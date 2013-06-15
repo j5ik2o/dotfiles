@@ -1,0 +1,73 @@
+export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+export PATH=/opt/local/bin:/opt/local/sbin/:~/bin:$PATH
+
+# osx alias
+alias pbc='pbcopy'
+
+# Terminal Colorの設定
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
+
+# vim
+export EDITOR=/Applications/MacVim.app/Contents/MacOS/Vim
+alias vi='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
+alias vim='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
+
+# emacs
+alias emacs='env LANG=ja_JP.UTF-8 /Applications/Emacs.app/Contents/MacOS/Emacs -nw "$@"'
+
+# Java
+
+##Java7
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home
+#export JAVA_HOME=/Library/Java/Home
+export PATH=$JAVA_HOME/bin:$PATH
+# デフォルトエンコーディングSJISをUTF-8へ
+export _JAVA_OPTIONS="-Dfile.encoding=UTF-8"
+
+# scala
+export SCALA_HOME=/Users/ozaki/.svm/current/rt
+PATH=$SCALA_HOME/bin:$PATH
+export SCALA_DOC_HOME=$SCALA_HOME/../devel-docs/api/
+
+export SCALA_CLASSPATH=~/sandbox/scala/yuroyoro/yuroyoro-util/target/yuroyoro-util-1.0.jar
+export SBT_OPTS="-XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256M"
+
+# Ant
+export ANT_VERSION=1.8.0
+export ANT_HOME=~/dev/Tools/apache-ant-${ANT_VERSION}
+export ANT_OPTS=-Xmx1g
+export PATH=$ANT_HOME/bin:$PATH
+
+# Maven2
+export MAVEN_VERSION=2.2.1
+export MAVEN_HOME=~/dev/Tools/apache-maven-${MAVEN_VERSION}
+export PATH=$MAVEN_HOME/bin:$PATH
+export MAVEN_OPTS=-Xmx1024M
+
+# man path
+MANPATH=/usr/local/man:$MANPATH
+export MANPATH
+INFOPATH=/usr/local/info:$INFOPATH
+export INFOPATH
+
+export PATH=/usr/local/share/python:$PATH
+
+
+# Perl
+alias perl='/opt/local/bin/perl'
+
+# Ruby
+eval "$(rbenv init -)"
+
+export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
+
+# node.js
+export NODE_PATH=/usr/local/lib/node:$PATH
+export PATH=/usr/local/share/npm/bin:$PATH
+
+# tmux
+alias tmux='tmuxx'
+alias tm='tmuxx'
+alias tma='tmux attach'
+alias tml='tmux list-window'
