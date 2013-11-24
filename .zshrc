@@ -685,3 +685,5 @@ source ~/dotfiles/.git-flow-completion.zsh
 #
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
+
+[ -s $HOME/.nvm/nvm.sh ] && . $HOME/.nvm/nvm.sh # This loads NVM

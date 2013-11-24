@@ -5,6 +5,7 @@ export PATH="$(brew --prefix josegonzalez/php/php53)/bin:$PATH"
 export PATH=/usr/local/bin:/usr/local/sbin:$PATH
 export PATH=/opt/local/bin:/opt/local/sbin/:~/bin:$PATH
 
+
 # osx alias
 alias pbc='pbcopy'
 
@@ -23,7 +24,7 @@ alias emacs='env LANG=ja_JP.UTF-8 /Applications/Emacs.app/Contents/MacOS/Emacs -
 # Java
 
 ##Java7
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.7.0_15.jdk/Contents/Home
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/current/Contents/Home
 #export JAVA_HOME=/Library/Java/Home
 export PATH=$JAVA_HOME/bin:$PATH
 # デフォルトエンコーディングSJISをUTF-8へ
@@ -34,8 +35,7 @@ export SCALA_HOME=/Users/ozaki/.svm/current/rt
 PATH=$SCALA_HOME/bin:$PATH
 export SCALA_DOC_HOME=$SCALA_HOME/../devel-docs/api/
 
-export SCALA_CLASSPATH=~/sandbox/scala/yuroyoro/yuroyoro-util/target/yuroyoro-util-1.0.jar
-export SBT_OPTS="-XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256M"
+export SBT_OPTS="-Xmx2G -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xss2M  -Duser.timezone=JST"
 
 # Ant
 export ANT_VERSION=1.8.0
@@ -70,8 +70,17 @@ export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/
 export NODE_PATH=/usr/local/lib/node:$PATH
 export PATH=/usr/local/share/npm/bin:$PATH
 
+# go
+export PATH=/opt/go/bin:$PATH
+export GOROOT=/opt/go/
+
 # tmux
 alias tmux='tmuxx'
 alias tm='tmuxx'
 alias tma='tmux attach'
 alias tml='tmux list-window'
+
+. ~/.nvm/nvm.sh
+nvm use v0.11.2
+
+export PATH="$HOME/Library/Haskell/bin:$PATH"
