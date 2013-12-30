@@ -83,25 +83,25 @@ noremap <Leader>cc <ESC>:copen<Enter>
 "C-Nで新しいバッファを開く
 nmap <Leader>nn :new<CR>
 
-"C-P,C-Nでバッファ移動,C-Dでバッファ消去
+"バッファ移動とバッファ消去
 nmap <Leader>bp :bp<CR>
 nmap <Leader>bn :bn<CR>
 nmap <Leader>bd :bd<CR>
 
 "C-L,C-Lでバッファリスト
-nmap <C-L><C-L> :ls<CR>
+nmap <Leader>ls :ls<CR>
 "C-L,C-Rでレジスタリスト
-nmap <C-L><C-R> :dis<CR>
+nmap <Leader>ds :dis<CR>
 "C-L,C-Kでキーマップリスト
-nmap <C-L><C-K> :map<CR>
+nmap <Leader>mp :map<CR>
 "C-L,C-Mでマークリスト
-nmap <C-L><C-M> :marks<CR>
+nmap <Leader>ms :marks<CR>
 "C-L,C-Jでジャンプリスト
-nmap <C-L><C-J> :jumps<CR>
+nmap <Leader>jm :jumps<CR>
 "C-L,C-Hでコマンドヒストリ
-nmap <C-L><C-H> :his<CR>
+nmap <Leader>hs :his<CR>
 "C-L,C-Uでアンドゥヒストリ
-nmap <C-L><C-U> :undolist<CR>
+nmap <Leader>un :undolist<CR>
 
 " ファイルタイプ判定をon
 filetype plugin on

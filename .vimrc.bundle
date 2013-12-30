@@ -84,6 +84,11 @@ NeoBundle 'airblade/vim-gitgutter'
 " ,,でトグルでコメントアウト
 NeoBundle 'scrooloose/nerdcommenter'
 
+" カラースキーム{{{
+NeoBundle 'w0ng/vim-hybrid'
+NeoBundle 'nanotech/jellybeans.vim'
+"}}}
+
 filetype plugin indent on     " Required!
 
 NeoBundleCheck
