@@ -59,7 +59,7 @@ case ${UID} in
         PROMPT="%{$fg_bold[gray]%}${USER}@%m ${RESET}${WHITE}${POH} ${RESET}"
         ;;
       esac
-      zle reset-prompt
+      #zle reset-prompt
     }
     zle -N zle-line-init
     zle -N zle-keymap-select
