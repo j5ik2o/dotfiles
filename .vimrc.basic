@@ -1,15 +1,22 @@
-"-------------------------------------------------------------------------------
-" 基本設定 Basics
-"-------------------------------------------------------------------------------
+" --- 基本
+" タイトルをバッファに変更しない
 set notitle
+"
+" VIM互換にしない
+set nocompatible
+
+" 編集中でも他のファイルを開けるようにする
+set hidden
+
+" バックスペースでなんでも消せるように
+set backspace=indent,eol,start
+
+set scrolloff=5 
 let mapleader = ","              " キーマップリーダー
-set scrolloff=5                  " スクロール時の余白確保
 set textwidth=0                  " 一行に長い文章を書いていても自動折り返しをしない
 set nobackup                     " バックアップ取らない
 set autoread                     " 他で書き換えられたら自動で読み直す
 set noswapfile                   " スワップファイル作らない
-set hidden                       " 編集中でも他のファイルを開けるようにする
-set backspace=indent,eol,start   " バックスペースでなんでも消せるように
 set formatoptions=lmoq           " テキスト整形オプション，マルチバイト系を追加
 set vb t_vb=                     " ビープをならさない
 set browsedir=buffer             " Exploreの初期ディレクトリ
@@ -21,6 +28,7 @@ set modelines=0                  " モードラインは無効
 
 " OSのクリップボードを使用する
 set clipboard+=unnamed
+
 " ターミナルでマウスを使用できるようにする
 set mouse=a
 set guioptions+=a
@@ -31,11 +39,69 @@ set clipboard=unnamed
 " 挿入モードでCtrl+kを押すとクリップボードの内容を貼り付けられるようにする "
 imap <C-p>  <ESC>"*pa
 
-" Ev/Rvでvimrcの編集と反映
-command! Ev edit $MYVIMRC
-command! Rv source $MYVIMRC
+" --- 検索{{{
+"インクリメンタルサーチを有効にする
+set incsearch
 
+" grepの設定
+set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m,%f
+set grepprg=grep\ -nh
+
+" サーチハイライトををESC二回で消す
+nnoremap <Esc><Esc> :nohlsearch<CR><Esc>
+"}}}
+
+" --- 外観{{{
+set ruler
+set number
+
+set cmdheight=2
+
+set cursorline
+
+syntax on
+
+" foldmethod
+set foldmethod=marker
+
+" モードごとでステータスライン色を変更する
+" au InsertEnter * hi StatusLine guifg=DarkBlue guibg=DarkYellow gui=none ctermfg=Blue ctermbg=Yellow cterm=none
+" au InsertLeave * hi StatusLine guifg=DarkBlue guibg=DarkGray gui=none ctermfg=Blue ctermbg=DarkGray cterm=none
+"}}}
+
+" --- その他
+" ヘルプファイル
 set helpfile=$VIMRUNTIME/doc/help.txt
+
+vnoremap < <gv
+vnoremap > >gv
+
+" QuickFix
+noremap <Leader>co <ESC>:copen<Enter>
+noremap <Leader>cc <ESC>:copen<Enter>
+
+"C-Nで新しいバッファを開く
+nmap <Leader>nn :new<CR>
+
+"C-P,C-Nでバッファ移動,C-Dでバッファ消去
+nmap <Leader>bp :bp<CR>
+nmap <Leader>bn :bn<CR>
+nmap <Leader>bd :bd<CR>
+
+"C-L,C-Lでバッファリスト
+nmap <C-L><C-L> :ls<CR>
+"C-L,C-Rでレジスタリスト
+nmap <C-L><C-R> :dis<CR>
+"C-L,C-Kでキーマップリスト
+nmap <C-L><C-K> :map<CR>
+"C-L,C-Mでマークリスト
+nmap <C-L><C-M> :marks<CR>
+"C-L,C-Jでジャンプリスト
+nmap <C-L><C-J> :jumps<CR>
+"C-L,C-Hでコマンドヒストリ
+nmap <C-L><C-H> :his<CR>
+"C-L,C-Uでアンドゥヒストリ
+nmap <C-L><C-U> :undolist<CR>
 
 " ファイルタイプ判定をon
 filetype plugin on
