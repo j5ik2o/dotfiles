@@ -35,11 +35,11 @@ let g:errormarker_warningtext = '??'
 let g:errormarker_errorgroup = 'Error'
 let g:errormarker_errorgroup = 'Todo'
 
-" Scala用設定
 " ファイルタイプの追加
 augroup filetypedetect
 	autocmd! BufNewFile,BufRead *.scala setfiletype scala
 	autocmd! BufNewFile,BufRead *.sbt setfiletype scala
+    autocmd! BufNewFile,BufRead *.markdown setfiletype octopress
 augroup END
 
 " Unite

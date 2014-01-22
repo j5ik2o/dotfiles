@@ -89,6 +89,8 @@ NeoBundle 'w0ng/vim-hybrid'
 NeoBundle 'nanotech/jellybeans.vim'
 "}}}
 
+NeoBundle 'tangledhelix/vim-octopress'
+
 filetype plugin indent on     " Required!
 
 NeoBundleCheck
