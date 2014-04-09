@@ -55,6 +55,9 @@ NeoBundle 'Shougo/vimshell'
   NeoBundle 'ujihisa/neco-ghc'
   NeoBundle 'dag/vim2hs'
 
+  " Golang
+  NeoBundle 'jnwhiteh/vim-golang'
+
 "}}}
 
 " Unite{{{

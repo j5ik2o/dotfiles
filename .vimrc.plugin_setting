@@ -1,3 +1,10 @@
+filetype off
+filetype plugin off
+set runtimepath+=$GOROOT/misc/vim
+filetype plugin on
+
+exe "set runtimepath+=".globpath($GOPATH, "src/github.com/nsf/gocode/vim")
+
 " buftabs.vim
 " :ls
 " :1b
