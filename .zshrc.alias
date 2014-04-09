@@ -1,5 +1,6 @@
 
 # ls
+alias ls="gls --color=auto"
 alias la="ls -a"
 alias lf="ls -F"
 alias ll="ls -l"
