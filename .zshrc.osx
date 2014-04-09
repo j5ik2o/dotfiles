@@ -75,7 +75,7 @@ alias tml='tmux list-window'
 
 # nvm
 . ~/.nvm/nvm.sh
-nvm use v0.11.4
+nvm use v0.11.12
 
 # haskell
 export PATH="$HOME/Library/Haskell/bin:$PATH"
