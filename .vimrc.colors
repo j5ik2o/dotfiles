@@ -2,7 +2,10 @@
 " カラー関連 Colors
 "-------------------------------------------------------------------------------
 
-colorscheme jellybeans
+" ハイライト on
+syntax enable
+set background=dark
+colorscheme solarized
 
 " ターミナルタイプによるカラー設定
 if &term =~ "xterm-256color" || "screen-256color"
@@ -24,9 +27,6 @@ endif
 "hi Pmenu guibg=#666666
 "hi PmenuSel guibg=#8cd0d3 guifg=#666666
 "hi PmenuSbar guibg=#333333
-
-" ハイライト on
-syntax enable
 
 " 補完候補の色づけ for vim7
 " hi Pmenu ctermbg=255 ctermfg=0 guifg=#000000 guibg=#999999
