@@ -33,6 +33,7 @@ PATH=$SCALA_HOME/bin:$PATH
 export SCALA_DOC_HOME=$SCALA_HOME/../devel-docs/api/
 
 ## sbt
+export SBT_HOME=/usr/local/Cellar/sbt/0.13.1/libexec
 export SBT_OPTS="-Xmx2G -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xss2M  -Duser.timezone=JST"
 
 ## Ant
@@ -65,9 +66,6 @@ eval "$(rbenv init -)"
 
 export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
 
-# go
-export PATH=/opt/go/bin:$PATH
-export GOROOT=/opt/go/
 
 # tmux
 alias tmux='tmuxx'
@@ -83,6 +81,9 @@ nvm use v0.11.4
 export PATH="$HOME/Library/Haskell/bin:$PATH"
 
 # golang
-export GOROOT=/usr/local/Cellar/go/1.1.2/libexec
-export GOPATH=$HOME/.gopath
+export GOROOT="/usr/local/Cellar/go/1.2/libexec"
+export GOPATH=$HOME/go
 export PATH=$GOROOT/bin:$PATH
+export PATH=$PATH:$GOPATH/bin
+
+export PATH=/opt/gatling/bin:$PATH

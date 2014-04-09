@@ -8,6 +8,10 @@ endif
 
 call neobundle#rc(expand('~/.vim/bundle/'))
 
+NeoBundle 'Align'
+
+NeoBundle 'JavaScript-Indent'
+
 " Let NeoBundle manage NeoBundle
 NeoBundleFetch 'Shougo/neobundle.vim'
 
