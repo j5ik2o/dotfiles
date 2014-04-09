@@ -306,9 +306,5 @@ linux*)
     ;;
 esac
 
-"source ~/dotfiles/.git-completion.zsh
-"source ~/dotfiles/.git-flow-completion.zsh
-
 ## local固有設定
-#
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
