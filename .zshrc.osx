@@ -2,8 +2,8 @@ export RSENSE_HOME="/usr/local/Cellar/rsense/0.3/libexec"
 export PATH="$(brew --prefix josegonzalez/php/php53)/bin:$PATH"
 [[ -f `brew --prefix`/etc/autojump.sh ]] && . `brew --prefix`/etc/autojump.sh
 
-export PATH=/usr/local/bin:/usr/local/sbin:$PATH
-export PATH=/opt/local/bin:/opt/local/sbin:~/bin:$PATH
+export PATH=/usr/local/bin:$PATH
+#export PATH=/opt/local/bin:/opt/local/sbin:~/bin:$PATH
 
 
 # osx alias
@@ -74,8 +74,11 @@ alias tma='tmux attach'
 alias tml='tmux list-window'
 
 # nvm
-. ~/.nvm/nvm.sh
-nvm use v0.11.12
+if [[ -f ~/.nvm/nvm.sh ]]; then
+    . ~/.nvm/nvm.sh
+    wait
+    nvm use v0.11.12 > /dev/null
+fi
 
 # haskell
 export PATH="$HOME/Library/Haskell/bin:$PATH"
@@ -86,4 +89,3 @@ export GOPATH=$HOME/go
 export PATH=$GOROOT/bin:$PATH
 export PATH=$PATH:$GOPATH/bin
 
-export PATH=/opt/gatling/bin:$PATH
