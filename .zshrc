@@ -291,6 +291,16 @@ setopt complete_aliases     # aliased ls needs if file/dir completions work
 
 alias where="command -v"
 
+export LS_COLORS="no=00:fi=00:di=01;36:ln=01;34"
+
+if [ -d ~/.dircolors ]; then
+    if type dircolors > /dev/null 2>&1; then
+        eval $(dircolors ~/.dircolors/dircolors.ansi-universal)
+    elif type gdircolors > /dev/null 2>&1; then
+        eval $(gdircolors ~/.dircolors/dircolors.ansi-universal)
+    fi
+fi
+
 [ -f ~/dotfiles/.zshrc.alias ] && source ~/dotfiles/.zshrc.alias
 
 case "${OSTYPE}" in

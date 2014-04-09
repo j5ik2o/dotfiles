@@ -5,6 +5,13 @@ export LSCOLORS=ExFxCxDxBxegedabagacad
 
 alias ls='ls -alh --color'
 
+# nvm
+if [[ -f ~/.nvm/nvm.sh ]]; then
+    . ~/.nvm/nvm.sh
+    wait
+    nvm use v0.11.12 > /dev/null
+fi
+
 export PATH=$HOME/.rbenv/bin:$PATH
 eval "$(rbenv init -)"
 
