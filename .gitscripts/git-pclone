@@ -1,0 +1,14 @@
+#!/bin/sh
+
+URL="$1"
+DIR="$2"
+
+if [ -z "$DIR" ]; then
+    DIR=`echo $URL | sed -E 's/.*\/([a-zA-Z0-9\-]*)(\.git)?$/\1/'`
+fi
+
+git clone $URL $DIR
+cd $DIR
+
+git config user.email "j5ik2o@gmail.com"
+git config user.name "じゅんいち☆かとう"
