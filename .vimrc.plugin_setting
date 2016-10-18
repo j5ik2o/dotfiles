@@ -85,7 +85,7 @@ let g:gitgutter_sign_removed = '✘'
 
 " lightline.vim
 let g:lightline = {
-        \ 'colorscheme': 'landscape',
+        \ 'colorscheme': 'solarized',
         \ 'mode_map': {'c': 'NORMAL'},
         \ 'active': {
         \   'left': [
@@ -111,8 +111,8 @@ let g:lightline = {
         \   'charcode': 'MyCharCode',
         \   'gitgutter': 'MyGitGutter',
         \ },
-        \ 'separator': {'left': '⮀', 'right': '⮂'},
-        \ 'subseparator': {'left': '⮁', 'right': '⮃'}
+        \ 'separator': {'left': "\ue0b0", 'right': "\ue0b2"},
+        \ 'subseparator': {'left': "\ue0b1", 'right': "\ue0b3"}
         \ }
 
 function! MyModified()
@@ -120,7 +120,7 @@ function! MyModified()
 endfunction
 
 function! MyReadonly()
-  return &ft !~? 'help\|vimfiler\|gundo' && &ro ? '⭤' : ''
+  return &ft !~? 'help\|vimfiler\|gundo' && &ro ? 'RO' : ''
 endfunction
 
 function! MyFilename()
@@ -136,7 +136,7 @@ function! MyFugitive()
   try
     if &ft !~? 'vimfiler\|gundo' && exists('*fugitive#head')
       let _ = fugitive#head()
-      return strlen(_) ? '⭠ '._ : ''
+      return strlen(_) ? "\ue0a0"._ : ''
     endif
   catch
   endtry

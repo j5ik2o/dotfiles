@@ -6,7 +6,7 @@ if has('vim_starting')
   set runtimepath+=~/.vim/bundle/neobundle.vim/
 endif
 
-call neobundle#rc(expand('~/.vim/bundle/'))
+call neobundle#begin(expand('~/.vim/bundle/'))
 
 NeoBundle 'Align'
 
@@ -28,7 +28,7 @@ NeoBundle 'LeafCage/yankround.vim'
 
 " Buffer{{{
 NeoBundle 'buftabs'
-NeoBundle 'bufexplorer.zip'
+" NeoBundle 'bufexplorer.zip'
 " }}}
 
 " Filer{{{
@@ -72,7 +72,7 @@ NeoBundle 'Shougo/vimshell'
   NeoBundle 'choplin/unite-vim_hacks'
 "}}}
 
-NeoBundle 'mattn/zencoding-vim'
+NeoBundle 'mattn/emmet-vim'
 
 NeoBundle 'thinca/vim-ref'
 
@@ -97,6 +97,8 @@ NeoBundle 'nanotech/jellybeans.vim'
 "}}}
 
 NeoBundle 'tangledhelix/vim-octopress'
+
+call neobundle#end()
 
 filetype plugin indent on     " Required!
 
