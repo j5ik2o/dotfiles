@@ -77,7 +77,7 @@ alias tml='tmux list-window'
 if [[ -f ~/.nvm/nvm.sh ]]; then
     . ~/.nvm/nvm.sh
     wait
-    nvm use v6.5.0 > /dev/null
+    nvm use v6.8.1 > /dev/null
 fi
 
 # haskell
