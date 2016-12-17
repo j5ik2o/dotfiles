@@ -11,7 +11,7 @@ done
 case "${OSTYPE}" in
 darwin*)
     brew update
-    brew install scala rbenv ruby-build zsh tmux wget curl coreutils reattach-to-user-namespace
+    brew bundle
     ;;
 linux*)
     ;;
