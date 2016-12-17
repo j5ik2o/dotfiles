@@ -1,11 +1,11 @@
 " 基本設定
-source ~/dotfiles/.vimrc.basic
+source ~/.vimrc.basic
 " プラグイン読込み設定
-source ~/dotfiles/.vimrc.bundle
+source ~/.vimrc.bundle
 " プラグイン設定
-source ~/dotfiles/.vimrc.plugin_setting
+source ~/.vimrc.plugin_setting
 " カラー設定
-source ~/dotfiles/.vimrc.colors
+source ~/.vimrc.colors
 " エンコーディング設定
-source ~/dotfiles/.vimrc.encoding
+source ~/.vimrc.encoding
 

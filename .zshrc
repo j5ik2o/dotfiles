@@ -302,12 +302,12 @@ case "${OSTYPE}" in
 # Mac(Unix)
 darwin*)
     [ -d ~/.dircolors ] && eval $(gdircolors ~/.dircolors/$DIRCOLORS_FILENAME)
-    [ -f ~/dotfiles/.zshrc.osx ] && source ~/dotfiles/.zshrc.osx
+    [ -f ~/.zshrc.osx ] && source ~/.zshrc.osx
     ;;
 # Linux
 linux*)
     [ -d ~/.dircolors ] && eval $(dircolors ~/.dircolors/$DIRCOLORS_FILENAME)
-    [ -f ~/dotfiles/.zshrc.linux ] && source ~/dotfiles/.zshrc.linux
+    [ -f ~/.zshrc.linux ] && source ~/.zshrc.linux
     ;;
 esac
 

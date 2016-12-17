@@ -3,8 +3,6 @@ export PATH="$(brew --prefix josegonzalez/php/php53)/bin:$PATH"
 [[ -f `brew --prefix`/etc/autojump.sh ]] && . `brew --prefix`/etc/autojump.sh
 
 export PATH=/usr/local/bin:$PATH
-#export PATH=/opt/local/bin:/opt/local/sbin:~/bin:$PATH
-
 
 # osx alias
 alias pbc='pbcopy'
@@ -27,27 +25,6 @@ export PATH=$JAVA_HOME/bin:$PATH
 # デフォルトエンコーディングSJISをUTF-8へ
 export _JAVA_OPTIONS="-Dfile.encoding=UTF-8"
 
-# scala
-export SCALA_HOME=/Users/ozaki/.svm/current/rt
-PATH=$SCALA_HOME/bin:$PATH
-export SCALA_DOC_HOME=$SCALA_HOME/../devel-docs/api/
-
-## sbt
-export SBT_HOME=/usr/local/Cellar/sbt/0.13.1/libexec
-export SBT_OPTS="-Xmx2G -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=2G -Xss2M  -Duser.timezone=JST"
-
-## Ant
-export ANT_VERSION=1.8.0
-export ANT_HOME=~/dev/Tools/apache-ant-${ANT_VERSION}
-export ANT_OPTS=-Xmx1g
-export PATH=$ANT_HOME/bin:$PATH
-
-## Maven2
-export MAVEN_VERSION=2.2.1
-export MAVEN_HOME=~/dev/Tools/apache-maven-${MAVEN_VERSION}
-export PATH=$MAVEN_HOME/bin:$PATH
-export MAVEN_OPTS=-Xmx1024M
-
 # man path
 MANPATH=/usr/local/man:$MANPATH
 export MANPATH
@@ -55,17 +32,12 @@ INFOPATH=/usr/local/info:$INFOPATH
 export INFOPATH
 
 # Vagrant
-
 export PATH=/Applications/Vagrant/bin:$PATH
-
-# Perl
-alias perl='/opt/local/bin/perl'
 
 # Ruby
 eval "$(rbenv init - zsh)"
 
 export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
-
 
 # tmux
 alias tmux='tmuxx'
@@ -76,26 +48,15 @@ alias tml='tmux list-window'
 export NVM_DIR="$HOME/.nvm"
 . "/usr/local/opt/nvm/nvm.sh"
 
-# haskell
-export PATH="$HOME/Library/Haskell/bin:$PATH"
-
 # golang
 export GOROOT="/usr/local/Cellar/go/1.2/libexec"
 export GOPATH=$HOME/go
 export PATH=$GOROOT/bin:$PATH
 export PATH=$PATH:$GOPATH/bin
 
-eval $(docker-machine env default)
-
-#source "/Users/cw-junichi/.gvm/bin/gvm-init.sh"
-
-export PATH=$PATH:/opt/apache-jmeter/bin
-
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
-
-eval $(docker-machine env default)
 
 export GOPATH=$HOME/go
 export GOROOT=/usr/local/opt/go/libexec
