@@ -15,6 +15,7 @@ set scrolloff=5
 let mapleader = ","              " キーマップリーダー
 set textwidth=0                  " 一行に長い文章を書いていても自動折り返しをしない
 set nobackup                     " バックアップ取らない
+set noundofile
 set autoread                     " 他で書き換えられたら自動で読み直す
 set noswapfile                   " スワップファイル作らない
 set formatoptions=lmoq           " テキスト整形オプション，マルチバイト系を追加
