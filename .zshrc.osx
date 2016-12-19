@@ -62,17 +62,11 @@ export GOPATH=$HOME/go
 export GOROOT=/usr/local/opt/go/libexec
 export PATH=$PATH:/usr/local/opt/go/libexec/bin
 
-export SBT_OPTS="-Xss4M -Xms4g -Xmx4g -XX:ReservedCodeCacheSize=256m -XX:MaxMetaspaceSize=8g -XX:+CMSClassUnloadingEnabled -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:InitiatingHeapOccupancyPercent=30"
-
 source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'
 source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'
 
 export PATH=/opt/spring/bin:$PATH
 
 [[ -s "$(brew --prefix dvm)/dvm.sh" ]] && source "$(brew --prefix dvm)/dvm.sh"
-
-growl() { echo -e $'\e]9;'${1}'\007' ; return  ; }
-
-REPORTTIME=1
 
 export PLANT_UML=/usr/local/plantuml
