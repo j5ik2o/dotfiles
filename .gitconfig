@@ -11,7 +11,6 @@
 [push]
   default = tracking       # defaultのpush先はtrackingしているリポジトリ
 [core]
-	excludesfile = /Users/junichi.kato/.gitignore_global
   autocrlf = input                 # CRLFを自動変換
   editor = vim
   quotepath = false
