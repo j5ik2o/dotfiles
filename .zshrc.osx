@@ -57,6 +57,7 @@ export PATH=$PATH:$GOPATH/bin
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
+if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
 
 export GOPATH=$HOME/go
 export GOROOT=/usr/local/opt/go/libexec
@@ -69,4 +70,7 @@ export PATH=/opt/spring/bin:$PATH
 
 [[ -s "$(brew --prefix dvm)/dvm.sh" ]] && source "$(brew --prefix dvm)/dvm.sh"
 
-export PLANT_UML=/usr/local/plantuml
+export PLANT_UML=/opt/plantuml
+export GRAPHVIZ_DOT=/usr/local/bin/dot
+
+export PATH=/opt/jad:$PATH
