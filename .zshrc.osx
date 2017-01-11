@@ -32,7 +32,7 @@ INFOPATH=/usr/local/info:$INFOPATH
 export INFOPATH
 
 # Vagrant
-export PATH=/Applications/Vagrant/bin:$PATH
+export PATH=/opt/vagrant/bin:$PATH
 
 # Ruby
 eval "$(rbenv init - zsh)"
@@ -49,19 +49,16 @@ export NVM_DIR="$HOME/.nvm"
 . "/usr/local/opt/nvm/nvm.sh"
 
 # golang
-export GOROOT="/usr/local/Cellar/go/1.2/libexec"
-export GOPATH=$HOME/go
-export PATH=$GOROOT/bin:$PATH
-export PATH=$PATH:$GOPATH/bin
+source /Users/j5ik2o/.gvm/scripts/gvm
+gvm use go1.7.4
+export GOPATH=$HOME/go-dev
+export PATH=$GOPATH/bin:$PATH
+export GO15VENDOREXPERIMENT=1
 
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
-
-export GOPATH=$HOME/go
-export GOROOT=/usr/local/opt/go/libexec
-export PATH=$PATH:/usr/local/opt/go/libexec/bin
 
 source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'
 source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'
@@ -74,3 +71,5 @@ export PLANT_UML=/opt/plantuml
 export GRAPHVIZ_DOT=/usr/local/bin/dot
 
 export PATH=/opt/jad:$PATH
+
+export PATH=$HOME/bin:$PATH
