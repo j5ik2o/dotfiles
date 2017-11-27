@@ -17,11 +17,9 @@ alias vi='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
 alias vim='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
 
 # emacs
-alias emacs='env LANG=ja_JP.UTF-8 /Applications/Emacs.app/Contents/MacOS/Emacs -nw "$@"'
+# alias emacs='env LANG=ja_JP.UTF-8 /Applications/Emacs.app/Contents/MacOS/Emacs -nw "$@"'
 
 # Java
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/current/Contents/Home
-export PATH=$JAVA_HOME/bin:$PATH
 # デフォルトエンコーディングSJISをUTF-8へ
 export _JAVA_OPTIONS="-Dfile.encoding=UTF-8"
 
@@ -31,45 +29,41 @@ export MANPATH
 INFOPATH=/usr/local/info:$INFOPATH
 export INFOPATH
 
-# Vagrant
-export PATH=/opt/vagrant/bin:$PATH
-
 # Ruby
 eval "$(rbenv init - zsh)"
 
 export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
 
-# tmux
-alias tmux='tmuxx'
-alias tm='tmuxx'
-alias tma='tmux attach'
-alias tml='tmux list-window'
+# Node
+export PATH=$HOME/.nodebrew/current/bin:$PATH
 
-export NVM_DIR="$HOME/.nvm"
-. "/usr/local/opt/nvm/nvm.sh"
+# tmux
+#alias tmux='tmuxx'
+#alias tm='tmuxx'
+#alias tma='tmux attach'
+#alias tml='tmux list-window'
 
 # golang
-source /Users/j5ik2o/.gvm/scripts/gvm
-gvm use go1.7.4
-export GOPATH=$HOME/go-dev
-export PATH=$GOPATH/bin:$PATH
-export GO15VENDOREXPERIMENT=1
+#source /Users/j5ik2o/.gvm/scripts/gvm
+#gvm use go1.7.4
+#export GOPATH=$HOME/go-dev
+#export PATH=$GOPATH/bin:$PATH
+#export GO15VENDOREXPERIMENT=1
 
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
+#export PYENV_ROOT="$HOME/.pyenv"
+#export PATH="$PYENV_ROOT/bin:$PATH"
+#eval "$(pyenv init -)"
+#if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
 
-source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'
-source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'
+#source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'
+#source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'
 
-export PATH=/opt/spring/bin:$PATH
+#export PATH=/opt/spring/bin:$PATH
 
-[[ -s "$(brew --prefix dvm)/dvm.sh" ]] && source "$(brew --prefix dvm)/dvm.sh"
+#[[ -s "$(brew --prefix dvm)/dvm.sh" ]] && source "$(brew --prefix dvm)/dvm.sh"
 
-export PLANT_UML=/opt/plantuml
-export GRAPHVIZ_DOT=/usr/local/bin/dot
-
-export PATH=/opt/jad:$PATH
+#export PLANT_UML=/opt/plantuml
+#export GRAPHVIZ_DOT=/usr/local/bin/dot
+#export PATH=/opt/jad:$PATH
 
 export PATH=$HOME/bin:$PATH
