@@ -93,8 +93,9 @@ NeoBundle 'airblade/vim-gitgutter'
 NeoBundle 'scrooloose/nerdcommenter'
 
 " カラースキーム{{{
-NeoBundle 'w0ng/vim-hybrid'
-NeoBundle 'nanotech/jellybeans.vim'
+" NeoBundle 'w0ng/vim-hybrid'
+" NeoBundle 'nanotech/jellybeans.vim'
+" NeoBundle 'herrbischoff/cobalt2.vim'
 "}}}
 
 NeoBundle 'tangledhelix/vim-octopress'
