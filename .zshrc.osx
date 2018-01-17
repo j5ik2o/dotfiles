@@ -73,8 +73,7 @@ if [ -e /usr/local/Caskroom/google-cloud-sdk ]; then
 fi
 
 export PATH=$HOME/bin:$PATH
-
 export PATH="/usr/local/opt/sbt@0.13/bin:$PATH"
 export PATH="/usr/local/opt/gettext/bin:$PATH"
 export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
-
+export PATH=$HOME/.cabal/bin:$PATH
