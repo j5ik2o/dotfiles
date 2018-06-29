@@ -5,7 +5,6 @@
 #alias tml='tmux list-window'
 
 export RSENSE_HOME="/usr/local/Cellar/rsense/0.3/libexec"
-export PATH="$(brew --prefix josegonzalez/php/php53)/bin:$PATH"
 [[ -f `brew --prefix`/etc/autojump.sh ]] && . `brew --prefix`/etc/autojump.sh
 
 export PATH=/usr/local/bin:$PATH
@@ -30,6 +29,7 @@ export _JAVA_OPTIONS="-Dfile.encoding=UTF-8"
 export SBT_OPTS="-Xms10g -Xmx10g -XX:MaxMetaspaceSize=8g -Xss10M -XX:+CMSClassUnloadingEnabled"
 
 if which jenv > /dev/null; then
+  export PATH="$HOME/.jenv/bin:$PATH"
   eval "$(jenv init -)"
 fi
 
