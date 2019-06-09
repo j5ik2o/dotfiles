@@ -1,3 +1,6 @@
+if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
+  zcompile ~/.zshrc
+ fi
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
 
@@ -316,3 +319,4 @@ esac
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
+[ -s "~/.jabba/jabba.sh" ] && source "~/.jabba/jabba.sh"

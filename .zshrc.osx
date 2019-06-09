@@ -23,16 +23,6 @@ if [ -e /Applications/MacVim.app ]; then
   alias vim='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
 fi
 
-# Java
-# デフォルトエンコーディングSJISをUTF-8へ
-export _JAVA_OPTIONS="-Dfile.encoding=UTF-8"
-export SBT_OPTS="-Xms10g -Xmx10g -XX:MaxMetaspaceSize=8g -Xss10M -XX:+CMSClassUnloadingEnabled"
-
-if which jenv > /dev/null; then
-  export PATH="$HOME/.jenv/bin:$PATH"
-  eval "$(jenv init -)"
-fi
-
 # man path
 MANPATH=/usr/local/man:$MANPATH
 export MANPATH
@@ -47,16 +37,13 @@ if [ -e $HOME/.rbenv ]; then
 fi
 
 # Node
-export PATH=$HOME/.nodebrew/current/bin:$PATH
-
+if [ -e $HOME/.nodebrew ]; then
+  export PATH=$HOME/.nodebrew/current/bin:$PATH
+fi
 
 # golang
 if [ -e $HOME/.gvm ]; then
-  source /Users/j5ik2o/.gvm/scripts/gvm
-  export GOPATH=$HOME/go-dev
-  export PATH=$GOPATH/bin:$PATH
-  export GO15VENDOREXPERIMENT=1
-  gvm use go1.9
+  source $HOME/.gvm/scripts/gvm
 fi
 
 # Python
@@ -73,7 +60,11 @@ if [ -e /usr/local/Caskroom/google-cloud-sdk ]; then
 fi
 
 export PATH=$HOME/bin:$PATH
-export PATH="/usr/local/opt/sbt@0.13/bin:$PATH"
 export PATH="/usr/local/opt/gettext/bin:$PATH"
 export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
 export PATH=$HOME/.cabal/bin:$PATH
+export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+
+source ~/.cargo/env
+
+export SBT_OPTS="-Xms2g -Xmx2g -XX:MaxMetaspaceSize=512M -XX:+CMSClassUnloadingEnabled"
