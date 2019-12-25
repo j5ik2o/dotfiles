@@ -319,4 +319,4 @@ esac
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
-[ -s "~/.jabba/jabba.sh" ] && source "~/.jabba/jabba.sh"
+. ~/.jabba/jabba.sh

@@ -1,3 +1,2 @@
-SBT_OPTS="-Xss4M -Xms4g -Xmx4g -XX:ReservedCodeCacheSize=512m -XX:MaxMetaspaceSize=8g -XX:+CMSClassUnloadingEnabled -XX:+UseG1GC -XX:G1HeapRegionSize=16m -XX:InitiatingHeapOccupancyPercent=30"
 
 

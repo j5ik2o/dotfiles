@@ -67,4 +67,4 @@ export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 
 source ~/.cargo/env
 
-export SBT_OPTS="-Xms2g -Xmx2g -XX:MaxMetaspaceSize=512M -XX:+CMSClassUnloadingEnabled"
+export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=512M -XX:+CMSClassUnloadingEnabled"
