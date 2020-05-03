@@ -31,6 +31,7 @@ export INFOPATH
 
 # Ruby
 if [ -e $HOME/.rbenv ]; then
+  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
   eval "$(rbenv init - zsh)"
   export PATH=$HOME/.rbenv/bin:$PATH
   export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
@@ -62,9 +63,13 @@ fi
 export PATH=$HOME/bin:$PATH
 export PATH="/usr/local/opt/gettext/bin:$PATH"
 export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
+
 export PATH=$HOME/.cabal/bin:$PATH
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 
 source ~/.cargo/env
 
-export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=512M -XX:+CMSClassUnloadingEnabled"
+export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled"
+
+export PATH=$HOME/.nodebrew/current/bin:$PATH
+

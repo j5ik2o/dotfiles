@@ -1,64 +1,73 @@
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
   zcompile ~/.zshrc
- fi
-# Path to your oh-my-zsh installation.
-export ZSH=$HOME/.oh-my-zsh
+fi
 
-# Set name of the theme to load.
-# Look in ~/.oh-my-zsh/themes/
-# Optionally, if you set this to "random", it'll load a random theme each
-# time that oh-my-zsh is loaded.
-# ZSH_THEME="robbyrussell"
-ZSH_THEME="powerlevel9k/powerlevel9k"
+export ZPLUG_HOME=~/.zplug
 
-POWERLINE_PATH="short"
+source $ZPLUG_HOME/init.zsh
 
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
+# zplug "Jxck/dotfiles", as:command, use:"bin/{histuniq,color}"
 
-# Uncomment the following line to use case-sensitive completion.
-# CASE_SENSITIVE="true"
+zplug "zsh-users/zsh-autosuggestions"
+zplug "zsh-users/zsh-syntax-highlighting"
+zplug "zsh-users/zsh-completions"
 
-# Uncomment the following line to disable bi-weekly auto-update checks.
-# DISABLE_AUTO_UPDATE="true"
+zplug "romkatv/powerlevel10k", as:theme, depth:1
 
-# Uncomment the following line to change how often to auto-update (in days).
-# export UPDATE_ZSH_DAYS=13
+# zplug "b4b4r07/enhancd", use:init.sh
+# zplug 'b4b4r07/gomi', as:command, from:gh-r
 
-# Uncomment the following line to disable colors in ls.
-# DISABLE_LS_COLORS="true"
+# zplug "supercrabtree/k"
+# zplug "b4b4r07/enhancd", use:init.sh
 
-# Uncomment the following line to disable auto-setting terminal title.
-# DISABLE_AUTO_TITLE="true"
+zplug "plugins/git", from:oh-my-zsh
+zplug "peterhurford/git-aliases.zsh"
+zplug "paulirish/git-open", as:plugin
 
-# Uncomment the following line to disable command auto-correction.
-# DISABLE_CORRECTION="true"
+# zplug "mafredri/zsh-async"
+# zplug "chrissicool/zsh-256color"
 
-# Uncomment the following line to display red dots whilst waiting for completion.
-# COMPLETION_WAITING_DOTS="true"
+# zplug "mrowa44/emojify", as:command
+# zplug "stedolan/jq", from:gh-r, as:command, rename-to:jq
+# zplug "b4b4r07/emoji-cli", on:"stedolan/jq"
 
-# Uncomment the following line if you want to disable marking untracked files
-# under VCS as dirty. This makes repository status check for large repositories
-# much, much faster.
-# DISABLE_UNTRACKED_FILES_DIRTY="true"
+# prezto plugins
+zplug "sorin-ionescu/prezto"
 
-# Uncomment the following line if you want to change the command execution time
-# stamp shown in the history command output.
-# The optional three formats: "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
-# HIST_STAMPS="mm/dd/yyyy"
+zplug "modules/environment", from:prezto
+zplug "modules/terminal", from:prezto
+zplug "modules/editor", from:prezto
+zplug "modules/history", from:prezto
+zplug "modules/directory", from:prezto
+zplug "modules/spectrum", from:prezto
+zplug "modules/utility", from:prezto
+zplug "modules/completion", from:prezto
+zplug "modules/prompt", from:prezto
+zplug "modules/homebrew", from:prezto
+zplug "modules/ruby", from:prezto
 
-# Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
 
-# Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
-# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git git-flow ruby brew osx sbt pyenv virutalenv)
+if ! zplug check --verbose; then
+  printf 'Install? [y/N]: '
+  if read -q; then
+    echo; zplug install
+  fi
+fi
 
-source $ZSH/oh-my-zsh.sh
+zplug load # --verbose
 
-# User configuration
+# Source Prezto.
+if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
+  source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
+fi
+
+# promt
+# if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
+#    echo "NVIM Terminal mode"
+#    prompt pure
+#fi
+
+alias rm=gomi
 
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -128,7 +137,7 @@ setopt nolistbeep
 # emacs like keybind (e.x. Ctrl-a goes to head of a line and Ctrl-e goes
 #   to end of it)
 #
-bindkey -v
+# bindkey -v
 
 # historical backward/forward search with linehead string binded to ^P/^N
 #
@@ -269,7 +278,7 @@ function cwaf() {
 
 ## Completion configuration
 #
-fpath=(~/.zsh/functions/Completion ${fpath})
+fpath=(~/.zsh/completion ${fpath})
 autoload -U compinit
 compinit -u
 
@@ -298,8 +307,8 @@ alias where="command -v"
 
 export LS_COLORS="no=00:fi=00:di=01;36:ln=01;34"
 
-#DIRCOLORS_FILENAME=dircolors.256dark
-DIRCOLORS_FILENAME=dircolors.ansi-dark
+DIRCOLORS_FILENAME=dircolors.256dark
+# DIRCOLORS_FILENAME=dircolors.ansi-dark
 
 [ -f ~/dotfiles/.zshrc.alias ] && source ~/dotfiles/.zshrc.alias
 
@@ -316,7 +325,16 @@ linux*)
     ;;
 esac
 
+export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
+
+[ -f ~/.jabba/jabba.sh ] && source ~/.jabba/jabba.sh
+
+jabba use adopt@1.8.0-242
+
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
-. ~/.jabba/jabba.sh
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+source <(kubectl completion zsh)
