@@ -1,71 +1,63 @@
-
-tap "homebrew/brewdler"
-tap "homebrew/core"
+tap "grpc/grpc"
 tap "homebrew/bundle"
-tap "caskroom/versions"
-tap "caskroom/cask"
-cask "java"
-brew "autoconf"
-brew "openssl"
-brew "readline"
+tap "homebrew/cask"
+tap "homebrew/core"
+tap "sambadevi/powerlevel9k"
+tap "scalacenter/bloop"
+tap "sl1pm4t/k2tf", "https://github.com/sl1pm4t/k2tf.git"
+tap "weaveworks/tap"
+brew "ansible"
+brew "aws-iam-authenticator"
 brew "awscli"
+brew "gettext"
+brew "circleci"
 brew "coreutils"
-brew "curl"
+brew "docker", link: false
+brew "docker-compose", link: false
+brew "gflags"
 brew "git"
-brew "docker-machine-driver-xhyve"
-brew "gettext", link: true
-brew "gnu-sed"
-brew "grep"
-brew "jenv"
+brew "graphviz"
+brew "grpc"
+brew "helm"
+brew "helmfile"
+brew "imagemagick"
 brew "jq"
-brew "kubectx"
-brew "libevent"
-brew "mas"
-brew "pkg-config"
+brew "kafka"
+brew "kubernetes-cli", link: false
+brew "maven"
+brew "minikube"
 brew "pwgen"
-brew "pyenv"
-brew "ruby-build"
 brew "rbenv"
-brew "reattach-to-user-namespace"
 brew "sbt"
 brew "scala"
 brew "terraform"
-brew "tmux"
+brew "the_silver_searcher"
+brew "watch"
 brew "wget"
 brew "zsh"
-brew "zsh-completions"
+brew "scalacenter/bloop/bloop"
+brew "sl1pm4t/k2tf/k2tf"
+brew "weaveworks/tap/eksctl"
 cask "1password"
 cask "alfred"
-cask "atom"
-cask "clipy"
+cask "balenaetcher"
+cask "calibre"
+cask "coteditor"
 cask "docker"
 cask "dropbox"
 cask "evernote"
-cask "firefox"
+cask "geekbench"
 cask "google-chrome"
-cask "google-cloud-sdk"
-cask "intellij-idea"
+cask "intel-power-gadget"
 cask "iterm2"
-cask "sketch"
+cask "java"
+cask "jetbrains-toolbox"
+cask "kindle"
+cask "kodi"
+cask "mysqlworkbench"
+cask "obs"
+cask "skitch"
 cask "slack"
-cask "tunnelblick"
-cask "vagrant"
 cask "virtualbox"
 cask "visual-studio-code"
-cask "caskroom/versions/java8"
-mas "050plus", id: 694926804
-mas "Be Focused Pro", id: 961632517
-mas "Civ6", id: 1123795278
-mas "CotEditor", id: 1024640650
-mas "Cyberduck", id: 409222199
-mas "Disk Diag", id: 672206759
-mas "GarageBand", id: 682658836
-mas "iMovie", id: 408981434
-mas "iTranslate", id: 884952790
-mas "Keynote", id: 409183694
-mas "Kindle", id: 405399194
-mas "LINE", id: 539883307
-mas "MenuBar Stats", id: 714196447
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
-mas "TweetDeck", id: 485812721
+cask "vlc"
