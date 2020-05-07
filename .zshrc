@@ -15,7 +15,7 @@ zplug "zsh-users/zsh-completions"
 zplug "romkatv/powerlevel10k", as:theme, depth:1
 
 # zplug "b4b4r07/enhancd", use:init.sh
-# zplug 'b4b4r07/gomi', as:command, from:gh-r
+zplug 'b4b4r07/gomi', as:command, from:gh-r
 
 # zplug "supercrabtree/k"
 # zplug "b4b4r07/enhancd", use:init.sh
@@ -338,3 +338,5 @@ jabba use adopt@1.8.0-242
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 source <(kubectl completion zsh)
+
+export XDG_CONFIG_HOME=~/.config

@@ -1,0 +1,101 @@
+[[plugins]]
+repo   = 'Shougo/unite.vim'
+
+# unite.vim を読み込んだら一緒に読み込む
+[[plugins]]
+repo      = 'Shougo/neomru.vim'
+on_source = ['unite.vim']
+
+[[plugins]]
+repo = 'tsukkee/unite-help'
+on_source = ['unite.vim']
+
+[[plugins]]
+repo = "davidhalter/jedi-vim"
+on_ft = ['python']
+
+[[plugins]]
+repo = 'fatih/vim-go'
+on_ft = ['go']
+
+[[plugins]]
+repo = 'vim-scripts/Align'
+
+[[plugins]]
+repo = 'pangloss/vim-javascript'
+
+[[plugins]]
+repo = 'LeafCage/yankround.vim'
+
+[[plugins]]
+repo = 'buftabs'
+
+# [[plugins]]
+# repo = 'bufexplorer.zip'
+
+[[plugins]]
+repo = 'Shougo/vimfiler'
+
+[[plugins]]
+repo = 'Shougo/vimshell'
+
+# Programming{{{
+# エラーがある場所をhilight
+#  NeoBundle 'errormarker.vim'
+#  " quickrun.vim : 編集中のファイルを簡単に実行できるプラグイン
+# NeoBundle 'thinca/vim-quickrun'
+  
+#  " yamlのシンタックスハイライト
+#  NeoBundle 'yaml.vim'
+ 
+#  " Java
+#  NeoBundle 'java.vim'
+#  " Scala
+#  NeoBundle 'derekwyatt/vim-scala'
+  
+#  " Haskell
+#  NeoBundle 'eagletmt/ghcmod-vim'
+#  NeoBundle 'ujihisa/neco-ghc'
+#  NeoBundle 'dag/vim2hs'
+
+#  " Golang
+#  NeoBundle 'jnwhiteh/vim-golang'
+
+# "}}}
+
+# Unite{{{
+# unite.vim : - すべてを破壊し、すべてを繋げ - vim scriptで実装されたanythingプラグイン
+#  NeoBundle 'tsukkee/unite-help'
+#  NeoBundle 'h1mesuke/unite-outline'
+#  NeoBundle 'Shougo/neomru.vim'
+#  "NeoBundle 'Sixeight/unite-grep'
+#  NeoBundle 'basyura/unite-rails'
+#  NeoBundle 'thinca/vim-unite-history'
+#  NeoBundle 'tsukkee/unite-tag'
+#  NeoBundle 'choplin/unite-vim_hacks'
+# }}}
+
+# NeoBundle 'mattn/emmet-vim'
+# NeoBundle 'thinca/vim-ref'
+# NeoBundle 'Shougo/neocomplcache'
+# NeoBundle 'sjl/gundo.vim'
+# NeoBundle 'kien/ctrlp.vim'
+
+# lightline{{{
+# NeoBundle 'itchyny/lightline.vim'
+# NeoBundle 'tpope/vim-fugitive'
+# NeoBundle 'airblade/vim-gitgutter'
+# }}}
+
+# ,,でトグルでコメントアウト
+# NeoBundle 'scrooloose/nerdcommenter'
+
+# カラースキーム{{{
+# NeoBundle 'w0ng/vim-hybrid'
+# NeoBundle 'nanotech/jellybeans.vim'
+# NeoBundle 'herrbischoff/cobalt2.vim'
+# }}}
+
+# NeoBundle 'tangledhelix/vim-octopress'
+
+

@@ -1,7 +1,7 @@
 " --- 基本
 " タイトルをバッファに変更しない
 set notitle
-
+"
 " VIM互換にしない
 set nocompatible
 
@@ -57,14 +57,11 @@ set incsearch
 set grepformat=%f:%l:%m,%f:%l%m,%f\ \ %l%m,%f
 set grepprg=grep\ -nh
 
-set hlsearch
-
 " サーチハイライトををESC二回で消す
 nnoremap <Esc><Esc> :nohlsearch<CR><Esc>
 "}}}
 
 " --- 外観{{{
-
 set ruler
 set number
 
@@ -72,20 +69,14 @@ set cmdheight=2
 
 set cursorline
 
-set nocursorcolumn
-
 syntax on
 
 " foldmethod
 set foldmethod=marker
 
 " モードごとでステータスライン色を変更する
-au InsertEnter * hi StatusLine guifg=DarkBlue guibg=DarkYellow gui=none ctermfg=Blue ctermbg=Yellow cterm=none
-au InsertLeave * hi StatusLine guifg=DarkBlue guibg=DarkGray gui=none ctermfg=Blue ctermbg=DarkGray cterm=none
-
-set showmatch
-set matchtime=3
-
+" au InsertEnter * hi StatusLine guifg=DarkBlue guibg=DarkYellow gui=none ctermfg=Blue ctermbg=Yellow cterm=none
+" au InsertLeave * hi StatusLine guifg=DarkBlue guibg=DarkGray gui=none ctermfg=Blue ctermbg=DarkGray cterm=none
 "}}}
 
 " --- その他

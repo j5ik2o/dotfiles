@@ -17,11 +17,15 @@ export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 
 # vim
-if [ -e /Applications/MacVim.app ]; then
-  export EDITOR=/Applications/MacVim.app/Contents/MacOS/Vim
-  alias vi='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
-  alias vim='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
-fi
+
+alias vi='nvim'
+alias vim='nvim'
+
+#if [ -e /Applications/MacVim.app ]; then
+#  export EDITOR=/Applications/MacVim.app/Contents/MacOS/Vim
+#  alias vi='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
+#  alias vim='env LANG=ja_JP.UTF-8 /Applications/MacVim.app/Contents/MacOS/Vim "$@"'
+#fi
 
 # man path
 MANPATH=/usr/local/man:$MANPATH
@@ -67,7 +71,9 @@ export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
 export PATH=$HOME/.cabal/bin:$PATH
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 
-source ~/.cargo/env
+if [ -e $HOME/.cargo ]; then
+source $HOME/.cargo/env
+fi
 
 export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled"
 

@@ -1,0 +1,29 @@
+[[plugins]]
+ repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'Shougo/vimproc.vim'
+
+[[plugins]] # カーソル位置のコンテキストに合わせてftを切り替える
+repo = 'osyo-manga/vim-precious'
+depends = ['context_filetype.vim']
+
+[[plugins]] # カーソル位置のコンテキストのftを判定するライブラリ
+repo = 'Shougo/context_filetype.vim'
+
+[[plugins]] # toml syntax
+repo = 'cespare/vim-toml'
+on_ft = 'toml'
+
+[[plugins]]
+repo = 'tpope/vim-surround'
+
+# https://qiita.com/kawaz/items/ee725f6214f91337b42b
+# [[plugins]] # カラースキーマ
+# repo = 'w0ng/vim-hybrid'
+# hook_add = '''
+#  set background=dark
+#  " colorscheme 設定は source 後に行う必要があるので VimEnter で行う。
+#  " 但し Colorscheme イベントの発生が抑制されないよう nented を付ける。
+#  au MyAutoCmd VimEnter * nested colorscheme hybrid
+# '''
