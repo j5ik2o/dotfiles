@@ -2,24 +2,30 @@ if &compatible
   set nocompatible
 endif
 
-" Add the dein installation directory into runtimepath
-set runtimepath+=~/.cache/dein/repos/github.com/Shougo/dein.vim
+let s:dein_dir=expand('~/.cache/dein')
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
-if dein#load_state('~/.cache/dein')
-  call dein#begin('~/.cache/dein')
+if &runtimepath !~# '/dein.vim'
+    if !isdirectory(s:dein_repo_dir)
+        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+    endif
+    execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+endif
+
+if dein#load_state(s:dein_dir)
+  call dein#begin(s:dein_dir)
 
   call dein#add('~/.cache/dein/repos/github.com/Shougo/dein.vim')
-  call dein#add('Shougo/deoplete.nvim')
   if !has('nvim')
+    call dein#add('Shougo/deoplete.nvim')
+    let g:deoplete#enable_at_startup = 1
     call dein#add('roxma/nvim-yarp')
     call dein#add('roxma/vim-hug-neovim-rpc')
   endif
 
-  call dein#add('Shougo/vimshell', { 'rev': '3787e5' })
-
   let g:config_dir = expand('~/')
-  let s:toml = g:config_dir . '/plugins.toml'
-  let s:toml_lazy = g:config_dir . '/plugins_lazy.toml'
+  let s:toml = g:config_dir . '/.vimrc.plugins.toml'
+  let s:toml_lazy = g:config_dir . '/.vimrc.plugins_lazy.toml'
 
   cal dein#load_toml(s:toml, {'lazy': 0})
   cal dein#load_toml(s:toml_lazy, {'lazy': 1})

@@ -27,8 +27,8 @@ repo = 'pangloss/vim-javascript'
 [[plugins]]
 repo = 'LeafCage/yankround.vim'
 
-[[plugins]]
-repo = 'buftabs'
+# [[plugins]]
+# repo = 'buftabs'
 
 # [[plugins]]
 # repo = 'bufexplorer.zip'
@@ -88,7 +88,8 @@ repo = 'Shougo/vimshell'
 # }}}
 
 # ,,でトグルでコメントアウト
-# NeoBundle 'scrooloose/nerdcommenter'
+[[plugins]]
+repo = 'preservim/nerdcommenter'
 
 # カラースキーム{{{
 # NeoBundle 'w0ng/vim-hybrid'

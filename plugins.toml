@@ -2,6 +2,9 @@
  repo = 'Shougo/dein.vim'
 
 [[plugins]]
+repo = 'Shougo/vimshell'
+
+[[plugins]]
 repo = 'Shougo/vimproc.vim'
 
 [[plugins]] # カーソル位置のコンテキストに合わせてftを切り替える
