@@ -296,7 +296,6 @@ autoload predict-on
 ## Command Line Stack [Esc]-[q]
 bindkey -a 'q' push-line
 
-
 ## Alias configuration
 #
 # expand aliases before completing
@@ -310,7 +309,8 @@ export LS_COLORS="no=00:fi=00:di=01;36:ln=01;34"
 DIRCOLORS_FILENAME=dircolors.256dark
 # DIRCOLORS_FILENAME=dircolors.ansi-dark
 
-[ -f ~/dotfiles/.zshrc.alias ] && source ~/dotfiles/.zshrc.alias
+[ -f ~/.zshrc.alias ] && source ~/.zshrc.alias
+[ -f ~/.zshrc.common ] && source ~/.zshrc.common
 
 case "${OSTYPE}" in
 # Mac(Unix)
@@ -327,12 +327,12 @@ esac
 
 export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
+## local固有設定
+[ -f ~/.zshrc.local ] && source ~/.zshrc.local
+
 [ -f ~/.jabba/jabba.sh ] && source ~/.jabba/jabba.sh
 
 jabba use adopt@1.8.0-242
-
-## local固有設定
-[ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -340,3 +340,9 @@ jabba use adopt@1.8.0-242
 source <(kubectl completion zsh)
 
 export XDG_CONFIG_HOME=~/.config
+
+# nodebrew
+if [ ! -d $HOME/.nodebrew ]; then
+  curl -L git.io/nodebrew | perl - setup
+fi
+export PATH=$HOME/.nodebrew/current/bin:$PATH

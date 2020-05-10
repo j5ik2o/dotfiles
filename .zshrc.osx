@@ -41,10 +41,6 @@ if [ -e $HOME/.rbenv ]; then
   export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
 fi
 
-# Node
-if [ -e $HOME/.nodebrew ]; then
-  export PATH=$HOME/.nodebrew/current/bin:$PATH
-fi
 
 # golang
 if [ -e $HOME/.gvm ]; then
