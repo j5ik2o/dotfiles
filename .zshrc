@@ -4,6 +4,10 @@ fi
 
 export ZPLUG_HOME=~/.zplug
 
+if [ ! -d $ZPLUG_HOME ]; then
+  git clone https://github.com/zplug/zplug $ZPLUG_HOME
+fi
+
 source $ZPLUG_HOME/init.zsh
 
 # zplug "Jxck/dotfiles", as:command, use:"bin/{histuniq,color}"
@@ -46,7 +50,6 @@ zplug "modules/prompt", from:prezto
 zplug "modules/homebrew", from:prezto
 zplug "modules/ruby", from:prezto
 
-
 if ! zplug check --verbose; then
   printf 'Install? [y/N]: '
   if read -q; then
@@ -56,10 +59,20 @@ fi
 
 zplug load # --verbose
 
-# Source Prezto.
-if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
-  source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
+if [ ! -e $HOME/.zprezto ]; then
+  ln -s $ZPLUG_HOME/repos/sorin-ionescu/prezto $HOME/.zprezto
 fi
+
+# Source Prezto.
+if [[ -s "$HOME/.zprezto/init.zsh" ]]; then
+  source "$HOME/.zprezto/init.zsh"
+fi
+
+[ ! -e $HOME/.zlogin ] && ln -s $HOME/.zprezto/runcoms/zlogin $HOME/.zlogin
+[ ! -e $HOME/.zpreztorc ] && ln -s $HOME/.zprezto/runcoms/zpreztorc $HOME/.zpreztorc
+[ ! -e $HOME/.zshenv ] && ln -s $HOME/.zprezto/runcoms/zshenv $HOME/.zshenv
+[ ! -e $HOME/.zlogout ] && ln -s $HOME/.zprezto/runcoms/zlogout $HOME/.zlogout
+[ ! -e $HOME/.zprofile ] && ln -s $HOME/.zprezto/runcoms/zprofile $HOME/.zprofile
 
 # promt
 # if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
@@ -284,12 +297,10 @@ compinit -u
 
 
 ## zsh editor
-#
 autoload zed
 
 
 ## Prediction configuration
-#
 autoload predict-on
 #predict-off
 
@@ -310,7 +321,6 @@ DIRCOLORS_FILENAME=dircolors.256dark
 # DIRCOLORS_FILENAME=dircolors.ansi-dark
 
 [ -f ~/.zshrc.alias ] && source ~/.zshrc.alias
-[ -f ~/.zshrc.common ] && source ~/.zshrc.common
 
 case "${OSTYPE}" in
 # Mac(Unix)
@@ -325,24 +335,9 @@ linux*)
     ;;
 esac
 
-export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
+[ -f ~/.zshrc.common ] && source ~/.zshrc.common
+
 
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
-[ -f ~/.jabba/jabba.sh ] && source ~/.jabba/jabba.sh
-
-jabba use adopt@1.8.0-242
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-source <(kubectl completion zsh)
-
-export XDG_CONFIG_HOME=~/.config
-
-# nodebrew
-if [ ! -d $HOME/.nodebrew ]; then
-  curl -L git.io/nodebrew | perl - setup
-fi
-export PATH=$HOME/.nodebrew/current/bin:$PATH

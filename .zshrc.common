@@ -1,0 +1,27 @@
+export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
+
+JABBA_HOME=$HOME/.jabba
+JABBA_JDK_VERSION=adopt@1.8.0-242
+
+if [ ! -d $JABBA_HOME ]; then
+  curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
+fi
+source $JABBA_HOME/jabba.sh
+if [ ! -f .jabba/jdk/$JABBA_JDK_VERSION ]; then
+  jabba install $JABBA_JDK_VERSION 
+fi
+jabba use $JABBA_JDK_VERSION 
+
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+source <(kubectl completion zsh)
+
+# vim
+
+export XDG_CONFIG_HOME=~/.config
+
+# nodebrew
+if [ ! -d $HOME/.nodebrew ]; then
+  curl -L git.io/nodebrew | perl - setup
+fi
+export PATH=$HOME/.nodebrew/current/bin:$PATH

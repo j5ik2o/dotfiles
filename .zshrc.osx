@@ -1,3 +1,15 @@
+if [ ! -e /usr/local/bin/brew ]; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+fi
+
+if [ ! -e $HOME/.brew-bundle-install ]; then
+  echo 'brew bundle install'
+  brew bundle install
+  touch .brew-bundle-install
+fi
+
+BREW_HOME=$(brew --prefix)
+
 # tmux
 #alias tmux='tmuxx'
 #alias tm='tmuxx'
@@ -5,7 +17,7 @@
 #alias tml='tmux list-window'
 
 export RSENSE_HOME="/usr/local/Cellar/rsense/0.3/libexec"
-[[ -f `brew --prefix`/etc/autojump.sh ]] && . `brew --prefix`/etc/autojump.sh
+[[ -f $BREW_HOME/etc/autojump.sh ]] && . $BREW_HOME/etc/autojump.sh
 
 export PATH=/usr/local/bin:$PATH
 
@@ -28,18 +40,21 @@ alias vim='nvim'
 #fi
 
 # man path
-MANPATH=/usr/local/man:$MANPATH
+MANPATH=$BREW_HOME/man:$MANPATH
 export MANPATH
-INFOPATH=/usr/local/info:$INFOPATH
+INFOPATH=$BREW_HOME/info:$INFOPATH
 export INFOPATH
 
 # Ruby
-if [ -e $HOME/.rbenv ]; then
-  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
-  eval "$(rbenv init - zsh)"
-  export PATH=$HOME/.rbenv/bin:$PATH
-  export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
+if [ ! -d $HOME/.rbenv/versions/2.7.1 ]; then
+  rbenv install 2.7.1
+  rbenv local 2.7.1
 fi
+
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
+eval "$(rbenv init - zsh)"
+export PATH=$HOME/.rbenv/bin:$PATH
+export REFE_DATA_DIR=/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/share/refe
 
 
 # golang
@@ -56,22 +71,20 @@ if command -v pyenv 1>/dev/null 2>&1; then
 fi
 
 if [ -e /usr/local/Caskroom/google-cloud-sdk ]; then
-  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc'
-  source '/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc'
+  source "$BREW_HOME/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
+  source "$BREW_HOME/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
 fi
 
 export PATH=$HOME/bin:$PATH
-export PATH="/usr/local/opt/gettext/bin:$PATH"
-export PATH="/usr/local/opt/protobuf@2.5/bin:$PATH"
+export PATH="$BREW_HOME/opt/gettext/bin:$PATH"
+export PATH="$BREW_HOME/opt/protobuf@2.5/bin:$PATH"
 
 export PATH=$HOME/.cabal/bin:$PATH
-export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+export PATH="$BREW_HOME/opt/mysql@5.6/bin:$PATH"
 
 if [ -e $HOME/.cargo ]; then
-source $HOME/.cargo/env
+  source $HOME/.cargo/env
 fi
 
 export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled"
-
-export PATH=$HOME/.nodebrew/current/bin:$PATH
 
