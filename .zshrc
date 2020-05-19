@@ -1,3 +1,10 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
 if [ ~/.zshrc -nt ~/.zshrc.zwc ]; then
   zcompile ~/.zshrc
 fi
@@ -332,12 +339,22 @@ darwin*)
 linux*)
     [ -d ~/.dircolors ] && eval $(dircolors ~/.dircolors/$DIRCOLORS_FILENAME)
     [ -f ~/.zshrc.linux ] && source ~/.zshrc.linux
+    if [ "$(uname -r | sed -n 's/.*\( *Microsoft *\).*/\1/p')" = "Microsoft" ]; then
+        [ -f ~/.zshrc.wsl2 ] && source ~/.zshrc.wsl2
+    fi
     ;;
 esac
 
 [ -f ~/.zshrc.common ] && source ~/.zshrc.common
 
-
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
+
+[ -s "/home/j5ik2o/.jabba/jabba.sh" ] && source "/home/j5ik2o/.jabba/jabba.sh"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+(( ! ${+functions[p10k]} )) || p10k finalize
+
+source $HOME/.cargo/env

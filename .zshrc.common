@@ -6,15 +6,20 @@ JABBA_JDK_VERSION=adopt@1.8.0-242
 if [ ! -d $JABBA_HOME ]; then
   curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
 fi
+
 source $JABBA_HOME/jabba.sh
+
 if [ ! -f .jabba/jdk/$JABBA_JDK_VERSION ]; then
   jabba install $JABBA_JDK_VERSION 
 fi
+
 jabba use $JABBA_JDK_VERSION 
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-source <(kubectl completion zsh)
+#if !(type "kubectl" > /dev/null 2>&1); then
+#   source <(kubectl completion zsh)
+#fi
 
 # vim
 

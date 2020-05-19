@@ -1,8 +1,8 @@
-[[plugins]]
- repo = 'Shougo/dein.vim'
+# [[plugins]]
+# repo = 'Shougo/dein.vim'
 
-[[plugins]]
-repo = 'Shougo/vimshell'
+# [[plugins]]
+# repo = 'Shougo/vimshell'
 
 [[plugins]]
 repo = 'Shougo/vimproc.vim'

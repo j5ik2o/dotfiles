@@ -5,13 +5,18 @@ export LSCOLORS=ExFxCxDxBxegedabagacad
 
 alias ls='ls -alh --color'
 
-# nvm
-if [[ -f ~/.nvm/nvm.sh ]]; then
-    . ~/.nvm/nvm.sh
-    wait
-    nvm use v0.11.12 > /dev/null
+if [[ -f ~/.rbenv ]]; then
+    export PATH=$HOME/.rbenv/bin:$PATH
+    eval "$(rbenv init -)"
 fi
 
-export PATH=$HOME/.rbenv/bin:$PATH
-eval "$(rbenv init -)"
+LINUX_BREW_HOME="/home/linuxbrew"
+export PATH="$LINUX_BREW_HOME/.linuxbrew/bin:$PATH"
+export PATH="$LINUX_BREW_HOME/.linuxbrew/sbin:$PATH"
 
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+
+(( ! ${+functions[p10k]} )) || p10k finalize
+
+alias vi='nvim'
+alias vim='nvim'
