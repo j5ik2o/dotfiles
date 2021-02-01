@@ -21,5 +21,3 @@ for FILE in ${DOT_FILES_SBT[@]}; do
 done
 
 for FILE in ${DOT_FILES_OTHER[@]}; do 
-    [ ! -f $HOME/$file ] && ln -s ${CURRENT_DIR}/$file ${HOME}/$FILE && echo "link ${CURRENT_DIR}/${FILE} -> ${HOME}/${FILE}"
-done
