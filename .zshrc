@@ -23,6 +23,7 @@ zplug "zsh-users/zsh-autosuggestions"
 zplug "zsh-users/zsh-syntax-highlighting"
 zplug "zsh-users/zsh-completions"
 
+
 zplug "romkatv/powerlevel10k", as:theme, depth:1
 
 # zplug "b4b4r07/enhancd", use:init.sh
@@ -324,8 +325,8 @@ alias where="command -v"
 
 export LS_COLORS="no=00:fi=00:di=01;36:ln=01;34"
 
-DIRCOLORS_FILENAME=dircolors.256dark
-# DIRCOLORS_FILENAME=dircolors.ansi-dark
+# DIRCOLORS_FILENAME=dircolors.256dark
+DIRCOLORS_FILENAME=dircolors.ansi-dark
 
 [ -f ~/.zshrc.alias ] && source ~/.zshrc.alias
 
@@ -350,11 +351,12 @@ esac
 ## local固有設定
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 
-
-[ -s "/home/j5ik2o/.jabba/jabba.sh" ] && source "/home/j5ik2o/.jabba/jabba.sh"
+[ -s "$HOME/.jabba/jabba.sh" ] && source "$HOME/.jabba/jabba.sh"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-(( ! ${+functions[p10k]} )) || p10k finalize
+# (( ! ${+functions[p10k]} )) || p10k finalize
 
 source $HOME/.cargo/env
+
+

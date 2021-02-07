@@ -1,3 +1,4 @@
+export AWS_REGION=ap-northeast-1
 export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
 JABBA_HOME=$HOME/.jabba
@@ -14,8 +15,6 @@ if [ ! -f .jabba/jdk/$JABBA_JDK_VERSION ]; then
 fi
 
 jabba use $JABBA_JDK_VERSION 
-
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 #if !(type "kubectl" > /dev/null 2>&1); then
 #   source <(kubectl completion zsh)
