@@ -24,8 +24,6 @@ repo = 'vim-scripts/Align'
 [[plugins]]
 repo = 'pangloss/vim-javascript'
 
-[[plugins]]
-repo = 'LeafCage/yankround.vim'
 
 # [[plugins]]
 # repo = 'buftabs'

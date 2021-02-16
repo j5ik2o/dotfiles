@@ -1,9 +1,9 @@
 filetype off
-filetype plugin off
-set runtimepath+=$GOROOT/misc/vim
-filetype plugin on
 
-exe "set runtimepath+=".globpath($GOPATH, "src/github.com/nsf/gocode/vim")
+" filetype plugin off
+" set runtimepath+=$GOROOT/misc/vim
+" filetype plugin on
+" exe "set runtimepath+=".globpath($GOPATH, "src/github.com/nsf/gocode/vim")
 
 " buftabs.vim
 " :ls
@@ -69,14 +69,14 @@ nnoremap <silent> [unite]m  :<C-u>Unite -no-split file_mru<CR>
 nnoremap <silent> [unite]d  :<C-u>UniteWithBufferDir -no-split file<CR>
 
 " yankround.vim
-nmap p <Plug>(yankround-p)
-nmap P <Plug>(yankround-P)
-nmap gp <Plug>(yankround-gp)
-nmap gP <Plug>(yankround-gP)
-nmap <C-p> <Plug>(yankround-prev)
-nmap <C-n> <Plug>(yankround-next)
+" nmap p <Plug>(yankround-p)
+" nmap P <Plug>(yankround-P)
+" nmap gp <Plug>(yankround-gp)
+" nmap gP <Plug>(yankround-gP)
+" nmap <C-p> <Plug>(yankround-prev)
+" nmap <C-n> <Plug>(yankround-next)
 
-nnoremap <silent>g<C-p> :<C-u>CtrlPYankRound<CR>
+" nnoremap <silent>g<C-p> :<C-u>CtrlPYankRound<CR>
 
 " vim-gitgutter
 let g:gitgutter_sign_added = '✚'
