@@ -14,7 +14,7 @@ LINUX_BREW_HOME="/home/linuxbrew"
 export PATH="$LINUX_BREW_HOME/.linuxbrew/bin:$PATH"
 export PATH="$LINUX_BREW_HOME/.linuxbrew/sbin:$PATH"
 
-eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
 (( ! ${+functions[p10k]} )) || p10k finalize
 

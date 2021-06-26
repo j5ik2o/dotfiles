@@ -2,7 +2,7 @@ export AWS_REGION=ap-northeast-1
 export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
 JABBA_HOME=$HOME/.jabba
-JABBA_JDK_VERSION=adopt@1.8.0-242
+JABBA_JDK_VERSION=adopt@1.8.0-292
 
 if [ ! -d $JABBA_HOME ]; then
   curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
@@ -30,24 +30,14 @@ if [ ! -d $HOME/.nodebrew ]; then
 fi
 export PATH=$HOME/.nodebrew/current/bin:$PATH
 
-start_minikube() {
-        minikube start --driver='virtualbox' --cpus=8 --disk-size='20gb'
+start-minikube() {
+        minikube start --driver=virtualbox --cpus=16 --memory=64g --disk-size=50g
 }
-eval export PATH="/Users/j5ik2o/.pyenv/shims:${PATH}"
-export PYENV_SHELL=zsh
-source '/usr/local/Cellar/pyenv/1.2.22/libexec/../completions/pyenv.zsh'
-command pyenv rehash 2>/dev/null
-pyenv() {
-  local command
-  command="${1:-}"
-  if [ "$#" -gt 0 ]; then
-    shift
-  fi
 
-  case "$command" in
-  rehash|shell)
-    eval "$(pyenv "sh-$command" "$@")";;
-  *)
-    command pyenv "$command" "$@";;
-  esac
+create-docker-machine() {
+        docker-machine create --driver "virtualbox" --virtualbox-no-vtx-check --virtualbox-cpu-count "16" --virtualbox-memory "8096" --virtualbox-disk-size "40000" default
+}
+
+create-dinghy() {
+        dinghy create --provider virtualbox --cpus 16 --memory 8096 --disk 40000
 }

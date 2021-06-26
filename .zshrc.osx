@@ -8,7 +8,7 @@ if [ ! -e $HOME/.brew-bundle-install ]; then
   touch .brew-bundle-install
 fi
 
-BREW_HOME=$(brew --prefix)
+BREW_HOME="$(brew --prefix)"
 
 # tmux
 #alias tmux='tmuxx'
@@ -81,10 +81,11 @@ export PATH="$BREW_HOME/opt/protobuf@2.5/bin:$PATH"
 
 export PATH=$HOME/.cabal/bin:$PATH
 export PATH="$BREW_HOME/opt/mysql@5.6/bin:$PATH"
+# export PATH="/opt/gnupg-2.2.7/bin:$PATH"
 
 if [ -e $HOME/.cargo ]; then
   source $HOME/.cargo/env
 fi
 
-export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled"
+export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled -XX:ReservedCodeCacheSize=1000m"
 
