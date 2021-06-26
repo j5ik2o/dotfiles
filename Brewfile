@@ -1,18 +1,6 @@
-tap "grpc/grpc"
-tap "homebrew/bundle"
-tap "homebrew/cask"
-tap "homebrew/core"
-tap "sambadevi/powerlevel9k"
-tap "scalacenter/bloop"
-tap "sl1pm4t/k2tf", "https://github.com/sl1pm4t/k2tf.git"
-tap "weaveworks/tap"
-brew "ansible"
-brew "aws-iam-authenticator"
 brew "awscli"
 brew "circleci"
 brew "coreutils"
-brew "docker", link: false
-brew "docker-compose", link: false
 brew "gflags"
 brew "git"
 brew "gnupg"

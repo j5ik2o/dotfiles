@@ -12,17 +12,17 @@ DOT_FILES_OTHER=(.tmux.conf .dircolors)
     
 cd $HOME 
 
-# for FILE in ${DOT_FILES_GIT[@]}; do 
-#   [ -f $HOME/$FILE ] && rm -f $HOME/$FILE
-#   ln -s ${CURRENT_DIR}/$FILE .
-#   echo "link ${CURRENT_DIR}/${FILE} -> ${HOME}/${FILE}"
-# done
+for FILE in ${DOT_FILES_GIT[@]}; do 
+  [ -f $HOME/$FILE ] && rm -f $HOME/$FILE
+  ln -s ${CURRENT_DIR}/$FILE .
+  echo "link ${CURRENT_DIR}/${FILE} -> ${HOME}/${FILE}"
+done
 
-# for FILE in ${DOT_FILES_ZSH[@]}; do 
-#   [ -f $HOME/$FILE ] && rm -f $HOME/$FILE
-#   ln -s ${CURRENT_DIR}/$FILE .
-#   echo "link ${CURRENT_DIR}/${FILE} -> ${HOME}/${FILE}"
-# done
+for FILE in ${DOT_FILES_ZSH[@]}; do 
+  [ -f $HOME/$FILE ] && rm -f $HOME/$FILE
+  ln -s ${CURRENT_DIR}/$FILE .
+  echo "link ${CURRENT_DIR}/${FILE} -> ${HOME}/${FILE}"
+done
 
 for FILE in ${DOT_FILES_VIM[@]}; do 
    [ -f $HOME/$FILE ] && rm -f $HOME/$FILE
