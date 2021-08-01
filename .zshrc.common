@@ -1,34 +1,7 @@
 export AWS_REGION=ap-northeast-1
 export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
-JABBA_HOME=$HOME/.jabba
-JABBA_JDK_VERSION=adopt@1.8.0-292
-
-if [ ! -d $JABBA_HOME ]; then
-  curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
-fi
-
-source $JABBA_HOME/jabba.sh
-
-if [ ! -f .jabba/jdk/$JABBA_JDK_VERSION ]; then
-  jabba install $JABBA_JDK_VERSION 
-fi
-
-jabba use $JABBA_JDK_VERSION 
-
-#if !(type "kubectl" > /dev/null 2>&1); then
-#   source <(kubectl completion zsh)
-#fi
-
-# vim
-
 export XDG_CONFIG_HOME=~/.config
-
-# nodebrew
-if [ ! -d $HOME/.nodebrew ]; then
-  curl -L git.io/nodebrew | perl - setup
-fi
-export PATH=$HOME/.nodebrew/current/bin:$PATH
 
 start-minikube() {
         minikube start --driver=virtualbox --cpus=16 --memory=64g --disk-size=50g
