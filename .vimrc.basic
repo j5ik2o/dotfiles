@@ -7,7 +7,6 @@ set nocompatible
 
 " 編集中でも他のファイルを開けるようにする
 set hidden
-
 " バックスペースでなんでも消せるように
 set backspace=indent,eol,start
 
@@ -124,3 +123,8 @@ nmap <Leader>un :undolist<CR>
 
 " ファイルタイプ判定をon
 filetype plugin on
+
+if executable('im-select')
+autocmd InsertLeave * :call system('im-select com.apple.keylayout.ABC')
+autocmd CmdlineLeave * :call system('im-select com.apple.keylayout.ABC')
+endif
