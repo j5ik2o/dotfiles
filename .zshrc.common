@@ -3,7 +3,6 @@ export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
 export XDG_CONFIG_HOME=~/.config
 
-. $(brew --prefix asdf)/asdf.sh
 
 start-minikube() {
         minikube start --driver=virtualbox --cpus=16 --memory=64g --disk-size=50g
