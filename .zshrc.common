@@ -3,30 +3,10 @@ export PATH="/usr/local/gnupg-2.2/bin:$HOME/.cargo/bin:$PATH"
 
 export XDG_CONFIG_HOME=~/.config
 
+. $(brew --prefix asdf)/libexec/asdf.sh
 
 start-minikube() {
         minikube start --driver=virtualbox --cpus=16 --memory=64g --disk-size=50g
 }
 
-create-docker-machine() {
-        docker-machine create --driver "virtualbox" --virtualbox-no-vtx-check --virtualbox-cpu-count "16" --virtualbox-memory "8096" --virtualbox-disk-size "40000" default
-}
-
-create-dinghy() {
-        dinghy create --provider virtualbox --cpus 16 --memory 8096 --disk 40000
-}
-
-asdf_install_java() {
-  VERSION=$1
-  [[ ! -d ~/.asdf/installs/java/$VERSION ]] && asdf install java $VERSION
-}
-
-asdf_install_java adoptopenjdk-8.0.292+10
-asdf_install_java adoptopenjdk-9.0.0+181
-asdf_install_java adoptopenjdk-11.0.11+9
-asdf_install_java adoptopenjdk-12.0.2+10.1
-asdf_install_java adoptopenjdk-13.0.2+8.1
-asdf_install_java adoptopenjdk-14.0.2+12
-asdf_install_java adoptopenjdk-15.0.2+7
-asdf_install_java adoptopenjdk-16.0.1+9
-
+export PROTOC=/Users/j5ik2o/.asdf/shims/protoc

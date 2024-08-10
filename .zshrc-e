@@ -357,14 +357,3 @@ POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
 
 [[ -f $HOME/.cargo ]] && source $HOME/.cargo/env
 
-[ -f "/Users/j5ik2o/.ghcup/env" ] && source "/Users/j5ik2o/.ghcup/env" # ghcup-env
-
-[[ -s "/Users/j5ik2o/.gvm/scripts/gvm" ]] && source "/Users/j5ik2o/.gvm/scripts/gvm"
-
-# pnpm
-export PNPM_HOME="/Users/j5ik2o/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end

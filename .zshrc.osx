@@ -5,12 +5,37 @@ export PATH=/usr/local/bin:$PATH
 # osx alias
 alias pbc='pbcopy'
 
-# Terminal Colorの設定
-export CLICOLOR=1
-#export LSCOLORS=ExFxCxDxBxegedabagacad
-eval $(gdircolors ~/.dircolors)
+eval $(gdircolors ~/.dircolors/dircolors.256dark)
 
 . $(brew --prefix asdf)/asdf.sh
 
-export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:+CMSClassUnloadingEnabled -XX:ReservedCodeCacheSize=1000m"
+export SBT_OPTS="-Xms8g -Xmx12g -XX:MaxMetaspaceSize=1g -XX:ReservedCodeCacheSize=1000m"
+#export JAVA_OPTS="--enable-preview"
+
+export PATH="$HOME/.gobrew/current/bin:$HOME/.gobrew/bin:$PATH"
+export GOROOT="$HOME/.gobrew/current/go"
+export GOPATH=$HOME/go
+export PATH=$GOPATH/bin:$PATH
+
+export PATH=/opt/homebrew/Cellar/llvm@12/12.0.1_1/bin:$PATH
+export PATH="$HOME/.cabal/bin:$HOME/.ghcup/bin:$PATH"
+export PATH=$HOME/.local/bin:$PATH
+export PATH=$HOME/.dotnet:$PATH
+
+export C_INCLUDE_PATH="$(xcrun --show-sdk-path)/usr/include/ffi"
+
+[[ ! -r $HOME/.opam/opam-init/init.zsh ]] || source $HOME/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
+
+source "/opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
+
+export PATH="$PATH:/opt/flutter/bin"
+
+export DOTNET_ROOT=/usr/local/share/dotnet
+
+export PATH="$PATH:$DOTNET_ROOT"
+
+cat << \EOF >> ~/.zprofile
+# .NET Core SDK tools
+export PATH="$PATH:/Users/j5ik2o/.dotnet/tools"
+EOF
 

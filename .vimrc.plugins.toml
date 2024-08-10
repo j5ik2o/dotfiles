@@ -21,6 +21,9 @@ on_ft = 'toml'
 [[plugins]]
 repo = 'tpope/vim-surround'
 
+[[plugins]]
+repo = 'wakatime/vim-wakatime'
+
 # https://qiita.com/kawaz/items/ee725f6214f91337b42b
 # [[plugins]] # カラースキーマ
 # repo = 'w0ng/vim-hybrid'
