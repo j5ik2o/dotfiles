@@ -251,8 +251,7 @@
       # find → fd
       find = "fd";
 
-      # cd → zoxide
-      cd = "z";
+      # zoxide のエイリアス (cdはzoxideが自動設定するため削除)
 
       # 確認付き操作
       rm = "rm -i";
