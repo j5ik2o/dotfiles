@@ -119,21 +119,21 @@
 
     # Google Cloud SDK 補完
     [plugins.gcloud-completion]
-    inline = '''
+    inline = """
     if [[ -n "$CLOUDSDK_ROOT_DIR" ]]; then
       source "$CLOUDSDK_ROOT_DIR/completion.zsh.inc" 2>/dev/null
     elif [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]]; then
       source "$HOME/google-cloud-sdk/completion.zsh.inc"
     fi
-    '''
+    """
 
     # Docker 補完
     [plugins.docker-completion]
-    inline = '''
+    inline = """
     if command -v docker &> /dev/null; then
       eval "$(docker completion zsh 2>/dev/null)"
     fi
-    '''
+    """
 
     # ============================================================
     # Prompt & Tools (最後に読み込み)
