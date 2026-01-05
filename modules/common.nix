@@ -71,6 +71,8 @@
 
     # AI ツール
     claude-code
+    codex              # OpenAI Codex CLI
+    gemini-cli         # Google Gemini CLI
 
     # ============================================================
     # 言語ランタイム (mise から移行)
@@ -98,6 +100,9 @@
 
     # Ruby
     ruby_3_3
+
+    # Rust (rustup で toolchain 管理)
+    rustup
 
     # Zig
     zig
