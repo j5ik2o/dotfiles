@@ -6,6 +6,11 @@
   # macOS のシステム設定を Nix で宣言的に管理
   # ============================================================
 
+  # unfree パッケージの許可 (claude-code など)
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+    "claude-code"
+  ];
+
   # Nix 設定
   nix = {
     settings = {
