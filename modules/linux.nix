@@ -1,8 +1,13 @@
 { config, pkgs, lib, username, ... }:
 
+let
+  # WSL 検出
+  isWSL = builtins.pathExists /proc/sys/fs/binfmt_misc/WSLInterop;
+in
 {
   # ============================================================
   # Linux 固有の Home Manager 設定
+  # WSL の場合は一部設定を上書き
   # ============================================================
 
   # home.homeDirectory は flake.nix で設定
@@ -26,7 +31,8 @@
     nettools
     traceroute
 
-    # クリップボード (X11/Wayland)
+  ] ++ lib.optionals (!isWSL) [
+    # クリップボード (X11/Wayland) - WSL では Windows 側を使用
     xclip
     wl-clipboard
 
@@ -39,11 +45,12 @@
     lsof
     strace
 
-    # クラウドストレージ
+  ] ++ lib.optionals (!isWSL) [
+    # クラウドストレージ - WSL では Windows 側を使用
     dropbox
     dropbox-cli
 
-    # コンテナ
+    # コンテナ - WSL では Docker Desktop を使用
     docker-client
     docker-compose
     docker-buildx
@@ -65,13 +72,13 @@
   # Linux 固有のシェルエイリアス
   # ============================================================
   home.shellAliases = {
-    # クリップボード (X11)
-    pbcopy = "xclip -selection clipboard";
-    pbpaste = "xclip -selection clipboard -o";
+    # クリップボード
+    pbcopy = if isWSL then "clip.exe" else "xclip -selection clipboard";
+    pbpaste = if isWSL then "powershell.exe -command 'Get-Clipboard'" else "xclip -selection clipboard -o";
 
-    # クリップボード (Wayland)
-    wlcopy = "wl-copy";
-    wlpaste = "wl-paste";
+    # クリップボード (Wayland) - WSL では不要
+    wlcopy = if isWSL then "clip.exe" else "wl-copy";
+    wlpaste = if isWSL then "powershell.exe -command 'Get-Clipboard'" else "wl-paste";
 
     # systemd
     sc = "sudo systemctl";
@@ -105,8 +112,8 @@
     pinentryPackage = pkgs.pinentry-curses;
   };
 
-  # Dropbox (自動起動)
-  services.dropbox.enable = true;
+  # Dropbox (自動起動) - WSL では Windows 側を使用
+  services.dropbox.enable = !isWSL;
 
   # Syncthing (オプション)
   # services.syncthing.enable = true;
