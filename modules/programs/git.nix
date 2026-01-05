@@ -1,5 +1,9 @@
 { config, pkgs, lib, username, ... }:
 
+let
+  # WSL 検出
+  isWSL = builtins.pathExists /proc/sys/fs/binfmt_misc/WSLInterop;
+in
 {
   # ============================================================
   # Git 設定
@@ -63,7 +67,10 @@
 
       # 認証設定
       credential = {
-        helper = if pkgs.stdenv.isDarwin then "osxkeychain" else "cache --timeout=3600";
+        helper =
+          if pkgs.stdenv.isDarwin then "osxkeychain"
+          else if isWSL then "/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe"
+          else "cache --timeout=3600";
       };
 
       # URL 置換
