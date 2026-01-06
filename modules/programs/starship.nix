@@ -2,7 +2,7 @@
 
 {
   # ============================================================
-  # Starship プロンプト設定
+  # Starship プロンプト設定 (Agnoster風シンプルスタイル)
   # ============================================================
   programs.starship = {
     enable = true;
@@ -12,253 +12,128 @@
 
     settings = {
       # 全体設定
-      command_timeout = 1000;  # コマンドタイムアウト (ミリ秒)
+      command_timeout = 1000;
+      add_newline = false;
 
+      # Agnoster風シンプルフォーマット
       format = lib.concatStrings [
-        "[](fg:#1C3A5E)"
-        "$os"
+        "[](fg:#3B4252)"
         "$username"
-        "[](bg:#3B6EA5 fg:#1C3A5E)"
+        "$hostname"
+        "[](bg:#5E81AC fg:#3B4252)"
         "$directory"
-        "[](fg:#3B6EA5 bg:#5B9BD5)"
+        "[](fg:#5E81AC bg:#A3BE8C)"
         "$git_branch"
         "$git_status"
-        "[](fg:#5B9BD5 bg:#86BBD8)"
-        "$c"
-        "$rust"
-        "$golang"
-        "$nodejs"
-        "$python"
-        "$java"
-        "$scala"
-        "$kotlin"
-        "$lua"
-        "$zig"
-        "[](fg:#86BBD8 bg:#33658A)"
-        "$docker_context"
-        "$kubernetes"
-        "[](fg:#33658A bg:#2F4858)"
-        "$time"
-        "[ ](fg:#2F4858)"
-        "\n$character"
+        "[](fg:#A3BE8C bg:#EBCB8B)"
+        "$nix_shell"
+        "[](fg:#EBCB8B) "
+        "$character"
       ];
 
-      # 右プロンプト
+      # 右プロンプト（最小限）
       right_format = lib.concatStrings [
         "$cmd_duration"
         "$status"
-        "$jobs"
       ];
-
-      # OS アイコン
-      os = {
-        disabled = false;
-        style = "bg:#1C3A5E fg:#FFFFFF";
-        symbols = {
-          Macos = " ";
-          Linux = " ";
-          Ubuntu = " ";
-          Debian = " ";
-          Arch = " ";
-          NixOS = " ";
-          Windows = " ";
-        };
-      };
 
       # ユーザー名
       username = {
         show_always = true;
-        style_user = "bg:#1C3A5E fg:#FFFFFF";
-        style_root = "bg:#1C3A5E fg:#FF0000";
-        format = "[$user ]($style)";
+        style_user = "bg:#3B4252 fg:#D8DEE9";
+        style_root = "bg:#BF616A fg:#D8DEE9";
+        format = "[ $user]($style)";
+      };
+
+      # ホスト名
+      hostname = {
+        ssh_only = false;
+        style = "bg:#3B4252 fg:#D8DEE9";
+        format = "[@$hostname ]($style)";
       };
 
       # ディレクトリ
       directory = {
-        style = "bg:#3B6EA5 fg:#FFFFFF";
+        style = "bg:#5E81AC fg:#ECEFF4";
         format = "[ $path ]($style)";
         truncation_length = 3;
         truncation_symbol = "…/";
-        substitutions = {
-          "Documents" = "󰈙 ";
-          "Downloads" = " ";
-          "Music" = " ";
-          "Pictures" = " ";
-          "Projects" = " ";
-          "Developer" = " ";
-          "Sources" = " ";
-        };
+        # 読み取り専用マーカー
+        read_only = " 󰌾";
+        read_only_style = "bg:#5E81AC fg:#BF616A";
       };
 
       # Git ブランチ
       git_branch = {
-        symbol = "";
-        style = "bg:#5B9BD5 fg:#1C3A5E";
-        format = "[ $symbol $branch ]($style)";
+        symbol = " ";
+        style = "bg:#A3BE8C fg:#2E3440";
+        format = "[$symbol$branch ]($style)";
       };
 
-      # Git ステータス
+      # Git ステータス（シンプル）
       git_status = {
-        style = "bg:#5B9BD5 fg:#1C3A5E";
-        format = "[$all_status$ahead_behind ]($style)";
-        conflicted = " ";
-        ahead = "⇡\${count}";
-        behind = "⇣\${count}";
-        diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
-        up_to_date = " ";
-        untracked = "?\${count}";
-        stashed = " ";
-        modified = "!\${count}";
-        staged = "+\${count}";
-        renamed = "»\${count}";
-        deleted = "✘\${count}";
-      };
-
-      # 言語 - C
-      c = {
-        symbol = " ";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Rust
-      rust = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Go
-      golang = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Node.js
-      nodejs = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Python
-      python = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Java
-      java = {
-        symbol = " ";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Scala
-      scala = {
-        symbol = " ";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Kotlin
-      kotlin = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Lua
-      lua = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # 言語 - Zig
-      zig = {
-        symbol = "";
-        style = "bg:#86BBD8 fg:#1C3A5E";
-        format = "[ $symbol ($version) ]($style)";
-      };
-
-      # Docker
-      docker_context = {
-        symbol = "";
-        style = "bg:#33658A fg:#FFFFFF";
-        format = "[ $symbol $context ]($style)";
-        only_with_files = true;
-      };
-
-      # Kubernetes
-      kubernetes = {
-        symbol = "󱃾";
-        style = "bg:#33658A fg:#FFFFFF";
-        format = "[ $symbol $context ]($style)";
-        disabled = false;
-      };
-
-      # 時刻
-      time = {
-        disabled = false;
-        time_format = "%H:%M";
-        style = "bg:#2F4858 fg:#FFFFFF";
-        format = "[  $time ]($style)";
-      };
-
-      # コマンド実行時間
-      cmd_duration = {
-        min_time = 2000;
-        format = "took [$duration]($style) ";
-        style = "yellow";
-      };
-
-      # 終了ステータス
-      status = {
-        disabled = false;
-        format = "[$symbol$status]($style) ";
-        symbol = "✘ ";
-        success_symbol = "";
-        style = "red";
-      };
-
-      # バックグラウンドジョブ
-      jobs = {
-        symbol = "";
-        style = "blue";
-        number_threshold = 1;
-        format = "[$symbol$number]($style) ";
-      };
-
-      # プロンプト文字
-      character = {
-        success_symbol = "[❯](bold green)";
-        error_symbol = "[❯](bold red)";
-        vimcmd_symbol = "[❮](bold green)";
+        style = "bg:#A3BE8C fg:#2E3440";
+        format = "[$all_status$ahead_behind]($style)";
+        conflicted = "⚡";
+        ahead = "⇡";
+        behind = "⇣";
+        diverged = "⇕";
+        up_to_date = "";
+        untracked = "?";
+        stashed = "📦";
+        modified = "!";
+        staged = "+";
+        renamed = "»";
+        deleted = "✘";
       };
 
       # Nix シェル
       nix_shell = {
         disabled = false;
         symbol = " ";
-        format = "via [$symbol$state( ($name))]($style) ";
+        style = "bg:#EBCB8B fg:#2E3440";
+        format = "[$symbol$state]($style)";
       };
 
-      # AWS
-      aws = {
-        symbol = " ";
-        style = "yellow";
-        format = "on [$symbol$profile(($region))]($style) ";
+      # プロンプト文字
+      character = {
+        success_symbol = "[❯](bold #A3BE8C)";
+        error_symbol = "[❯](bold #BF616A)";
+        vimcmd_symbol = "[❮](bold #A3BE8C)";
       };
 
-      # Terraform
-      terraform = {
-        symbol = "󱁢 ";
-        style = "purple";
-        format = "via [$symbol$version]($style) ";
+      # コマンド実行時間（2秒以上のみ表示）
+      cmd_duration = {
+        min_time = 2000;
+        format = "[⏱ $duration]($style) ";
+        style = "fg:#EBCB8B";
       };
+
+      # 終了ステータス（エラー時のみ）
+      status = {
+        disabled = false;
+        format = "[✘ $status]($style) ";
+        style = "fg:#BF616A";
+      };
+
+      # 以下は無効化（シンプル化）
+      aws.disabled = true;
+      gcloud.disabled = true;
+      kubernetes.disabled = true;
+      docker_context.disabled = true;
+      time.disabled = true;
+
+      # 言語は全て無効化
+      c.disabled = true;
+      rust.disabled = true;
+      golang.disabled = true;
+      nodejs.disabled = true;
+      python.disabled = true;
+      java.disabled = true;
+      scala.disabled = true;
+      kotlin.disabled = true;
+      lua.disabled = true;
+      zig.disabled = true;
     };
   };
 }
