@@ -68,6 +68,7 @@
     procs
     tokei
     hyperfine
+    devbox            # Nix ベース開発環境
 
     # AI ツール
     claude-code
