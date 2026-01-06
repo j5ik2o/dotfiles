@@ -108,6 +108,9 @@
     # Zig
     zig
 
+    # Lean 4 (定理証明 / 関数型言語)
+    elan              # Lean バージョンマネージャ (rustup 相当)
+
     # Protocol Buffers
     protobuf
   ];
