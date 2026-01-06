@@ -27,7 +27,9 @@
         "$git_status"
         "[](fg:#A3BE8C bg:#EBCB8B)"
         "$nix_shell"
-        "[](fg:#EBCB8B) "
+        "\${env_var.DEVBOX_PROJECT_ROOT}"
+        "[](fg:#EBCB8B)"
+        "\n"
         "$character"
       ];
 
@@ -56,8 +58,8 @@
       directory = {
         style = "bg:#5E81AC fg:#ECEFF4";
         format = "[ $path ]($style)";
-        truncation_length = 3;
-        truncation_symbol = "…/";
+        truncate_to_repo = false;
+        truncation_length = 0;
         # 読み取り専用マーカー
         read_only = " 󰌾";
         read_only_style = "bg:#5E81AC fg:#BF616A";
@@ -93,6 +95,15 @@
         symbol = " ";
         style = "bg:#EBCB8B fg:#2E3440";
         format = "[$symbol$state]($style)";
+      };
+
+      # Devbox シェル検出 (direnv経由の場合はDEVBOX_PROJECT_ROOTを使用)
+      env_var = {
+        DEVBOX_PROJECT_ROOT = {
+          symbol = "📦 ";
+          style = "bg:#EBCB8B fg:#2E3440";
+          format = "[$symbol devbox]($style)";
+        };
       };
 
       # プロンプト文字

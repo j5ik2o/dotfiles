@@ -139,6 +139,10 @@
     # Prompt & Tools (最後に読み込み)
     # ============================================================
 
+    # direnv (環境自動切り替え)
+    [plugins.direnv]
+    inline = 'eval "$(direnv hook zsh)"'
+
     # zoxide (スマート cd)
     [plugins.zoxide]
     inline = 'eval "$(zoxide init zsh)"'
@@ -182,8 +186,21 @@
         eval "$(sheldon source)"
       fi
 
-      # キーバインド (Emacs style)
-      bindkey -e
+      # キーバインド (Vi style)
+      bindkey -v
+
+      # Vi モードでのカーソル形状変更
+      function zle-keymap-select {
+        if [[ $KEYMAP == vicmd ]]; then
+          echo -ne '\e[2 q'  # Block cursor for normal mode
+        else
+          echo -ne '\e[6 q'  # Beam cursor for insert mode
+        fi
+      }
+      zle -N zle-keymap-select
+
+      # 起動時は insert mode
+      echo -ne '\e[6 q'
 
       # history-substring-search のキーバインド
       bindkey '^[[A' history-substring-search-up

@@ -7,7 +7,8 @@
   # ============================================================
   programs.direnv = {
     enable = true;
-    # enableZshIntegration/enableFishIntegration は自動で true
+    # Zsh は sheldon で初期化するため無効化
+    enableZshIntegration = false;
 
     # nix-direnv を使用 (キャッシュ機能付き)
     nix-direnv.enable = true;

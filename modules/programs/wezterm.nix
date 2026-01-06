@@ -40,6 +40,10 @@
       config.audible_bell = 'Disabled'
       config.exit_behavior = 'CloseOnCleanExit'
 
+      -- シェル統合を無効化（プロンプトマーカーの問題回避）
+      config.enable_kitty_keyboard = false
+      config.enable_csi_u_key_encoding = false
+
       return config
     '';
   };
