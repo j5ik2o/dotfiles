@@ -110,6 +110,7 @@
       "monitorcontrol"
       "cleanshot"           # スクリーンショット
       "angry-ip-scanner"
+      "tailscale"
 
       # コミュニケーション
       "slack"
