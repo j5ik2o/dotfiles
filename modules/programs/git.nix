@@ -281,9 +281,12 @@ in
         showIcons = true;
       };
       git = {
-        paging = {
-          colorArg = "always";
-          pager = "delta --dark --paging=never";
+        pagers = {
+          diff = "delta --dark --paging=never";
+          show = "delta --dark --paging=never";
+          log = "delta --dark --paging=never";
+          stash = "delta --dark --paging=never";
+          reflog = "delta --dark --paging=never";
         };
       };
     };
