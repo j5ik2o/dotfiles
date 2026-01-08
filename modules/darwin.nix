@@ -37,8 +37,15 @@
   home.sessionVariables = {
     # Homebrew (Apple Silicon)
     HOMEBREW_PREFIX = "/opt/homebrew";
-    # macOS 固有の PATH 追加
+    HOMEBREW_CELLAR = "/opt/homebrew/Cellar";
+    HOMEBREW_REPOSITORY = "/opt/homebrew";
   };
+
+  # Homebrew PATH を追加 (Apple Silicon)
+  home.sessionPath = [
+    "/opt/homebrew/bin"
+    "/opt/homebrew/sbin"
+  ];
 
   # ============================================================
   # macOS 固有のシェルエイリアス
