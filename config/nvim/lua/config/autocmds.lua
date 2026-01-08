@@ -42,15 +42,6 @@ autocmd("VimResized", {
   end,
 })
 
--- 特定のファイルタイプでスペルチェック有効
-autocmd("FileType", {
-  group = augroup("spell_check", { clear = true }),
-  pattern = { "gitcommit", "markdown" },
-  callback = function()
-    vim.opt_local.spell = true
-  end,
-})
-
 -- 保存時に末尾空白を削除
 autocmd("BufWritePre", {
   group = augroup("trim_whitespace", { clear = true }),
