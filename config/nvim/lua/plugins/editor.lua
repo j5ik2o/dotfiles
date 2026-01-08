@@ -162,10 +162,14 @@ return {
     dir = helper.get_plugin_path("toggleterm.nvim"),
     keys = {
       { [[<C-\>]], desc = "Toggle terminal" },
+      { [[<leader>tf]], "<cmd>ToggleTerm direction=float<CR>", desc = "Float terminal" },
+      { [[<leader>th]], "<cmd>ToggleTerm direction=horizontal<CR>", desc = "Horizontal terminal" },
+      { [[<leader>tv]], "<cmd>ToggleTerm direction=vertical<CR>", desc = "Vertical terminal" },
     },
     opts = {
       open_mapping = [[<C-\>]],
-      direction = "float",
+      direction = "horizontal",
+      size = 15,
       float_opts = { border = "rounded" },
     },
   },

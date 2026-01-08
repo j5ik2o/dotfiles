@@ -46,6 +46,11 @@ map("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 
 -- ターミナル
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+map("n", "<leader>ts", "<cmd>belowright split | terminal<CR>", { desc = "Terminal below (split)" })
+map("t", "<C-h>", "<C-\\><C-n><C-w>h", { desc = "Move to left window" })
+map("t", "<C-j>", "<C-\\><C-n><C-w>j", { desc = "Move to lower window" })
+map("t", "<C-k>", "<C-\\><C-n><C-w>k", { desc = "Move to upper window" })
+map("t", "<C-l>", "<C-\\><C-n><C-w>l", { desc = "Move to right window" })
 
 -- better up/down
 map({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
