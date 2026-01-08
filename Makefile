@@ -102,7 +102,7 @@ switch-hm:
 switch-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
-	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
+	sudo -E nix run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
 else
 	@echo "nix-darwin is only available on macOS"
 	@exit 1
