@@ -21,7 +21,7 @@
     gh
     ghq
     tig
-    lazygit
+    # lazygit は programs.lazygit で管理
     delta
 
     # シェルツール
@@ -153,5 +153,17 @@
   home.file.".codex/config.toml" = {
     source = "${self}/config/codex/config.toml";
     force = true;
+  };
+
+  # ============================================================
+  # lazygit 設定
+  # ============================================================
+  programs.lazygit = {
+    enable = true;
+    settings = {
+      gui = {
+        language = "ja";
+      };
+    };
   };
 }

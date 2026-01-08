@@ -81,17 +81,23 @@
       "arc"
 
       # 開発ツール
+      "jetbrains-toolbox"
       "visual-studio-code"
+      "zed"
+
       "cursor"
       "windsurf"
+      "antigravity"
+
       "iterm2"
       "warp"
       "wezterm"
       "ghostty"
+
       "docker-desktop"
-      "jetbrains-toolbox"
-      "github"              # GitHub Desktop
-      "coteditor"
+      "github"
+
+      "parallels"
 
       # AI / ML
       "lm-studio"
@@ -99,6 +105,7 @@
       "claude"
 
       # ユーティリティ
+      "coteditor"
       "raycast"
       "alfred"
       "1password"
@@ -110,7 +117,7 @@
       "monitorcontrol"
       "cleanshot"           # スクリーンショット
       "angry-ip-scanner"
-      "tailscale"
+      "tailscale-app"
 
       # コミュニケーション
       "slack"
