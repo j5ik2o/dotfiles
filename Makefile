@@ -25,7 +25,7 @@ else
   endif
 endif
 
-.PHONY: help check build build-hm build-darwin switch switch-hm switch-darwin \
+.PHONY: help check check-update build build-hm build-darwin switch switch-hm switch-darwin \
         clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply \
         plan plan-darwin plan-hm
 
@@ -46,6 +46,7 @@ help:
 	@echo ""
 	@echo "Other targets:"
 	@echo "  check          Run nix flake check"
+	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  test           Alias for check"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
@@ -72,6 +73,42 @@ endif
 
 check:
 	nix flake check --no-build
+
+check-update:
+	@tmpdir="$(CURDIR)/.tmp"; \
+	mkdir -p $$tmpdir; \
+	tmp=$$(mktemp -p $$tmpdir flake.lock.XXXXXX); \
+	outdir=$$(mktemp -d -p $$tmpdir nix-check-update.XXXXXX); \
+	nix flake update --output-lock-file $$tmp >/dev/null; \
+	if diff -q flake.lock $$tmp >/dev/null; then \
+		echo "No input updates."; \
+		rm -f $$tmp; rm -rf $$outdir; \
+		exit 0; \
+	fi; \
+	if [ "$(UNAME)" = "Darwin" ]; then \
+		echo "Building nix-darwin with updated inputs: $(DARWIN_CONFIG)"; \
+		nix build --reference-lock-file $$tmp .#darwinConfigurations.$(DARWIN_CONFIG).system --show-trace --out-link $$outdir/result >/dev/null; \
+		if command -v nvd >/dev/null; then \
+			nvd diff /run/current-system $$outdir/result; \
+		else \
+			nix store diff-closures /run/current-system $$outdir/result; \
+		fi; \
+	else \
+		echo "Building Home Manager with updated inputs: $(HM_CONFIG)"; \
+		nix build --reference-lock-file $$tmp .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace --out-link $$outdir/result >/dev/null; \
+		profile="$$HOME/.local/state/nix/profiles/home-manager"; \
+		if [ -e $$profile ]; then \
+			if command -v nvd >/dev/null; then \
+				nvd diff $$profile $$outdir/result; \
+			else \
+				nix store diff-closures $$profile $$outdir/result; \
+			fi; \
+		else \
+			echo "Home Manager profile not found: $$profile"; \
+			echo "Build result: $$outdir/result"; \
+		fi; \
+	fi; \
+	rm -f $$tmp; rm -rf $$outdir
 
 test: check
 
