@@ -88,6 +88,7 @@
       "iterm2"
       "warp"
       "wezterm"
+      "ghostty"
       "docker-desktop"
       "jetbrains-toolbox"
       "github"              # GitHub Desktop

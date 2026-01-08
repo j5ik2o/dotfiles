@@ -1,0 +1,62 @@
+{ config, pkgs, lib, ... }:
+
+{
+  # ============================================================
+  # Ghostty ターミナル設定
+  # ============================================================
+  programs.ghostty = {
+    enable = true;
+
+    # macOSではHomebrewでインストールするためパッケージは無効化
+    package = null;
+
+    # シェル統合
+    enableZshIntegration = true;
+    enableFishIntegration = true;
+    enableBashIntegration = true;
+
+    settings = {
+      # フォント
+      font-family = "JetBrainsMono Nerd Font";
+      font-family-bold = "JetBrainsMono Nerd Font";
+      font-family-italic = "JetBrainsMono Nerd Font";
+      font-family-bold-italic = "JetBrainsMono Nerd Font";
+      font-size = 14;
+
+      # テーマ
+      theme = "Adventure";
+
+      # ウィンドウ
+      window-padding-x = 4;
+      window-padding-y = 4;
+      window-decoration = true;
+      macos-titlebar-style = "tabs";
+
+      # カーソル
+      cursor-style = "block";
+      cursor-style-blink = true;
+
+      # マウス
+      mouse-hide-while-typing = true;
+
+      # コピー＆ペースト
+      copy-on-select = "clipboard";
+      clipboard-paste-protection = true;
+
+      # その他
+      confirm-close-surface = false;
+      shell-integration = "zsh";
+
+      # キーバインド
+      keybind = [
+        "super+c=copy_to_clipboard"
+        "super+v=paste_from_clipboard"
+        "super+t=new_tab"
+        "super+w=close_surface"
+        "super+n=new_window"
+        "super+shift+left=previous_tab"
+        "super+shift+right=next_tab"
+      ];
+    };
+  };
+}

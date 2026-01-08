@@ -5,6 +5,11 @@
   # macOS 固有の Home Manager 設定
   # ============================================================
 
+  imports = [
+    ./programs/wezterm.nix
+    ./programs/ghostty.nix
+  ];
+
   # home.homeDirectory は flake.nix で設定
 
   # ============================================================

@@ -124,7 +124,6 @@
     ./programs/starship.nix
     ./programs/neovim.nix
     ./programs/direnv.nix
-    ./programs/wezterm.nix
   ];
 
   # ============================================================
