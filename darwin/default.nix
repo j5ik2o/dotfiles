@@ -66,7 +66,6 @@
 
     # Homebrew taps
     taps = [
-      "homebrew/services"
     ];
 
     # CLI ツール (Nix にないもの)
