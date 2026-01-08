@@ -1,8 +1,99 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, nvimConfigPath, ... }:
 
-{
+let
+  # 設定ファイルのパス（flake.nixから渡される）
+  nvimLuaConfigPath = nvimConfigPath + "/lua/config";
+  nvimLuaPluginsPath = nvimConfigPath + "/lua/plugins";
+
+  # lazy-nix-helper をビルド
+  lazy-nix-helper = pkgs.vimUtils.buildVimPlugin {
+    name = "lazy-nix-helper.nvim";
+    src = pkgs.fetchFromGitHub {
+      owner = "b-src";
+      repo = "lazy-nix-helper.nvim";
+      rev = "v0.5.0";
+      sha256 = "sha256-Vn/3nBqITAJd+l7cPe7LSKBwc7k6Kc0rs7dXwqQVh10=";
+    };
+  };
+
+  # プラグインリスト
+  plugins = with pkgs.vimPlugins; [
+    # プラグインマネージャー
+    lazy-nvim
+
+    # カラースキーム
+    catppuccin-nvim
+
+    # ファイルエクスプローラー
+    neo-tree-nvim
+    nvim-web-devicons
+    nui-nvim
+
+    # ファジーファインダー
+    telescope-nvim
+    telescope-fzf-native-nvim
+    plenary-nvim
+
+    # シンタックスハイライト
+    nvim-treesitter.withAllGrammars
+
+    # LSP
+    nvim-lspconfig
+
+    # 補完
+    nvim-cmp
+    cmp-nvim-lsp
+    cmp-buffer
+    cmp-path
+    luasnip
+    cmp_luasnip
+    friendly-snippets
+
+    # Git
+    gitsigns-nvim
+
+    # UI
+    lualine-nvim
+    bufferline-nvim
+    indent-blankline-nvim
+    noice-nvim
+    nui-nvim
+
+    # エディタ機能
+    comment-nvim
+    nvim-autopairs
+    nvim-surround
+    which-key-nvim
+    flash-nvim
+    trouble-nvim
+    todo-comments-nvim
+
+    # ターミナル
+    toggleterm-nvim
+
+    # 通知
+    nvim-notify
+  ];
+
+  # プラグイン名をサニタイズ（Nixのpname prefixを除去）
+  sanitizeName = name:
+    let
+      # "vimPlugins." などのプレフィックスを除去
+      baseName = builtins.baseNameOf name;
+    in
+      builtins.replaceStrings [ "vimplugin-" ] [ "" ] baseName;
+
+  # プラグインテーブルを生成（Luaの形式）
+  pluginTable = lib.strings.concatMapStringsSep ",\n    "
+    (plugin: ''["${sanitizeName plugin.pname or plugin.name}"] = "${plugin}"'')
+    plugins;
+
+  # lazy-nix-helper のパス
+  lazyNixHelperPath = "${lazy-nix-helper}";
+
+in {
   # ============================================================
-  # Neovim 設定
+  # Neovim 設定 (lazy-nix-helper 方式)
   # ============================================================
   programs.neovim = {
     enable = true;
@@ -11,7 +102,7 @@
     vimAlias = true;
     vimdiffAlias = true;
 
-    # 追加パッケージ
+    # 外部ツール（LSP、フォーマッター等）
     extraPackages = with pkgs; [
       # LSP サーバー
       nil                     # Nix
@@ -43,295 +134,82 @@
       tree-sitter
     ];
 
-    # プラグイン設定
-    plugins = with pkgs.vimPlugins; [
-      # パッケージマネージャ (lazy.nvim は手動設定を推奨)
+    # プラグインは Nix でインストールするが、設定は lazy.nvim 経由
+    plugins = plugins ++ [ lazy-nix-helper ];
 
-      # カラースキーム
-      {
-        plugin = catppuccin-nvim;
-        type = "lua";
-        config = ''
-          require("catppuccin").setup({
-            flavour = "mocha",
-            transparent_background = true,
-            integrations = {
-              cmp = true,
-              gitsigns = true,
-              nvimtree = true,
-              telescope = true,
-              treesitter = true,
-              which_key = true,
-            },
-          })
-          vim.cmd.colorscheme "catppuccin"
-        '';
-      }
-
-      # ファイルエクスプローラー
-      {
-        plugin = nvim-tree-lua;
-        type = "lua";
-        config = ''
-          require("nvim-tree").setup({
-            view = { width = 30 },
-            renderer = { icons = { show = { git = true } } },
-            filters = { dotfiles = false },
-          })
-          vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { silent = true })
-        '';
-      }
-      nvim-web-devicons
-
-      # ファジーファインダー
-      {
-        plugin = telescope-nvim;
-        type = "lua";
-        config = ''
-          local telescope = require("telescope")
-          telescope.setup({
-            defaults = {
-              file_ignore_patterns = { "node_modules", ".git/" },
-              mappings = {
-                i = {
-                  ["<C-j>"] = "move_selection_next",
-                  ["<C-k>"] = "move_selection_previous",
-                },
-              },
-            },
-          })
-          local builtin = require("telescope.builtin")
-          vim.keymap.set("n", "<leader>ff", builtin.find_files, {})
-          vim.keymap.set("n", "<leader>fg", builtin.live_grep, {})
-          vim.keymap.set("n", "<leader>fb", builtin.buffers, {})
-          vim.keymap.set("n", "<leader>fh", builtin.help_tags, {})
-        '';
-      }
-      telescope-fzf-native-nvim
-      plenary-nvim
-
-      # シンタックスハイライト (Nix で grammars はプリビルド済み)
-      nvim-treesitter.withAllGrammars
-
-      # LSP (nvim-lspconfig は補助的に使用)
-      nvim-lspconfig
-
-      # 補完
-      {
-        plugin = nvim-cmp;
-        type = "lua";
-        config = ''
-          local cmp = require("cmp")
-          local luasnip = require("luasnip")
-
-          cmp.setup({
-            snippet = {
-              expand = function(args)
-                luasnip.lsp_expand(args.body)
-              end,
-            },
-            mapping = cmp.mapping.preset.insert({
-              ["<C-b>"] = cmp.mapping.scroll_docs(-4),
-              ["<C-f>"] = cmp.mapping.scroll_docs(4),
-              ["<C-Space>"] = cmp.mapping.complete(),
-              ["<C-e>"] = cmp.mapping.abort(),
-              ["<CR>"] = cmp.mapping.confirm({ select = true }),
-              ["<Tab>"] = cmp.mapping.select_next_item(),
-              ["<S-Tab>"] = cmp.mapping.select_prev_item(),
-            }),
-            sources = cmp.config.sources({
-              { name = "nvim_lsp" },
-              { name = "luasnip" },
-              { name = "buffer" },
-              { name = "path" },
-            }),
-          })
-        '';
-      }
-      cmp-nvim-lsp
-      cmp-buffer
-      cmp-path
-      luasnip
-      cmp_luasnip
-
-      # Git 統合
-      {
-        plugin = gitsigns-nvim;
-        type = "lua";
-        config = ''
-          require("gitsigns").setup({
-            signs = {
-              add = { text = "│" },
-              change = { text = "│" },
-              delete = { text = "_" },
-              topdelete = { text = "‾" },
-              changedelete = { text = "~" },
-            },
-          })
-        '';
-      }
-
-      # ステータスライン
-      {
-        plugin = lualine-nvim;
-        type = "lua";
-        config = ''
-          require("lualine").setup({
-            options = {
-              theme = "catppuccin",
-              component_separators = { left = "", right = "" },
-              section_separators = { left = "", right = "" },
-            },
-          })
-        '';
-      }
-
-      # インデントガイド
-      {
-        plugin = indent-blankline-nvim;
-        type = "lua";
-        config = ''
-          require("ibl").setup({
-            indent = { char = "│" },
-            scope = { enabled = true },
-          })
-        '';
-      }
-
-      # コメント
-      {
-        plugin = comment-nvim;
-        type = "lua";
-        config = ''require("Comment").setup()'';
-      }
-
-      # ペア括弧
-      {
-        plugin = nvim-autopairs;
-        type = "lua";
-        config = ''require("nvim-autopairs").setup({})'';
-      }
-
-      # サラウンド
-      {
-        plugin = nvim-surround;
-        type = "lua";
-        config = ''require("nvim-surround").setup({})'';
-      }
-
-      # キーマップヘルプ
-      {
-        plugin = which-key-nvim;
-        type = "lua";
-        config = ''require("which-key").setup({})'';
-      }
-
-      # ターミナル
-      {
-        plugin = toggleterm-nvim;
-        type = "lua";
-        config = ''
-          require("toggleterm").setup({
-            open_mapping = [[<C-\>]],
-            direction = "float",
-            float_opts = { border = "rounded" },
-          })
-        '';
-      }
-    ];
-
-    # 基本設定 (init.lua)
+    # 初期化スクリプト（プラグインテーブルを注入）
     extraLuaConfig = ''
-      -- リーダーキー
-      vim.g.mapleader = " "
-      vim.g.maplocalleader = " "
+      -- Nix が生成したプラグインテーブル
+      local nix_plugins = {
+        ${pluginTable}
+      }
 
-      -- 基本オプション
-      vim.opt.number = true
-      vim.opt.relativenumber = true
-      vim.opt.mouse = "a"
-      vim.opt.showmode = false
-      vim.opt.clipboard = "unnamedplus"
-      vim.opt.breakindent = true
-      vim.opt.undofile = true
-      vim.opt.ignorecase = true
-      vim.opt.smartcase = true
-      vim.opt.signcolumn = "yes"
-      vim.opt.updatetime = 250
-      vim.opt.timeoutlen = 300
-      vim.opt.splitright = true
-      vim.opt.splitbelow = true
-      vim.opt.list = true
-      vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
-      vim.opt.inccommand = "split"
-      vim.opt.cursorline = true
-      vim.opt.scrolloff = 10
+      -- lazy-nix-helper のパス
+      local lazy_nix_helper_path = "${lazyNixHelperPath}"
 
-      -- インデント
-      vim.opt.expandtab = true
-      vim.opt.shiftwidth = 2
-      vim.opt.tabstop = 2
-      vim.opt.softtabstop = 2
-      vim.opt.smartindent = true
+      -- lazy-nix-helper をロード
+      vim.opt.rtp:prepend(lazy_nix_helper_path)
 
-      -- 検索
-      vim.opt.hlsearch = true
-      vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
+      require("lazy-nix-helper").setup({
+        lazypath = nix_plugins["lazy.nvim"],
+        input_plugin_table = nix_plugins,
+      })
 
-      -- ウィンドウ移動
-      vim.keymap.set("n", "<C-h>", "<C-w><C-h>")
-      vim.keymap.set("n", "<C-l>", "<C-w><C-l>")
-      vim.keymap.set("n", "<C-j>", "<C-w><C-j>")
-      vim.keymap.set("n", "<C-k>", "<C-w><C-k>")
+      -- 設定ファイルを読み込み
+      require("config.options")
+      require("config.keymaps")
+      require("config.autocmds")
 
-      -- バッファ操作
-      vim.keymap.set("n", "<leader>bn", ":bnext<CR>", { silent = true })
-      vim.keymap.set("n", "<leader>bp", ":bprevious<CR>", { silent = true })
-      vim.keymap.set("n", "<leader>bd", ":bdelete<CR>", { silent = true })
+      -- lazy.nvim をセットアップ
+      local lazypath = require("lazy-nix-helper").lazypath()
+      vim.opt.rtp:prepend(lazypath)
 
-      -- 保存・終了
-      vim.keymap.set("n", "<leader>w", ":w<CR>", { silent = true })
-      vim.keymap.set("n", "<leader>q", ":q<CR>", { silent = true })
-      vim.keymap.set("n", "<leader>Q", ":qa!<CR>", { silent = true })
-
-      -- 行移動 (Visual mode)
-      vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { silent = true })
-      vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { silent = true })
-
-      -- 診断表示
-      vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
-      vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
-      vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float)
-
-      -- Treesitter (Nix でプリビルド済みなので有効化のみ)
-      vim.opt.foldmethod = "expr"
-      vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
-      vim.opt.foldenable = false  -- 起動時は折りたたまない
-
-      -- LSP 設定 (Neovim 0.11+ の新 API)
-      vim.lsp.config('nil_ls', {})
-      vim.lsp.config('lua_ls', {
-        settings = {
-          Lua = {
-            diagnostics = { globals = { 'vim' } },
+      require("lazy").setup({
+        spec = {
+          { import = "plugins" },
+        },
+        defaults = {
+          lazy = true,
+        },
+        install = {
+          -- Nix で管理するのでインストール無効
+          missing = false,
+        },
+        checker = {
+          -- アップデートチェック無効
+          enabled = false,
+        },
+        change_detection = {
+          enabled = false,
+        },
+        performance = {
+          rtp = {
+            disabled_plugins = {
+              "gzip",
+              "matchit",
+              "matchparen",
+              "netrwPlugin",
+              "tarPlugin",
+              "tohtml",
+              "tutor",
+              "zipPlugin",
+            },
           },
         },
       })
-      vim.lsp.config('ts_ls', {})
-      vim.lsp.config('rust_analyzer', {})
-      vim.lsp.config('gopls', {})
-      vim.lsp.config('pyright', {})
-
-      -- LSP を有効化
-      vim.lsp.enable({ 'nil_ls', 'lua_ls', 'ts_ls', 'rust_analyzer', 'gopls', 'pyright' })
-
-      -- LSP キーマッピング
-      vim.keymap.set("n", "gd", vim.lsp.buf.definition, {})
-      vim.keymap.set("n", "gr", vim.lsp.buf.references, {})
-      vim.keymap.set("n", "K", vim.lsp.buf.hover, {})
-      vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, {})
-      vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, {})
     '';
+  };
+
+  # Lua 設定ファイルをシンボリンク
+  xdg.configFile = {
+    "nvim/lua/config" = {
+      source = nvimLuaConfigPath;
+      recursive = true;
+    };
+    "nvim/lua/plugins" = {
+      source = nvimLuaPluginsPath;
+      recursive = true;
+    };
   };
 
   # ============================================================

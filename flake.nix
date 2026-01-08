@@ -29,6 +29,9 @@
       # home-manager 設定のパス
       hmConfigPath = ./modules;
 
+      # Neovim Lua 設定のパス
+      nvimConfigPath = ./config/nvim;
+
       # 共通の home-manager モジュール
       commonHomeModules = [
         "${hmConfigPath}/common.nix"
@@ -56,7 +59,7 @@
             }
           ];
           extraSpecialArgs = {
-            inherit inputs username;
+            inherit inputs username nvimConfigPath;
           } // extraSpecialArgs;
         };
 
@@ -116,7 +119,7 @@
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit inputs username;
+                  inherit inputs username nvimConfigPath;
                 };
               };
             }
@@ -142,7 +145,7 @@
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit inputs username;
+                  inherit inputs username nvimConfigPath;
                 };
               };
             }
