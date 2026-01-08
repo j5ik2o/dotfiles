@@ -62,13 +62,21 @@ git clone https://github.com/j5ik2o/dotfiles.git ~/Sources/dotfiles
 cd ~/Sources/dotfiles
 ```
 
-### 5. 適用
+### 5. 初回適用
 
 ```bash
-make switch
+make init-darwin
 ```
 
+初回は `init-darwin` を使います。これにより：
+- `/etc/nix/nix.conf`, `/etc/bashrc`, `/etc/zshrc` をバックアップ
+- nix-darwin を初回セットアップ
+
 初回は時間がかかります（Homebrew casks のダウンロードなど）。
+
+### 6. 再起動
+
+設定を完全に反映させるため、再起動またはログアウト→ログインしてください。
 
 ## 日常の使い方
 
@@ -105,6 +113,7 @@ make help
 
 | ターゲット | 説明 |
 |-----------|------|
+| `init-darwin` | **初回のみ**: nix-darwin 初回セットアップ |
 | `switch` | 設定を適用（macOS: darwin-rebuild, Linux: home-manager） |
 | `build` | ビルドのみ（dry-run） |
 | `update` | flake inputs を更新 |

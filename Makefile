@@ -119,9 +119,10 @@ endif
 init-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Preparing for first nix-darwin installation..."
-	-sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.before-nix-darwin 2>/dev/null || true
-	-sudo mv /etc/bashrc /etc/bashrc.before-nix-darwin 2>/dev/null || true
-	-sudo mv /etc/zshrc /etc/zshrc.before-nix-darwin 2>/dev/null || true
+	@# バックアップが存在しない場合のみ退避（再実行時に上書きしない）
+	@[ -f /etc/nix/nix.conf.before-nix-darwin ] || sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.before-nix-darwin 2>/dev/null || true
+	@[ -f /etc/bashrc.before-nix-darwin ] || sudo mv /etc/bashrc /etc/bashrc.before-nix-darwin 2>/dev/null || true
+	@[ -f /etc/zshrc.before-nix-darwin ] || sudo mv /etc/zshrc /etc/zshrc.before-nix-darwin 2>/dev/null || true
 	@echo "Running initial nix-darwin switch..."
 	sudo -E nix --extra-experimental-features 'nix-command flakes' run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
 else
