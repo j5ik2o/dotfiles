@@ -12,6 +12,10 @@
   xdg.configFile."sheldon/plugins.toml".text = ''
     shell = "zsh"
 
+    [defaults]
+    # SSH キーがなくても動作するよう HTTPS を使用
+    protocol = "https"
+
     [plugins]
 
     # ============================================================
