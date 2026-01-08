@@ -70,6 +70,7 @@
     hyperfine
     devbox            # Nix ベース開発環境
     chezmoi           # シークレット管理付き dotfiles
+    nvd               # Nix パッケージ差分表示
 
     # AI ツール
     claude-code

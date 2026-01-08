@@ -26,7 +26,8 @@ else
 endif
 
 .PHONY: help check build build-hm build-darwin switch switch-hm switch-darwin \
-        clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply
+        clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply \
+        plan plan-darwin plan-hm
 
 # デフォルトターゲット
 help:
@@ -36,6 +37,7 @@ help:
 	@echo "  build          Build all (darwin on macOS, hm on Linux)"
 	@echo "  build-hm       Build Home Manager configuration"
 	@echo "  build-darwin   Build nix-darwin configuration (macOS only)"
+	@echo "  plan           Build and show diff (like terraform plan)"
 	@echo ""
 	@echo "Switch targets:"
 	@echo "  switch         Apply all (darwin on macOS, hm on Linux)"
@@ -95,6 +97,37 @@ ifeq ($(UNAME),Darwin)
 	$(MAKE) build-darwin
 else
 	$(MAKE) build-hm
+endif
+
+# ============================================================
+# Plan (dry-run with diff)
+# ============================================================
+
+plan-darwin:
+ifeq ($(UNAME),Darwin)
+	@echo "Planning nix-darwin configuration: $(DARWIN_CONFIG)"
+	@nix build .#darwinConfigurations.$(DARWIN_CONFIG).system --show-trace
+	@if command -v nvd &> /dev/null; then \
+		nvd diff /run/current-system ./result; \
+	else \
+		echo "Install 'nvd' for detailed diff: nix profile install nixpkgs#nvd"; \
+		echo "Build successful. Run 'make switch' to apply."; \
+	fi
+else
+	@echo "nix-darwin is only available on macOS"
+	@exit 1
+endif
+
+plan-hm:
+	@echo "Planning Home Manager configuration: $(HM_CONFIG)"
+	@nix build .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace
+	@echo "Build successful. Run 'make switch' to apply."
+
+plan:
+ifeq ($(UNAME),Darwin)
+	$(MAKE) plan-darwin
+else
+	$(MAKE) plan-hm
 endif
 
 # ============================================================
@@ -178,14 +211,16 @@ sheldon-source:
 # ============================================================
 
 secrets-init:
-	@echo "Initializing chezmoi with local source..."
-	chezmoi init --source=$(CURDIR)/chezmoi
+	@if [ ! -d ~/.local/share/chezmoi ]; then \
+		echo "Initializing chezmoi with local source..."; \
+		chezmoi init --source=$(CURDIR)/chezmoi; \
+	fi
 
-secrets-diff:
+secrets-diff: secrets-init
 	@echo "Showing differences..."
 	chezmoi diff --source=$(CURDIR)/chezmoi
 
-secrets-apply:
+secrets-apply: secrets-init
 	@echo "Applying secrets from 1Password..."
 	chezmoi apply --source=$(CURDIR)/chezmoi
 

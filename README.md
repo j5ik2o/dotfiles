@@ -214,6 +214,7 @@ make help
 ## ドキュメント
 
 - [Neovim キーマップ](docs/neovim.md)
+- [chezmoi シークレット管理](docs/chezmoi.md)
 
 ## テーマ
 
