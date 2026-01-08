@@ -96,6 +96,8 @@
 
       # AI / ML
       "lm-studio"
+      "chatgpt"
+      "claude"
 
       # ユーティリティ
       "raycast"
