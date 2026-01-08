@@ -102,7 +102,7 @@ switch-hm:
 switch-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
-	sudo -E nix run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
+	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
 else
 	@echo "nix-darwin is only available on macOS"
 	@exit 1
@@ -113,6 +113,20 @@ ifeq ($(UNAME),Darwin)
 	$(MAKE) switch-darwin
 else
 	$(MAKE) switch-hm
+endif
+
+
+init-darwin:
+ifeq ($(UNAME),Darwin)
+	@echo "Preparing for first nix-darwin installation..."
+	-sudo mv /etc/nix/nix.conf /etc/nix/nix.conf.before-nix-darwin 2>/dev/null || true
+	-sudo mv /etc/bashrc /etc/bashrc.before-nix-darwin 2>/dev/null || true
+	-sudo mv /etc/zshrc /etc/zshrc.before-nix-darwin 2>/dev/null || true
+	@echo "Running initial nix-darwin switch..."
+	sudo -E nix --extra-experimental-features 'nix-command flakes' run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
+else
+	@echo "nix-darwin is only available on macOS"
+	@exit 1
 endif
 
 # ============================================================

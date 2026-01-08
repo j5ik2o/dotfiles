@@ -46,7 +46,6 @@ eval "$(/usr/local/bin/brew shellenv)"
 
 ```bash
 sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
-sudo echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 ```
 
 インストール後、シェルを再起動：
