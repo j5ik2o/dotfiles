@@ -13,6 +13,8 @@ dotfiles/
 │   └── programs/       # プログラム別設定
 ├── config/             # アプリ設定ファイル
 │   └── nvim/           # Neovim 設定
+├── chezmoi/            # シークレット管理 (1Password 連携)
+│   └── private_dot_ssh/ # SSH キーテンプレート
 ├── docs/               # ドキュメント
 │   └── neovim.md       # Neovim キーマップ
 └── Makefile            # ビルド・適用コマンド
@@ -105,6 +107,86 @@ make build
 make gc
 ```
 
+## シークレット管理 (chezmoi + 1Password)
+
+SSH キーなどのシークレットは chezmoi + 1Password CLI で管理します。
+
+### 仕組み
+
+- **Nix**: パッケージ、システム設定、アプリ設定を管理
+- **chezmoi**: シークレット（SSH キー、トークンなど）を管理
+- **1Password**: シークレットの安全な保管場所
+
+### 初回セットアップ
+
+#### 1. 1Password CLI の設定
+
+1Password アプリを開き、**設定 → 開発者 → 「1Password CLI と連携」** にチェック
+
+```bash
+# 動作確認
+op vault list
+```
+
+#### 2. SSH キーを 1Password に登録（初回のみ）
+
+既存の SSH キーがある場合：
+
+```bash
+op item create \
+  --category=Login \
+  --title="GitHub SSH" \
+  --vault="Private" \
+  "private_key[password]=$(cat ~/.ssh/id_rsa.github)" \
+  "public_key[text]=$(cat ~/.ssh/id_rsa.github.pub)"
+```
+
+#### 3. chezmoi でシークレットを適用
+
+```bash
+# 初期化
+make secrets-init
+
+# 差分確認
+make secrets-diff
+
+# 適用（1Password から SSH キーを取得）
+make secrets-apply
+```
+
+### 新しいマシンでのセットアップ
+
+```bash
+# 1. dotfiles を適用（chezmoi がインストールされる）
+make init-darwin
+
+# 2. 1Password アプリにログイン & CLI 連携を有効化
+
+# 3. シークレットを適用
+make secrets-init
+make secrets-apply
+```
+
+これで SSH キーが `~/.ssh/` に展開されます。
+
+### シークレットの追加
+
+新しいシークレットを追加する場合：
+
+1. 1Password にアイテムを追加
+2. `chezmoi/` 以下にテンプレートファイルを作成
+
+テンプレート例（`chezmoi/private_dot_ssh/private_id_rsa.github.tmpl`）：
+
+```
+{{ onepasswordRead "op://Private/GitHub SSH/private_key" }}
+```
+
+ファイル名の規則：
+- `private_` プレフィックス: パーミッション 0600
+- `dot_`: ファイル名の先頭を `.` に変換
+- `.tmpl` サフィックス: テンプレートとして処理
+
 ## Makefile ターゲット一覧
 
 ```bash
@@ -120,6 +202,9 @@ make help
 | `check` | flake check 実行 |
 | `gc` | Nix ガベージコレクション |
 | `fmt` | Nix ファイルをフォーマット |
+| `secrets-init` | chezmoi 初期化 |
+| `secrets-diff` | シークレットの差分表示 |
+| `secrets-apply` | シークレットを 1Password から適用 |
 
 ## 新しいマシンの追加
 

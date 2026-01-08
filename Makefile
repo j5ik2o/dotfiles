@@ -26,7 +26,7 @@ else
 endif
 
 .PHONY: help check build build-hm build-darwin switch switch-hm switch-darwin \
-        clean update fmt sheldon-lock gc test
+        clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply
 
 # デフォルトターゲット
 help:
@@ -50,6 +50,12 @@ help:
 	@echo "  clean          Remove build artifacts"
 	@echo "  gc             Run nix garbage collection"
 	@echo "  sheldon-lock   Lock sheldon plugins"
+	@echo ""
+	@echo "Secrets (chezmoi + 1Password):"
+	@echo "  secrets-init   Initialize chezmoi"
+	@echo "  secrets-diff   Show diff before applying"
+	@echo "  secrets-apply  Apply secrets from 1Password"
+	@echo "  secrets        Alias for secrets-apply"
 	@echo ""
 	@echo "Detected configuration:"
 	@echo "  System: $(UNAME) ($(ARCH))"
@@ -166,6 +172,24 @@ sheldon-lock:
 sheldon-source:
 	@echo "Sourcing sheldon plugins..."
 	sheldon source
+
+# ============================================================
+# Chezmoi (シークレット管理)
+# ============================================================
+
+secrets-init:
+	@echo "Initializing chezmoi with local source..."
+	chezmoi init --source=$(CURDIR)/chezmoi
+
+secrets-diff:
+	@echo "Showing differences..."
+	chezmoi diff --source=$(CURDIR)/chezmoi
+
+secrets-apply:
+	@echo "Applying secrets from 1Password..."
+	chezmoi apply --source=$(CURDIR)/chezmoi
+
+secrets: secrets-apply
 
 # ============================================================
 # Debug / Info

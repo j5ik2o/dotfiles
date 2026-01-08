@@ -1,0 +1,13 @@
+# Nix で管理しているファイルは chezmoi では無視
+.config/zsh
+.config/fish
+.config/starship.toml
+.config/git
+.config/sheldon
+.config/wezterm
+.config/ghostty
+.config/nvim
+.config/helix
+
+# OS 固有
+.DS_Store

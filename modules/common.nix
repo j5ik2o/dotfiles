@@ -69,6 +69,7 @@
     tokei
     hyperfine
     devbox            # Nix ベース開発環境
+    chezmoi           # シークレット管理付き dotfiles
 
     # AI ツール
     claude-code
