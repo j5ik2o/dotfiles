@@ -1,4 +1,4 @@
-{ config, pkgs, lib, username, ... }:
+{ config, pkgs, lib, username, self, ... }:
 
 {
   # ============================================================
@@ -150,5 +150,5 @@
   # ============================================================
   # Codex 設定
   # ============================================================
-  home.file.".codex/config.toml".source = ../config/codex/config.toml;
+  home.file.".codex/config.toml".source = "${self}/config/codex/config.toml";
 }

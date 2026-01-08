@@ -59,7 +59,7 @@
             }
           ];
           extraSpecialArgs = {
-            inherit inputs username nvimConfigPath;
+            inherit self inputs username nvimConfigPath;
           } // extraSpecialArgs;
         };
 
@@ -119,7 +119,7 @@
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit inputs username nvimConfigPath;
+                  inherit self inputs username nvimConfigPath;
                 };
               };
             }
@@ -145,7 +145,7 @@
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit inputs username nvimConfigPath;
+                  inherit self inputs username nvimConfigPath;
                 };
               };
             }
