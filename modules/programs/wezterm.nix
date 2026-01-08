@@ -31,7 +31,8 @@
 
       -- 外観
       config.window_background_opacity = 1
-      config.color_scheme = 'AdventureTime'
+      -- テーマ (Catppuccin Mocha で統一)
+      config.color_scheme = 'Catppuccin Mocha'
 
       -- タブ
       config.hide_tab_bar_if_only_one_tab = true
