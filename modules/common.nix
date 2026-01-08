@@ -150,5 +150,8 @@
   # ============================================================
   # Codex 設定
   # ============================================================
-  home.file.".codex/config.toml".source = "${self}/config/codex/config.toml";
+  home.file.".codex/config.toml" = {
+    source = "${self}/config/codex/config.toml";
+    force = true;
+  };
 }
