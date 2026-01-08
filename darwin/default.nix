@@ -175,9 +175,8 @@
 
     # キーボード設定
     NSGlobalDomain = {
-      # キーリピート設定
-      KeyRepeat = 6;
-      InitialKeyRepeat = 25;
+      # キーリピート設定 (macOSデフォルト: KeyRepeat=2, InitialKeyRepeat=15)
+      # 削除してOSデフォルトに任せる
 
       # その他
       AppleInterfaceStyle = "Dark";  # ダークモード
