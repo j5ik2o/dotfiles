@@ -31,6 +31,17 @@ return {
           map("<leader>cr", vim.lsp.buf.rename, "Rename")
           map("<leader>ca", vim.lsp.buf.code_action, "Code action")
           map("<leader>cf", function() vim.lsp.buf.format({ async = true }) end, "Format")
+
+          -- Inlay hints トグル
+          map("<leader>ci", function()
+            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+          end, "Toggle inlay hints")
+
+          -- Rust ファイルの場合、inlay hints をデフォルトで有効化
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.name == "rust_analyzer" then
+            vim.lsp.inlay_hint.enable(true)
+          end
         end,
       })
 
@@ -59,6 +70,33 @@ return {
 
       vim.lsp.config("rust_analyzer", {
         capabilities = capabilities,
+        settings = {
+          ["rust-analyzer"] = {
+            -- Clippy で保存時チェック
+            checkOnSave = {
+              command = "clippy",
+            },
+            -- Inlay hints
+            inlayHints = {
+              bindingModeHints = { enable = true },
+              chainingHints = { enable = true },
+              closingBraceHints = { enable = true },
+              closureReturnTypeHints = { enable = "always" },
+              lifetimeElisionHints = { enable = "always" },
+              parameterHints = { enable = true },
+              typeHints = { enable = true },
+            },
+            -- Cargo
+            cargo = {
+              allFeatures = true,
+              loadOutDirsFromCheck = true,
+            },
+            -- Proc macro
+            procMacro = {
+              enable = true,
+            },
+          },
+        },
       })
 
       vim.lsp.config("gopls", {

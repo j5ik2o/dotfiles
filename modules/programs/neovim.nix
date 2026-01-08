@@ -73,6 +73,9 @@ let
 
     # 通知
     nvim-notify
+
+    # Rust
+    crates-nvim
   ];
 
   # プラグイン名をサニタイズ（Nixのpname prefixを除去）

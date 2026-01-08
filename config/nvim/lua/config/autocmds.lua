@@ -52,3 +52,12 @@ autocmd("BufWritePre", {
     vim.fn.setpos(".", save_cursor)
   end,
 })
+
+-- Rust: 保存時に自動フォーマット
+autocmd("BufWritePre", {
+  group = augroup("rust_format", { clear = true }),
+  pattern = "*.rs",
+  callback = function()
+    vim.lsp.buf.format({ async = false })
+  end,
+})
