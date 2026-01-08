@@ -15,7 +15,7 @@ in
     settings = {
       # ユーザー情報
       user = {
-        name = "j5ik2o";
+        name = "Junichi Kato";
         email = "j5ik2o@gmail.com";  # 必要に応じて変更
       };
 
