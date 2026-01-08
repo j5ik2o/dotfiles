@@ -102,6 +102,7 @@
       "raycast"
       "alfred"
       "1password"
+      "1password-cli"
       "karabiner-elements"
       "rectangle"
       "alt-tab"
