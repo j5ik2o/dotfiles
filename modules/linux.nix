@@ -46,16 +46,13 @@ in
     strace
 
   ] ++ lib.optionals (!isWSL) [
-    # クラウドストレージ - WSL では Windows 側を使用
-    dropbox
-    dropbox-cli
-
     # コンテナ - WSL では Docker Desktop を使用
     docker-client
     docker-compose
     docker-buildx
     lazydocker
   ];
+  # 注: dropbox/dropbox-cli は unfree パッケージのため削除
 
   # ============================================================
   # Linux 固有の環境変数
@@ -109,11 +106,8 @@ in
   services.gpg-agent = {
     enable = true;
     enableSshSupport = true;
-    pinentryPackage = pkgs.pinentry-curses;
+    pinentry.package = pkgs.pinentry-curses;
   };
-
-  # Dropbox (自動起動) - WSL では Windows 側を使用
-  services.dropbox.enable = !isWSL;
 
   # Syncthing (オプション)
   # services.syncthing.enable = true;
