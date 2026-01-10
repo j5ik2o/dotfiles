@@ -34,9 +34,17 @@ return {
           ["P"] = {
             "toggle_preview",
             config = {
-              use_float = true,
+              use_float = false,
               use_image_nvim = true,
             },
+          },
+        },
+      },
+      open_files_do_not_replace_types = { "terminal", "trouble", "qf" },
+      default_component_configs = {
+        file_opened = {
+          window_picker = {
+            enable = false,
           },
         },
       },

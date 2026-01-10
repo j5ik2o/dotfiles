@@ -13,11 +13,16 @@ map("n", "<C-l>", "<C-w><C-l>", { desc = "Move to right window" })
 map("n", "<C-j>", "<C-w><C-j>", { desc = "Move to lower window" })
 map("n", "<C-k>", "<C-w><C-k>", { desc = "Move to upper window" })
 
--- ウィンドウリサイズ
-map("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height" })
-map("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
-map("n", "<C-Left>", "<cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
-map("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window width" })
+-- ウィンドウリサイズ (<leader>w + hjkl: 小, <leader>W + hjkl: 大)
+map("n", "<leader>wh", "<cmd>vertical resize -2<CR>", { desc = "Decrease window width" })
+map("n", "<leader>wl", "<cmd>vertical resize +2<CR>", { desc = "Increase window width" })
+map("n", "<leader>wj", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
+map("n", "<leader>wk", "<cmd>resize +2<CR>", { desc = "Increase window height" })
+map("n", "<leader>Wh", "<cmd>vertical resize -10<CR>", { desc = "Decrease window width (large)" })
+map("n", "<leader>Wl", "<cmd>vertical resize +10<CR>", { desc = "Increase window width (large)" })
+map("n", "<leader>Wj", "<cmd>resize -10<CR>", { desc = "Decrease window height (large)" })
+map("n", "<leader>Wk", "<cmd>resize +10<CR>", { desc = "Increase window height (large)" })
+map("n", "<leader>w=", "<C-w>=", { desc = "Equal window size" })
 
 -- バッファ操作
 map("n", "<leader>bn", "<cmd>bnext<CR>", { desc = "Next buffer" })
