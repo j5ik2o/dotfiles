@@ -16,8 +16,21 @@ let
     };
   };
 
+  # image.nvim をビルド (ターミナルで画像表示)
+  image-nvim = pkgs.vimUtils.buildVimPlugin {
+    pname = "image.nvim";
+    version = "2025-01-10";
+    src = pkgs.fetchFromGitHub {
+      owner = "3rd";
+      repo = "image.nvim";
+      rev = "446a8a5cc7a3eae3185ee0c697732c32a5547a0b";
+      sha256 = "sha256-EaDeY8aP41xHTw5epqYjaBqPYs6Z2DABzSaVOnG6D6I=";
+    };
+    nvimSkipModule = [ "minimal-setup" ];
+  };
+
   # プラグインリスト
-  plugins = with pkgs.vimPlugins; [
+  plugins = (with pkgs.vimPlugins; [
     # プラグインマネージャー
     lazy-nvim
 
@@ -76,6 +89,9 @@ let
 
     # Rust
     crates-nvim
+  ]) ++ [
+    # 画像表示
+    image-nvim
   ];
 
   # プラグイン名をサニタイズ（Nixのpname prefixを除去）
@@ -135,10 +151,16 @@ in {
       ripgrep
       fd
       tree-sitter
+
+      # 画像表示
+      imagemagick
     ];
 
     # プラグインは Nix でインストールするが、設定は lazy.nvim 経由
-    plugins = plugins ++ [ lazy-nix-helper ];
+    plugins = plugins ++ [ lazy-nix-helper image-nvim ];
+
+    # Lua パッケージ (image.nvim 用)
+    extraLuaPackages = ps: [ ps.magick ];
 
     # 初期化スクリプト（プラグインテーブルを注入）
     extraLuaConfig = ''

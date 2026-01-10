@@ -30,6 +30,15 @@ return {
       },
       window = {
         width = 30,
+        mappings = {
+          ["P"] = {
+            "toggle_preview",
+            config = {
+              use_float = true,
+              use_image_nvim = true,
+            },
+          },
+        },
       },
     },
   },
