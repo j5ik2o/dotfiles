@@ -210,7 +210,7 @@ init-linux:
 ifeq ($(UNAME),Linux)
 	@echo "Preparing for first home-manager installation on Linux..."
 	@echo "Running initial home-manager switch..."
-	nix --extra-experimental-features 'nix-command flakes' run home-manager/master -- switch --flake .#$(HM_CONFIG)
+	nix --extra-experimental-features nix-command --extra-experimental-features flakes run home-manager/master -- switch --flake .#$(HM_CONFIG)
 else
 	@echo "init-linux is only available on Linux"
 	@exit 1
