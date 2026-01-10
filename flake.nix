@@ -50,7 +50,12 @@
       # home-manager 設定を生成する関数
       mkHomeConfiguration = { system, modules, homeDirectory, extraSpecialArgs ? {} }:
         home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+              "claude-code"
+            ];
+          };
           modules = modules ++ [
             {
               home.username = username;
