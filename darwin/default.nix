@@ -132,6 +132,7 @@
       "notion"
       "obsidian"
       "mactex"              # LaTeX
+      "spotify"
     ];
 
     # Mac App Store アプリ
