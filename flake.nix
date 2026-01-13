@@ -17,8 +17,11 @@
 
   outputs = { self, nixpkgs, home-manager, nix-darwin, ... }@inputs:
     let
-      # ユーザー設定
-      username = "j5ik2o";
+      # サポートするユーザー一覧
+      users = [ "j5ik2o" "parallels" ];
+
+      # デフォルトユーザー (nix-darwin用)
+      defaultUser = "j5ik2o";
 
       # サポートするシステム
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -48,7 +51,7 @@
       ];
 
       # home-manager 設定を生成する関数
-      mkHomeConfiguration = { system, modules, homeDirectory, extraSpecialArgs ? {} }:
+      mkHomeConfiguration = { system, modules, username, homeDirectory, extraSpecialArgs ? {} }:
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
@@ -68,46 +71,49 @@
           } // extraSpecialArgs;
         };
 
+      # 全ユーザー × 全プラットフォームの homeConfigurations を生成
+      mkAllHomeConfigurations = nixpkgs.lib.foldl' (acc: user:
+        acc // {
+          "${user}@darwin-aarch64" = mkHomeConfiguration {
+            system = "aarch64-darwin";
+            modules = darwinHomeModules;
+            username = user;
+            homeDirectory = "/Users/${user}";
+          };
+          "${user}@darwin-x86_64" = mkHomeConfiguration {
+            system = "x86_64-darwin";
+            modules = darwinHomeModules;
+            username = user;
+            homeDirectory = "/Users/${user}";
+          };
+          "${user}@linux-x86_64" = mkHomeConfiguration {
+            system = "x86_64-linux";
+            modules = linuxHomeModules;
+            username = user;
+            homeDirectory = "/home/${user}";
+          };
+          "${user}@linux-aarch64" = mkHomeConfiguration {
+            system = "aarch64-linux";
+            modules = linuxHomeModules;
+            username = user;
+            homeDirectory = "/home/${user}";
+          };
+        }
+      ) {} users;
+
     in {
       # ============================================================
       # Home Manager Configurations (standalone)
+      # 全ユーザー × 全プラットフォームの組み合わせを自動生成
       # ============================================================
-      homeConfigurations = {
-        # macOS (Apple Silicon)
-        "${username}@darwin-aarch64" = mkHomeConfiguration {
-          system = "aarch64-darwin";
-          modules = darwinHomeModules;
-          homeDirectory = "/Users/${username}";
-        };
-
-        # macOS (Intel)
-        "${username}@darwin-x86_64" = mkHomeConfiguration {
-          system = "x86_64-darwin";
-          modules = darwinHomeModules;
-          homeDirectory = "/Users/${username}";
-        };
-
-        # Linux (x86_64)
-        "${username}@linux-x86_64" = mkHomeConfiguration {
-          system = "x86_64-linux";
-          modules = linuxHomeModules;
-          homeDirectory = "/home/${username}";
-        };
-
-        # Linux (aarch64)
-        "${username}@linux-aarch64" = mkHomeConfiguration {
-          system = "aarch64-linux";
-          modules = linuxHomeModules;
-          homeDirectory = "/home/${username}";
-        };
-      };
+      homeConfigurations = mkAllHomeConfigurations;
 
       # ============================================================
       # nix-darwin Configurations (macOS system-level)
       # ============================================================
       darwinConfigurations = {
         # macOS (Apple Silicon)
-        "${username}-darwin" = nix-darwin.lib.darwinSystem {
+        "${defaultUser}-darwin" = nix-darwin.lib.darwinSystem {
           system = "aarch64-darwin";
           modules = [
             ./darwin/default.nix
@@ -117,23 +123,24 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "backup";  # 既存ファイルを .backup に退避
-                users.${username} = { pkgs, ... }: {
+                users.${defaultUser} = { pkgs, ... }: {
                   imports = darwinHomeModules;
-                  home.username = username;
-                  home.homeDirectory = "/Users/${username}";
+                  home.username = defaultUser;
+                  home.homeDirectory = "/Users/${defaultUser}";
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit self inputs username nvimConfigPath;
+                  inherit self inputs nvimConfigPath;
+                  username = defaultUser;
                 };
               };
             }
           ];
-          specialArgs = { inherit inputs username; };
+          specialArgs = { inherit inputs; username = defaultUser; };
         };
 
         # macOS (Intel) - 必要に応じて追加
-        "${username}-darwin-x86" = nix-darwin.lib.darwinSystem {
+        "${defaultUser}-darwin-x86" = nix-darwin.lib.darwinSystem {
           system = "x86_64-darwin";
           modules = [
             ./darwin/default.nix
@@ -143,19 +150,20 @@
                 useGlobalPkgs = true;
                 useUserPackages = true;
                 backupFileExtension = "backup";  # 既存ファイルを .backup に退避
-                users.${username} = { pkgs, ... }: {
+                users.${defaultUser} = { pkgs, ... }: {
                   imports = darwinHomeModules;
-                  home.username = username;
-                  home.homeDirectory = "/Users/${username}";
+                  home.username = defaultUser;
+                  home.homeDirectory = "/Users/${defaultUser}";
                   home.stateVersion = "24.11";
                 };
                 extraSpecialArgs = {
-                  inherit self inputs username nvimConfigPath;
+                  inherit self inputs nvimConfigPath;
+                  username = defaultUser;
                 };
               };
             }
           ];
-          specialArgs = { inherit inputs username; };
+          specialArgs = { inherit inputs; username = defaultUser; };
         };
       };
 

@@ -1,5 +1,8 @@
 { config, pkgs, lib, ... }:
 
+let
+  isDarwin = pkgs.stdenv.isDarwin;
+in
 {
   # ============================================================
   # Ghostty ターミナル設定
@@ -7,8 +10,8 @@
   programs.ghostty = {
     enable = true;
 
-    # macOSではHomebrewでインストールするためパッケージは無効化
-    package = null;
+    # macOSではHomebrewでインストール、LinuxではNixでインストール
+    package = if isDarwin then null else pkgs.ghostty;
 
     # シェル統合
     enableZshIntegration = true;

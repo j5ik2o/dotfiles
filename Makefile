@@ -2,8 +2,8 @@
 # Dotfiles Makefile
 # ============================================================
 
-# ユーザー名 (flake.nix と一致させる)
-USER := j5ik2o
+# ユーザー名 (現在のログインユーザーを自動検出)
+USER := $(shell whoami)
 
 # システム検出
 UNAME := $(shell uname)

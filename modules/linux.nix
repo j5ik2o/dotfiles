@@ -10,12 +10,34 @@ in
   # WSL の場合は一部設定を上書き
   # ============================================================
 
+  imports = [
+    ./programs/ghostty.nix
+    ./programs/wezterm.nix
+    ./programs/foot.nix
+  ];
+
   # home.homeDirectory は flake.nix で設定
+
+  # ============================================================
+  # フォント設定
+  # ============================================================
+  fonts.fontconfig.enable = true;
 
   # ============================================================
   # Linux 固有パッケージ
   # ============================================================
   home.packages = with pkgs; [
+    # Nerd Fonts
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    nerd-fonts.hack
+    nerd-fonts.meslo-lg
+
+    # 日本語フォント
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-cjk-serif
+
     # システムモニタリング
     iotop
     iftop
@@ -38,6 +60,10 @@ in
 
     # 通知
     libnotify
+
+    # OpenGL/EGL (ターミナル用)
+    mesa
+    libGL
 
     # その他 Linux ツール
     pciutils
