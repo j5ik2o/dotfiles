@@ -12,10 +12,6 @@
   xdg.configFile."sheldon/plugins.toml".text = ''
     shell = "zsh"
 
-    [defaults]
-    # SSH キーがなくても動作するよう HTTPS を使用
-    protocol = "https"
-
     [plugins]
 
     # ============================================================
@@ -31,6 +27,7 @@
     # zsh-defer (遅延読み込みの基盤)
     [plugins.zsh-defer]
     github = "romkatv/zsh-defer"
+    proto = "https"
 
     # Powerlevel10k (高速プロンプト) - Starship を使う場合はコメントアウト
     # [plugins.powerlevel10k]
@@ -42,9 +39,11 @@
 
     [plugins.zsh-completions]
     github = "zsh-users/zsh-completions"
+    proto = "https"
 
     [plugins.nix-zsh-completions]
     github = "nix-community/nix-zsh-completions"
+    proto = "https"
 
     # ============================================================
     # Enhancements (defer で遅延読み込み)
@@ -52,14 +51,17 @@
 
     [plugins.zsh-autosuggestions]
     github = "zsh-users/zsh-autosuggestions"
+    proto = "https"
     apply = ["defer"]
 
     [plugins.zsh-syntax-highlighting]
     github = "zsh-users/zsh-syntax-highlighting"
+    proto = "https"
     apply = ["defer"]
 
     [plugins.zsh-history-substring-search]
     github = "zsh-users/zsh-history-substring-search"
+    proto = "https"
     apply = ["defer"]
 
     # ============================================================
@@ -68,15 +70,18 @@
 
     [plugins.zsh-autopair]
     github = "hlissner/zsh-autopair"
+    proto = "https"
     apply = ["defer"]
 
     [plugins.zsh-you-should-use]
     github = "MichaelAquilina/zsh-you-should-use"
+    proto = "https"
     apply = ["defer"]
 
     # fzf-tab (fzf で補完をリッチに)
     [plugins.fzf-tab]
     github = "Aloxaf/fzf-tab"
+    proto = "https"
 
     # ============================================================
     # Git enhancements
@@ -84,6 +89,7 @@
 
     [plugins.forgit]
     github = "wfxr/forgit"
+    proto = "https"
     apply = ["defer"]
 
     # ============================================================
@@ -92,6 +98,7 @@
 
     [plugins.enhancd]
     github = "b4b4r07/enhancd"
+    proto = "https"
     apply = ["defer"]
 
     # ============================================================
@@ -100,11 +107,13 @@
 
     [plugins.ohmyzsh-lib]
     github = "ohmyzsh/ohmyzsh"
+    proto = "https"
     dir = "lib"
     use = ["clipboard.zsh", "completion.zsh", "directories.zsh", "git.zsh", "key-bindings.zsh"]
 
     [plugins.ohmyzsh-plugins]
     github = "ohmyzsh/ohmyzsh"
+    proto = "https"
     dir = "plugins"
     use = ["{extract,sudo,docker,docker-compose,kubectl}/*.plugin.zsh"]
     apply = ["defer"]
@@ -119,7 +128,12 @@
 
     # AWS CLI 補完
     [plugins.aws-completion]
-    inline = 'complete -C aws_completer aws'
+    inline = """
+    if command -v aws_completer &> /dev/null; then
+      autoload -Uz bashcompinit && bashcompinit
+      complete -C aws_completer aws
+    fi
+    """
 
     # Google Cloud SDK 補完
     [plugins.gcloud-completion]

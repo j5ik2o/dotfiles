@@ -73,16 +73,9 @@ in
           else "cache --timeout=3600";
       };
 
-      # URL 置換
-      url = {
-        "git@github.com:" = {
-          insteadOf = "https://github.com/";
-        };
-      };
-
       # GitHub CLI 統合
       gh = {
-        protocol = "ssh";
+        protocol = "https";
       };
 
       # パフォーマンス
