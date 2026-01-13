@@ -48,7 +48,11 @@ in
 
       # その他
       confirm-close-surface = false;
-      shell-integration = "zsh";
+      # shell-integration: SSH先で問題が起きる場合は "none" に変更
+      # shell-integration = "zsh";
+
+      # TERM変数: リモートSSH先でghostty terminfoがない場合の互換性確保
+      term = "xterm-256color";
 
       # キーバインド
       keybind = [
