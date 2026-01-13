@@ -180,8 +180,8 @@
     enableCompletion = true;
     syntaxHighlighting.enable = false;
 
-    # XDG 準拠の設定ディレクトリ
-    dotDir = "${config.xdg.configHome}/zsh";
+    # XDG 準拠の設定ディレクトリ (HOME からの相対パス)
+    dotDir = ".config/zsh";
 
     # 履歴設定
     history = {
@@ -210,15 +210,15 @@
       # Vi モードでのカーソル形状変更
       function zle-keymap-select {
         if [[ $KEYMAP == vicmd ]]; then
-          echo -ne '\e[2 q'  # Block cursor for normal mode
+          printf '\e[2 q'  # Block cursor for normal mode
         else
-          echo -ne '\e[6 q'  # Beam cursor for insert mode
+          printf '\e[6 q'  # Beam cursor for insert mode
         fi
       }
       zle -N zle-keymap-select
 
       # 起動時は insert mode
-      echo -ne '\e[6 q'
+      printf '\e[6 q'
 
       # history-substring-search のキーバインド
       bindkey '^[[A' history-substring-search-up
