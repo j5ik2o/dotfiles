@@ -51,6 +51,11 @@
     awscli2
     google-cloud-sdk
 
+    # IaC (Infrastructure as Code)
+    opentofu          # Terraform のオープンソースフォーク
+    tflint            # Terraform リンター
+    terraform-docs    # ドキュメント生成
+
     # コンテナ
     lazydocker
     dive        # Docker イメージ解析
