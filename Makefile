@@ -25,6 +25,11 @@ else
   endif
 endif
 
+# Nix experimental features (flakes + nix-command)
+NIX_EXPERIMENTAL_FEATURES ?= nix-command flakes
+NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
+export NIX_CONFIG
+
 .PHONY: help check check-update build build-hm build-darwin switch switch-hm switch-darwin \
         clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply \
         plan plan-darwin plan-hm
@@ -200,7 +205,7 @@ ifeq ($(UNAME),Darwin)
 	@[ -f /etc/bashrc.before-nix-darwin ] || sudo mv /etc/bashrc /etc/bashrc.before-nix-darwin 2>/dev/null || true
 	@[ -f /etc/zshrc.before-nix-darwin ] || sudo mv /etc/zshrc /etc/zshrc.before-nix-darwin 2>/dev/null || true
 	@echo "Running initial nix-darwin switch..."
-	sudo -E nix --extra-experimental-features 'nix-command flakes' run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
+	sudo -E nix run nix-darwin#darwin-rebuild -- switch --flake .#$(DARWIN_CONFIG)
 else
 	@echo "nix-darwin is only available on macOS"
 	@exit 1
@@ -210,7 +215,7 @@ init-linux:
 ifeq ($(UNAME),Linux)
 	@echo "Preparing for first home-manager installation on Linux..."
 	@echo "Running initial home-manager switch..."
-	nix --extra-experimental-features nix-command --extra-experimental-features flakes run home-manager/master -- switch --flake .#$(HM_CONFIG)
+	nix run home-manager/master -- switch --flake .#$(HM_CONFIG)
 else
 	@echo "init-linux is only available on Linux"
 	@exit 1
