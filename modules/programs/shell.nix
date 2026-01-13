@@ -180,8 +180,8 @@
     enableCompletion = true;
     syntaxHighlighting.enable = false;
 
-    # XDG 準拠の設定ディレクトリ (HOME からの相対パス)
-    dotDir = ".config/zsh";
+    # XDG 準拠の設定ディレクトリ
+    dotDir = "${config.xdg.configHome}/zsh";
 
     # 履歴設定
     history = {
