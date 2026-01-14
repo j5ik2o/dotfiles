@@ -30,7 +30,7 @@ NIX_EXPERIMENTAL_FEATURES ?= nix-command flakes
 NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
 export NIX_CONFIG
 
-.PHONY: help check check-update build build-hm build-darwin switch switch-hm switch-darwin \
+.PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply \
         plan plan-darwin plan-hm
 
@@ -44,10 +44,10 @@ help:
 	@echo "  build-darwin   Build nix-darwin configuration (macOS only)"
 	@echo "  plan           Build and show diff (like terraform plan)"
 	@echo ""
-	@echo "Switch targets:"
-	@echo "  switch         Apply all (darwin on macOS, hm on Linux)"
-	@echo "  switch-hm      Apply Home Manager configuration"
-	@echo "  switch-darwin  Apply nix-darwin configuration (macOS only)"
+	@echo "Apply targets:"
+	@echo "  apply          Apply all (darwin on macOS, hm on Linux)"
+	@echo "  apply-hm       Apply Home Manager configuration"
+	@echo "  apply-darwin   Apply nix-darwin configuration (macOS only)"
 	@echo ""
 	@echo "Other targets:"
 	@echo "  check          Run nix flake check"
@@ -153,7 +153,7 @@ ifeq ($(UNAME),Darwin)
 		nvd diff /run/current-system ./result; \
 	else \
 		echo "Install 'nvd' for detailed diff: nix profile install nixpkgs#nvd"; \
-		echo "Build successful. Run 'make switch' to apply."; \
+		echo "Build successful. Run 'make apply' to apply."; \
 	fi
 else
 	@echo "nix-darwin is only available on macOS"
@@ -163,7 +163,7 @@ endif
 plan-hm:
 	@echo "Planning Home Manager configuration: $(HM_CONFIG)"
 	@nix build .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace
-	@echo "Build successful. Run 'make switch' to apply."
+	@echo "Build successful. Run 'make apply' to apply."
 
 plan:
 ifeq ($(UNAME),Darwin)
@@ -173,14 +173,14 @@ else
 endif
 
 # ============================================================
-# Switch (apply)
+# Apply
 # ============================================================
 
-switch-hm:
+apply-hm:
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
 	home-manager switch --flake .#$(HM_CONFIG)
 
-switch-darwin:
+apply-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
 	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
@@ -189,11 +189,11 @@ else
 	@exit 1
 endif
 
-switch:
+apply:
 ifeq ($(UNAME),Darwin)
-	$(MAKE) switch-darwin
+	$(MAKE) apply-darwin
 else
-	$(MAKE) switch-hm
+	$(MAKE) apply-hm
 endif
 
 
@@ -238,7 +238,7 @@ update:
 
 fmt:
 	@echo "Formatting nix files..."
-	find . -name "*.nix" -exec nixfmt {} \;
+	find . -name "*.nix" -exec nixfmt {} \; 2>/dev/null
 
 clean:
 	@echo "Cleaning build artifacts..."
