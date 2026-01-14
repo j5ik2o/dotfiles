@@ -23,10 +23,12 @@ return {
     opts = {
       filesystem = {
         follow_current_file = { enabled = true },
+        use_libuv_file_watcher = true, -- ファイルシステム監視で自動更新
         filtered_items = {
           hide_dotfiles = false,
           hide_gitignored = false,
         },
+        group_empty_dirs = true,
       },
       window = {
         width = 30,
@@ -169,6 +171,10 @@ return {
         { "<leader>b", group = "Buffer" },
         { "<leader>c", group = "Code" },
         { "<leader>x", group = "Diagnostics" },
+        { "<leader>t", group = "Terminal" },
+        { "<leader>g", group = "Git" },
+        { "<leader>w", group = "Window" },
+        { "<leader>W", group = "Window (large)" },
       })
     end,
   },
@@ -182,12 +188,103 @@ return {
       { [[<leader>tf]], "<cmd>ToggleTerm direction=float<CR>", desc = "Float terminal" },
       { [[<leader>th]], "<cmd>ToggleTerm direction=horizontal<CR>", desc = "Horizontal terminal" },
       { [[<leader>tv]], "<cmd>ToggleTerm direction=vertical<CR>", desc = "Vertical terminal" },
+      -- 番号付きターミナル（常に下部に固定、フォーカスのみ・トグルしない）
+      {
+        [[<leader>t1]],
+        function()
+          local term = require("toggleterm.terminal").get(1)
+          if term == nil then
+            vim.cmd("1ToggleTerm direction=horizontal")
+          elseif not term:is_open() then
+            term:open()
+          else
+            term:focus()
+          end
+        end,
+        desc = "Terminal #1",
+      },
+      {
+        [[<leader>t2]],
+        function()
+          local term = require("toggleterm.terminal").get(2)
+          if term == nil then
+            vim.cmd("2ToggleTerm direction=horizontal")
+          elseif not term:is_open() then
+            term:open()
+          else
+            term:focus()
+          end
+        end,
+        desc = "Terminal #2",
+      },
+      {
+        [[<leader>t3]],
+        function()
+          local term = require("toggleterm.terminal").get(3)
+          if term == nil then
+            vim.cmd("3ToggleTerm direction=horizontal")
+          elseif not term:is_open() then
+            term:open()
+          else
+            term:focus()
+          end
+        end,
+        desc = "Terminal #3",
+      },
+      {
+        [[<leader>t4]],
+        function()
+          local term = require("toggleterm.terminal").get(4)
+          if term == nil then
+            vim.cmd("4ToggleTerm direction=horizontal")
+          elseif not term:is_open() then
+            term:open()
+          else
+            term:focus()
+          end
+        end,
+        desc = "Terminal #4",
+      },
+      { [[<leader>tS]], "<cmd>TermSelect<CR>", desc = "Select terminal" },
+      { [[<leader>tN]], "<cmd>ToggleTermSetName<CR>", desc = "Name terminal" },
+      { [[<leader>ta]], "<cmd>ToggleTermToggleAll<CR>", desc = "Toggle all terminals" },
+      -- ターミナルを隠す（終了せずに非表示）
+      {
+        [[<leader>tc]],
+        function()
+          local terms = require("toggleterm.terminal").get_all()
+          for _, term in ipairs(terms) do
+            if term:is_open() then
+              term:close()
+            end
+          end
+        end,
+        desc = "Hide all terminals",
+      },
     },
     opts = {
       open_mapping = [[<C-\>]],
       direction = "horizontal",
-      size = 15,
-      float_opts = { border = "rounded" },
+      size = function(term)
+        if term.direction == "horizontal" then
+          return math.floor(vim.o.lines * 0.3)
+        elseif term.direction == "vertical" then
+          return math.floor(vim.o.columns * 0.4)
+        end
+      end,
+      float_opts = {
+        border = "rounded",
+        width = function()
+          return math.floor(vim.o.columns * 0.8)
+        end,
+        height = function()
+          return math.floor(vim.o.lines * 0.8)
+        end,
+      },
+      shade_terminals = true,
+      shading_factor = 2,
+      persist_size = true,
+      persist_mode = true,
     },
   },
 }

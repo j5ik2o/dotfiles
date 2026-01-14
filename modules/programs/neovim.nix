@@ -64,6 +64,7 @@ let
 
     # Git
     gitsigns-nvim
+    diffview-nvim
 
     # UI
     lualine-nvim
@@ -71,6 +72,7 @@ let
     indent-blankline-nvim
     noice-nvim
     nui-nvim
+    edgy-nvim
 
     # エディタ機能
     comment-nvim

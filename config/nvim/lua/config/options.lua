@@ -45,6 +45,9 @@ opt.signcolumn = "yes"
 opt.updatetime = 250
 opt.timeoutlen = 300
 
+-- ファイル自動再読み込み
+opt.autoread = true
+
 -- 分割
 opt.splitright = true
 opt.splitbelow = true
