@@ -14,6 +14,18 @@ opt.relativenumber = false
 
 -- マウス
 opt.mouse = "a"
+opt.mousemoveevent = true -- マウス移動イベントを有効化
+
+-- ウィンドウ境界を見やすく
+opt.fillchars = {
+  horiz = "━",
+  horizup = "┻",
+  horizdown = "┳",
+  vert = "┃",
+  vertleft = "┫",
+  vertright = "┣",
+  verthoriz = "╋",
+}
 
 -- モード非表示（lualineで表示するため）
 opt.showmode = false

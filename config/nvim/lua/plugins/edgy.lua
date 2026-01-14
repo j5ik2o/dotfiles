@@ -9,15 +9,9 @@ return {
   dir = helper.get_plugin_path("edgy.nvim"),
   event = "VeryLazy",
   opts = {
-    -- 下部パネル（ターミナル、診断など）
+    -- 下部パネル（診断など）
+    -- Note: toggletermはマウスリサイズを有効にするためedgy管理外
     bottom = {
-      {
-        ft = "toggleterm",
-        size = { height = 0.3 },
-        filter = function(buf, win)
-          return vim.api.nvim_win_get_config(win).relative == ""
-        end,
-      },
       {
         ft = "trouble",
         title = "Diagnostics",
