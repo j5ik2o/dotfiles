@@ -11,6 +11,13 @@
     "claude-code"
   ];
 
+  # カスタムパッケージの overlay
+  nixpkgs.overlays = [
+    (final: prev: {
+      gwq = final.callPackage ../packages/gwq.nix { };
+    })
+  ];
+
   # Nix 設定
   nix = {
     settings = {

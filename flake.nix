@@ -29,6 +29,11 @@
       # 各システム用の関数を生成
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
+      # カスタムパッケージの overlay
+      customOverlay = final: prev: {
+        gwq = final.callPackage ./packages/gwq.nix { };
+      };
+
       # home-manager 設定のパス
       hmConfigPath = ./modules;
 
@@ -55,6 +60,7 @@
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
+            overlays = [ customOverlay ];
             config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
               "claude-code"
             ];
