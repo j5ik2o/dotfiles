@@ -10,7 +10,7 @@ vim.g.maplocalleader = " "
 
 -- 行番号
 opt.number = true
-opt.relativenumber = true
+opt.relativenumber = false
 
 -- マウス
 opt.mouse = "a"
