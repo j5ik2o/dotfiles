@@ -134,7 +134,7 @@ in {
       marksman                # Markdown
 
       # フォーマッター
-      nixfmt-classic
+      nixfmt
       stylua
       nodePackages.prettier
       rustfmt

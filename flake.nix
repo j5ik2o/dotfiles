@@ -182,7 +182,7 @@
         in {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
-              nixfmt-classic
+              nixfmt
               nil
             ];
           };
