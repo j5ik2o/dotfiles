@@ -54,6 +54,9 @@ in
       # TERM変数: リモートSSH先でghostty terminfoがない場合の互換性確保
       term = "xterm-256color";
 
+      # macOS: OptionキーをAltとして扱う (Claude Code/Codex の Shift+Option+Enter に必要)
+      macos-option-as-alt = true;
+
       # キーバインド
       keybind = [
         "super+c=copy_to_clipboard"
