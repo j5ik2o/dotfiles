@@ -102,6 +102,7 @@
     nodejs_20
     pnpm
     bun
+    yarn
 
     # Python
     python313
