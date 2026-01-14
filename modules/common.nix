@@ -155,11 +155,26 @@
   xdg.enable = true;
 
   # ============================================================
+  # PATH 追加
+  # ============================================================
+  home.sessionPath = [
+    "$HOME/.local/bin"
+  ];
+
+  # ============================================================
   # Codex 設定
   # ============================================================
   home.file.".codex/config.toml" = {
     source = "${self}/config/codex/config.toml";
     force = true;
+  };
+
+  # ============================================================
+  # カスタムスクリプト
+  # ============================================================
+  home.file.".local/bin/git-ai-commit" = {
+    source = "${self}/scripts/git-ai-commit.sh";
+    executable = true;
   };
 
   # ============================================================
@@ -171,6 +186,16 @@
       gui = {
         language = "ja";
       };
+      customCommands = [
+        {
+          key = "C";
+          context = "files";
+          command = "git-ai-commit";
+          description = "AI commit (Claude Code)";
+          loadingText = "Generating commit message...";
+          subprocess = true;
+        }
+      ];
     };
   };
 }
