@@ -40,8 +40,8 @@ return {
       { "nvim-tree/nvim-web-devicons", dir = helper.get_plugin_path("nvim-web-devicons") },
     },
     keys = {
-      { "<leader>bp", "<cmd>BufferLineTogglePin<CR>", desc = "Pin buffer" },
-      { "<leader>bP", "<cmd>BufferLineGroupClose ungrouped<CR>", desc = "Close unpinned buffers" },
+      { "<leader>bP", "<cmd>BufferLineTogglePin<CR>", desc = "Pin buffer" },
+      { "<leader>bX", "<cmd>BufferLineGroupClose ungrouped<CR>", desc = "Close unpinned buffers" },
     },
     opts = {
       options = {

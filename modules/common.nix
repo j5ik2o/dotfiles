@@ -193,7 +193,7 @@
           command = "git-ai-commit";
           description = "AI commit (Claude Code)";
           loadingText = "Generating commit message...";
-          subprocess = true;
+          output = "terminal";
         }
       ];
     };

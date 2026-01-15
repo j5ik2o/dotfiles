@@ -30,7 +30,10 @@
 | `Space b n` | 次のバッファ |
 | `Space b p` | 前のバッファ |
 | `Space b d` | バッファ削除 |
-| `Space b p` | バッファをピン |
+| `Space b P` | バッファをピン |
+| `Space b X` | ピンされていないバッファを閉じる |
+
+> **Note**: バッファ切り替えはBufferLineを使用。Neo-treeなどのサイドパネル内でも動作します。
 
 ## ファイル検索 (Telescope)
 

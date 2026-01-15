@@ -7,13 +7,27 @@ local helper = require("lazy-nix-helper")
 -- Lazygit ターミナルを作成する関数
 local lazygit = nil
 local function toggle_lazygit()
+  local lazygit_path = vim.fn.exepath("lazygit")
+  if lazygit_path == "" then
+    vim.notify("lazygit が PATH に見つかりません", vim.log.levels.ERROR)
+    return
+  end
+
+  -- Git 管理下でない場合は即終了するため事前チェックする
+  vim.fn.system({ "git", "rev-parse", "--is-inside-work-tree" })
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Git リポジトリ内ではありません", vim.log.levels.WARN)
+    return
+  end
+
   if lazygit == nil then
     local Terminal = require("toggleterm.terminal").Terminal
     lazygit = Terminal:new({
-      cmd = "lazygit",
+      cmd = lazygit_path,
       dir = "git_dir",
       direction = "float",
       hidden = true,
+      close_on_exit = false,
       float_opts = {
         border = "rounded",
         width = function()
@@ -29,6 +43,13 @@ local function toggle_lazygit()
       end,
       on_close = function()
         vim.cmd("checktime")
+      end,
+      on_exit = function(_, _, code)
+        if code ~= 0 then
+          vim.schedule(function()
+            vim.notify("lazygit が終了しました (code=" .. tostring(code) .. ")", vim.log.levels.ERROR)
+          end)
+        end
       end,
     })
   end

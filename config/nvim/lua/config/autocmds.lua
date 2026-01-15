@@ -13,12 +13,13 @@ autocmd("TextYankPost", {
   end,
 })
 
--- ターミナルを開いた時に行番号を非表示
+-- ターミナルを開いた時に行番号を非表示 & バッファ固定
 autocmd("TermOpen", {
   group = augroup("terminal_settings", { clear = true }),
   callback = function()
     vim.opt_local.number = false
     vim.opt_local.relativenumber = false
+    vim.opt_local.winfixbuf = true  -- このウィンドウでは他のバッファを開かない
   end,
 })
 

@@ -25,11 +25,52 @@ map("n", "<leader>Wk", "<cmd>resize +10<CR>", { desc = "Increase window height (
 map("n", "<leader>w=", "<C-w>=", { desc = "Equal window size" })
 
 -- バッファ操作
-map("n", "<leader>bn", "<cmd>bnext<CR>", { desc = "Next buffer" })
-map("n", "<leader>bp", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
+local function is_normal_window(win)
+  if not vim.api.nvim_win_is_valid(win) then
+    return false
+  end
+  if vim.api.nvim_win_get_config(win).relative ~= "" then
+    return false
+  end
+  if vim.wo[win].winfixbuf then
+    return false
+  end
+  local buf = vim.api.nvim_win_get_buf(win)
+  return vim.bo[buf].buftype == ""
+end
+
+local function focus_normal_window()
+  local current = vim.api.nvim_get_current_win()
+  if is_normal_window(current) then
+    return
+  end
+
+  local alternate = vim.fn.win_getid(vim.fn.winnr("#"))
+  if alternate ~= 0 and is_normal_window(alternate) then
+    vim.api.nvim_set_current_win(alternate)
+    return
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if is_normal_window(win) then
+      vim.api.nvim_set_current_win(win)
+      return
+    end
+  end
+end
+
+local function open_buffer_list()
+  focus_normal_window()
+  vim.cmd("Telescope buffers")
+end
+
+map("n", "<leader>bb", open_buffer_list, { desc = "Buffer list" })
+map("n", "<leader>fb", open_buffer_list, { desc = "Buffers" })
+map("n", "<leader>bn", "<cmd>BufferLineCycleNext<CR>", { desc = "Next buffer" })
+map("n", "<leader>bp", "<cmd>BufferLineCyclePrev<CR>", { desc = "Previous buffer" })
 map("n", "<leader>bd", "<cmd>bdelete<CR>", { desc = "Delete buffer" })
-map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
-map("n", "<S-l>", "<cmd>bnext<CR>", { desc = "Next buffer" })
+map("n", "<S-h>", "<cmd>BufferLineCyclePrev<CR>", { desc = "Previous buffer" })
+map("n", "<S-l>", "<cmd>BufferLineCycleNext<CR>", { desc = "Next buffer" })
 
 -- 保存・終了
 map("n", "<leader>w", "<cmd>w<CR>", { desc = "Save" })
