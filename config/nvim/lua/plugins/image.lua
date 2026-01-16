@@ -1,8 +1,16 @@
 -- ============================================================
--- image.nvim - Terminal image display (Kitty)
+-- image.nvim - Terminal image display (Kitty only)
 -- ============================================================
 -- Not included in LazyVim, custom plugin for Kitty terminal
+-- Only loads when running in Kitty terminal
 -- ============================================================
+
+-- Only enable in Kitty terminal
+local is_kitty = vim.env.TERM == "xterm-kitty" or vim.env.KITTY_WINDOW_ID ~= nil
+
+if not is_kitty then
+  return {}
+end
 
 return {
   {
