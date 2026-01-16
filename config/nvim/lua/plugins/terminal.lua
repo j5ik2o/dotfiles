@@ -8,7 +8,6 @@ return {
     "folke/edgy.nvim",
     optional = true,
     opts = function(_, opts)
-      -- bottom パネルから toggleterm を除外
       if opts.bottom then
         opts.bottom = vim.tbl_filter(function(view)
           return view.ft ~= "toggleterm"
