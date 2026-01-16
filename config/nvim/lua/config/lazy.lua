@@ -30,15 +30,16 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.nix" },
 
     -- ============================================================
+    -- UI (extras.ui.*)
+    -- edgy must be loaded BEFORE outline
+    -- ============================================================
+    { import = "lazyvim.plugins.extras.ui.edgy" },
+
+    -- ============================================================
     -- Editor Features (extras.editor.*)
     -- neo-tree is included in LazyVim core by default
     -- ============================================================
     { import = "lazyvim.plugins.extras.editor.outline" },
-
-    -- ============================================================
-    -- UI (extras.ui.*)
-    -- ============================================================
-    { import = "lazyvim.plugins.extras.ui.edgy" },
 
     -- ============================================================
     -- Coding (extras.coding.*)
