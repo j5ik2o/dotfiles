@@ -68,9 +68,11 @@
           };
           modules = modules ++ [
             {
-              home.username = username;
-              home.homeDirectory = homeDirectory;
-              home.stateVersion = "24.11";
+              home = {
+                username = username;
+                homeDirectory = homeDirectory;
+                stateVersion = "24.11";
+              };
             }
           ];
           extraSpecialArgs = {
@@ -132,9 +134,11 @@
                 backupFileExtension = "backup";  # 既存ファイルを .backup に退避
                 users.${defaultUser} = { pkgs, ... }: {
                   imports = darwinHomeModules;
-                  home.username = defaultUser;
-                  home.homeDirectory = "/Users/${defaultUser}";
-                  home.stateVersion = "24.11";
+                  home = {
+                    username = defaultUser;
+                    homeDirectory = "/Users/${defaultUser}";
+                    stateVersion = "24.11";
+                  };
                 };
                 extraSpecialArgs = {
                   inherit self inputs nvimConfigPath;
@@ -159,9 +163,11 @@
                 backupFileExtension = "backup";  # 既存ファイルを .backup に退避
                 users.${defaultUser} = { pkgs, ... }: {
                   imports = darwinHomeModules;
-                  home.username = defaultUser;
-                  home.homeDirectory = "/Users/${defaultUser}";
-                  home.stateVersion = "24.11";
+                  home = {
+                    username = defaultUser;
+                    homeDirectory = "/Users/${defaultUser}";
+                    stateVersion = "24.11";
+                  };
                 };
                 extraSpecialArgs = {
                   inherit self inputs nvimConfigPath;
