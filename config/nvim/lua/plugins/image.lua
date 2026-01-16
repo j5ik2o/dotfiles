@@ -1,13 +1,16 @@
-local helper = require("lazy-nix-helper")
+-- ============================================================
+-- image.nvim - Terminal image display (Kitty)
+-- ============================================================
+-- Not included in LazyVim, custom plugin for Kitty terminal
+-- ============================================================
 
 return {
   {
     "3rd/image.nvim",
-    dir = helper.get_plugin_path("image.nvim"),
-    lazy = false,  -- 即座にロード
+    lazy = false,
     opts = {
       backend = "kitty",
-      processor = "magick_cli",  -- magick_rockは追加設定が必要なためcliに変更
+      processor = "magick_cli",
       integrations = {
         markdown = {
           enabled = true,

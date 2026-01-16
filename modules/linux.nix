@@ -27,6 +27,9 @@ in
   # Linux 固有パッケージ
   # ============================================================
   home.packages = with pkgs; [
+    # 1Password CLI (macOS では Homebrew cask でインストール)
+    _1password-cli
+
     # Nerd Fonts
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
