@@ -6,8 +6,17 @@
 
 return {
   -- Disable mason (Nix manages LSP servers)
-  { "williamboman/mason.nvim", enabled = false },
-  { "williamboman/mason-lspconfig.nvim", enabled = false },
+  {
+    "mason-org/mason.nvim",
+    enabled = false,
+    -- Suppress rename warning
+    name = "mason.nvim",
+  },
+  {
+    "mason-org/mason-lspconfig.nvim",
+    enabled = false,
+    name = "mason-lspconfig.nvim",
+  },
 
   -- LSP server settings (servers are installed via Nix)
   {
