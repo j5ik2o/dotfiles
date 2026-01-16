@@ -31,8 +31,8 @@ require("lazy").setup({
 
     -- ============================================================
     -- Editor Features (extras.editor.*)
+    -- neo-tree is included in LazyVim core by default
     -- ============================================================
-    { import = "lazyvim.plugins.extras.editor.neo-tree" },
     { import = "lazyvim.plugins.extras.editor.outline" },
 
     -- ============================================================
@@ -46,14 +46,27 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.coding.luasnip" },
 
     -- ============================================================
-    -- Colorscheme
+    -- Colorscheme (catppuccin)
     -- ============================================================
-    { import = "lazyvim.plugins.extras.ui.catppuccin" },
-
-    -- ============================================================
-    -- Util (extras.util.*)
-    -- ============================================================
-    { import = "lazyvim.plugins.extras.util.gitui" },
+    {
+      "catppuccin/nvim",
+      name = "catppuccin",
+      priority = 1000,
+      opts = {
+        flavour = "mocha",
+        integrations = {
+          cmp = true,
+          gitsigns = true,
+          nvimtree = true,
+          treesitter = true,
+          notify = true,
+          mini = true,
+          native_lsp = {
+            enabled = true,
+          },
+        },
+      },
+    },
 
     -- ============================================================
     -- Custom plugins (minimal overrides)
