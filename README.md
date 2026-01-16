@@ -213,13 +213,25 @@ make help
 
 ## ドキュメント
 
-- [Neovim キーマップ](docs/neovim.md)
+- [Neovim キーマップ (LazyVim)](docs/neovim.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
+
+## Neovim (LazyVim)
+
+LazyVim ベースの設定。プラグイン管理は LazyVim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
+
+**有効な Extras:**
+- 言語: rust, go, typescript, python, json, yaml, toml, markdown, nix
+- エディタ: neo-tree, outline, edgy
+- UI: catppuccin
+- Git: gitui (lazygit)
+
+詳細は [docs/neovim.md](docs/neovim.md) 参照。
 
 ## テーマ
 
 すべて **Catppuccin Mocha** で統一：
-- Neovim
+- Neovim (LazyVim)
 - Ghostty
 - WezTerm
 

@@ -1,12 +1,15 @@
-# Neovim キーマップ カンペ
+# Neovim キーマップ カンペ (LazyVim)
+
+> LazyVim ベースの設定。詳細は https://www.lazyvim.org/keymaps 参照
 
 ## 基本操作
 
 | キー | 動作 |
 |------|------|
-| `Space w` | 保存 |
-| `Space q` | 終了 |
-| `Space Q` | 全終了（強制） |
+| `Space` | Leader キー |
+| `Space w` | 保存 (LazyVim) |
+| `Space q q` | 終了 |
+| `Space q Q` | 全終了（強制） |
 | `Esc` | 検索ハイライト解除 |
 
 ## ウィンドウ操作
@@ -14,12 +17,13 @@
 | キー | 動作 |
 |------|------|
 | `Ctrl+h/j/k/l` | ウィンドウ移動（左/下/上/右） |
-| `Space w h/l` | ウィンドウ幅 -2/+2 |
-| `Space w j/k` | ウィンドウ高さ -2/+2 |
-| `Space W h/l` | ウィンドウ幅 -10/+10 |
-| `Space W j/k` | ウィンドウ高さ -10/+10 |
-| `Space w =` | ウィンドウサイズ均等化 |
-| `Ctrl+↑/↓/←/→` | edgy パネルリサイズ |
+| `Ctrl+↑/↓/←/→` | ウィンドウリサイズ |
+| `Space w -` | 水平分割 |
+| `Space w |` | 垂直分割 |
+| `Space w d` | ウィンドウ削除 |
+| `Space w h/l` | ウィンドウ幅 -2/+2 (カスタム) |
+| `Space w j/k` | ウィンドウ高さ -2/+2 (カスタム) |
+| `Space w =` | ウィンドウサイズ均等化 (カスタム) |
 
 ## バッファ操作
 
@@ -27,32 +31,34 @@
 |------|------|
 | `Shift+h` | 前のバッファ |
 | `Shift+l` | 次のバッファ |
-| `Space b n` | 次のバッファ |
-| `Space b p` | 前のバッファ |
+| `Space b b` | バッファ一覧 (Telescope) |
 | `Space b d` | バッファ削除 |
-| `Space b P` | バッファをピン |
-| `Space b X` | ピンされていないバッファを閉じる |
-
-> **Note**: バッファ切り替えはBufferLineを使用。Neo-treeなどのサイドパネル内でも動作します。
+| `Space b D` | 他のバッファを全削除 |
+| `Space b p` | バッファをピン |
 
 ## ファイル検索 (Telescope)
 
 | キー | 動作 |
 |------|------|
-| `Space f f` | ファイル検索 |
-| `Space f g` | 文字列検索 (grep) |
-| `Space f b` | バッファ一覧 |
+| `Space Space` | ファイル検索 (root) |
+| `Space f f` | ファイル検索 (root) |
+| `Space f F` | ファイル検索 (cwd) |
+| `Space /` | 文字列検索 (grep) |
+| `Space s g` | 文字列検索 (grep) |
 | `Space f r` | 最近開いたファイル |
-| `Space f h` | ヘルプ検索 |
-| `Space f t` | TODO検索 |
-| `Space /` | 現在のバッファ内検索 |
+| `Space s h` | ヘルプ検索 |
+| `Space s t` | TODO検索 |
+| `Space s s` | シンボル検索 |
+| `Space s S` | ワークスペースシンボル |
 
 ## ファイルエクスプローラー (Neo-tree)
 
 | キー | 動作 |
 |------|------|
-| `Space e` | Neo-tree トグル |
-| `Space f e` | 現在のファイルを表示 |
+| `Space e` | Neo-tree トグル (root) |
+| `Space E` | Neo-tree トグル (cwd) |
+| `Space f e` | Neo-tree (root) |
+| `Space f E` | Neo-tree (cwd) |
 
 ### Neo-tree 内操作
 
@@ -72,37 +78,14 @@
 
 ## ターミナル
 
-### 基本操作
-
 | キー | 動作 |
 |------|------|
-| `Ctrl+\` | ターミナル トグル (toggleterm) |
-| `Space t s` | エディタ下にターミナル分割 |
-| `Space t f` | フロートターミナル |
-| `Space t h` | 下部ターミナル（水平） |
-| `Space t v` | 右側ターミナル（垂直） |
+| `Ctrl+/` | ターミナル トグル (root) |
+| `Ctrl+_` | ターミナル トグル (root) |
+| `Space f t` | ターミナル (root) |
+| `Space f T` | ターミナル (cwd) |
+| `Space t s` | エディタ下にターミナル分割 (カスタム) |
 | `Esc Esc` | ターミナルモード終了 |
-
-### 複数ターミナル管理
-
-| キー | 動作 |
-|------|------|
-| `Space t 1` | ターミナル #1 を開く/フォーカス（トグルしない） |
-| `Space t 2` | ターミナル #2 を開く/フォーカス |
-| `Space t 3` | ターミナル #3 を開く/フォーカス |
-| `Space t 4` | ターミナル #4 を開く/フォーカス |
-| `Space t S` | ターミナル選択 |
-| `Space t N` | ターミナルに名前を付ける |
-| `Space t a` | 全ターミナル表示/非表示 |
-| `Space t c` | 全ターミナルを隠す（終了せず） |
-
-### ターミナルを閉じる
-
-| 方法 | 説明 |
-|------|------|
-| `exit` | シェルを終了（ターミナル削除） |
-| `Esc Esc` → `:q` | バッファを閉じる |
-| `Space t c` | 非表示にする（プロセスは継続） |
 
 ### ターミナルからのウィンドウ移動
 
@@ -119,16 +102,10 @@
 
 | キー | 動作 |
 |------|------|
-| `Space g g` | Lazygit を開く |
-
-### Diffview
-
-| キー | 動作 |
-|------|------|
-| `Space g d` | Diff view を開く |
-| `Space g h` | 現在ファイルの履歴 |
-| `Space g H` | ブランチ履歴 |
-| `Space g q` | Diff view を閉じる |
+| `Space g g` | Lazygit (root) |
+| `Space g G` | Lazygit (cwd) |
+| `Space g l` | Lazygit ログ |
+| `Space g f` | Lazygit 現在ファイル履歴 |
 
 ### Gitsigns (hunk 操作)
 
@@ -136,24 +113,30 @@
 |------|------|
 | `]h` | 次の hunk へ |
 | `[h` | 前の hunk へ |
-| `Space g s` | hunk をステージ |
-| `Space g r` | hunk をリセット |
-| `Space g S` | バッファ全体をステージ |
-| `Space g u` | ステージ取り消し |
-| `Space g R` | バッファ全体をリセット |
-| `Space g p` | hunk をプレビュー |
-| `Space g b` | 行の blame 表示 |
-| `Space g B` | 行 blame 常時表示トグル |
+| `Space g h s` | hunk をステージ |
+| `Space g h r` | hunk をリセット |
+| `Space g h S` | バッファ全体をステージ |
+| `Space g h u` | ステージ取り消し |
+| `Space g h R` | バッファ全体をリセット |
+| `Space g h p` | hunk をプレビュー |
+| `Space g h b` | 行の blame 表示 |
+| `Space g h B` | blame バッファ |
 
-## 診断 (Trouble)
+## 診断
 
 | キー | 動作 |
 |------|------|
-| `Space x x` | 診断一覧 |
-| `Space x X` | 現バッファの診断 |
+| `Space x x` | 診断一覧 (Trouble) |
+| `Space x X` | バッファ診断 |
+| `Space x L` | Location List |
+| `Space x Q` | Quickfix List |
 | `Space c d` | 行の診断表示 |
 | `[d` | 前の診断へ |
 | `]d` | 次の診断へ |
+| `[e` | 前のエラーへ |
+| `]e` | 次のエラーへ |
+| `[w` | 前の警告へ |
+| `]w` | 次の警告へ |
 
 ## LSP (コード操作)
 
@@ -165,10 +148,12 @@
 | `gy` | 型定義へジャンプ |
 | `gD` | 宣言へジャンプ |
 | `K` | ホバー（ドキュメント表示） |
+| `gK` | シグネチャヘルプ |
 | `Space c r` | リネーム |
 | `Space c a` | コードアクション |
 | `Space c f` | フォーマット |
-| `Space c i` | インレイヒント トグル |
+| `Space c l` | Lsp Info |
+| `Space c R` | Rust アクション (Rust) |
 
 ## 高速移動 (flash.nvim)
 
@@ -176,30 +161,39 @@
 |------|------|
 | `s` | Flash ジャンプ |
 | `S` | Flash Treesitter |
+| `r` | Remote Flash (Operator-pending) |
+| `R` | Treesitter Search |
+| `Ctrl+s` | Toggle Flash Search |
 
-## コメント (Comment.nvim)
+## コメント
 
 | キー | 動作 |
 |------|------|
 | `gc` | コメントトグル (行) |
-| `gb` | ブロックコメントトグル |
+| `gcc` | 現在行をコメント |
+| `gco` | 下に行追加してコメント |
+| `gcO` | 上に行追加してコメント |
+| `gcA` | 行末にコメント追加 |
 
-## サラウンド (nvim-surround)
+## サラウンド (mini.surround)
 
 | キー | 動作 |
 |------|------|
-| `ys{motion}{char}` | サラウンド追加 |
-| `ds{char}` | サラウンド削除 |
-| `cs{old}{new}` | サラウンド変更 |
+| `gsa` | サラウンド追加 |
+| `gsd` | サラウンド削除 |
+| `gsr` | サラウンド変更 |
+| `gsf` | 関数呼び出しを検索 |
+| `gsh` | 左右のサラウンドをハイライト |
+| `gsn` | 隣接行数を更新 |
 
-例: `ysiw"` → 単語を `"` で囲む
+例: `gsa iw"` → 単語を `"` で囲む
 
 ## 編集
 
 | キー | 動作 |
 |------|------|
-| `J` (Visual) | 行を下に移動 |
-| `K` (Visual) | 行を上に移動 |
+| `Alt+j` | 行を下に移動 |
+| `Alt+k` | 行を上に移動 |
 | `<` (Visual) | インデント減（維持） |
 | `>` (Visual) | インデント増（維持） |
 
@@ -207,9 +201,22 @@
 
 | キー | 動作 |
 |------|------|
-| `Ctrl+Space` | 選択開始 |
-| `Ctrl+Space` (Visual) | 選択拡大 |
-| `Backspace` (Visual) | 選択縮小 |
+| `Ctrl+Space` | 選択開始/拡大 |
+| `Backspace` | 選択縮小 |
+
+## UI トグル
+
+| キー | 動作 |
+|------|------|
+| `Space u f` | 自動フォーマット トグル |
+| `Space u s` | スペリング トグル |
+| `Space u w` | ワードラップ トグル |
+| `Space u l` | 行番号 トグル |
+| `Space u L` | 相対行番号 トグル |
+| `Space u d` | 診断 トグル |
+| `Space u c` | conceal トグル |
+| `Space u h` | インレイヒント トグル |
+| `Space u n` | 通知 トグル |
 
 ## which-key
 
@@ -217,18 +224,20 @@
 |------|------|
 | `Space` を押して待つ | キーマップヘルプ表示 |
 
-## Leader キーグループ一覧
+## Leader キーグループ一覧 (LazyVim)
 
 | プレフィックス | グループ |
 |---------------|---------|
-| `Space f` | Find (検索) |
+| `Space f` | Find/File |
 | `Space b` | Buffer |
-| `Space c` | Code (LSP) |
-| `Space x` | Diagnostics |
-| `Space t` | Terminal |
+| `Space c` | Code |
 | `Space g` | Git |
-| `Space w` | Window (小) |
-| `Space W` | Window (大) |
+| `Space s` | Search |
+| `Space u` | UI |
+| `Space w` | Window |
+| `Space x` | Diagnostics/Quickfix |
+| `Space q` | Quit/Session |
+| `Space <tab>` | Tab |
 
 ## VS Code風 IDE レイアウト
 
@@ -238,36 +247,37 @@
 |  Neo-tree  |       Editor           |
 |  (Space e) |                        |
 |            +------------------------+
-|            |  Terminal (Space t h)  |
+|            |  Terminal (Ctrl+/)     |
 +------------+------------------------+
 ```
 
 ### クイックセットアップ
 
 1. `Space e` → Neo-tree を開く（左パネル固定）
-2. `Space t h` → 下部にターミナル
+2. `Ctrl+/` → 下部にターミナル
 3. `Ctrl+h/l` でパネル間移動
 4. `Space g g` → Lazygit でコミット
-
-### マルチターミナルワークフロー
-
-```
-+------------+------------------------+
-|            |       Editor           |
-|  Neo-tree  +------------------------+
-|            | Term #1 | Term #2      |
-+------------+------------------------+
-```
-
-1. `Space t 1` → ターミナル #1 を開く
-2. `Space t 2` → ターミナル #2 を開く
-3. `Space t S` → ターミナル一覧から選択
-4. `Space t a` → 全ターミナル表示/非表示
 
 ### Git ワークフロー
 
 1. `Space g g` → Lazygit を開く（フル画面）
-2. `Space g d` → Diffview で差分確認
-3. `Space g h` → ファイル履歴を確認
-4. `]h` / `[h` → hunk 間を移動
-5. `Space g s` → hunk をステージ
+2. `]h` / `[h` → hunk 間を移動
+3. `Space g h s` → hunk をステージ
+4. `Space g h p` → hunk をプレビュー
+
+## Rust 開発 (extras.lang.rust)
+
+| キー | 動作 |
+|------|------|
+| `Space c R` | Rust アクション |
+| `K` | rust-analyzer ホバー |
+
+Cargo.toml 内:
+| キー | 動作 |
+|------|------|
+| `Space c c` | crates.nvim アクション |
+
+## 追加情報
+
+- LazyVim 公式キーマップ: https://www.lazyvim.org/keymaps
+- LazyVim Extras: https://www.lazyvim.org/extras

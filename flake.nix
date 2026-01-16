@@ -63,6 +63,7 @@
             overlays = [ customOverlay ];
             config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
               "claude-code"
+              "1password-cli"
             ];
           };
           modules = modules ++ [
