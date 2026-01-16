@@ -3,21 +3,21 @@
 -- ============================================================
 
 return {
+  -- edgy.nvim から toggleterm を除外してリサイズを許可
+  {
+    "folke/edgy.nvim",
+    optional = true,
+    opts = function(_, opts)
+      -- bottom パネルから toggleterm を除外
+      if opts.bottom then
+        opts.bottom = vim.tbl_filter(function(view)
+          return view.ft ~= "toggleterm"
+        end, opts.bottom)
+      end
+    end,
+  },
   {
     "akinsho/toggleterm.nvim",
-    init = function()
-      -- toggleterm が winfixheight/winfixwidth を設定するのを上書き
-      vim.api.nvim_create_autocmd("TermOpen", {
-        pattern = "term://*toggleterm#*",
-        callback = function()
-          vim.defer_fn(function()
-            local win = vim.api.nvim_get_current_win()
-            vim.wo[win].winfixheight = false
-            vim.wo[win].winfixwidth = false
-          end, 10)
-        end,
-      })
-    end,
     version = "*",
     keys = {
       { [[<C-\>]], desc = "Toggle terminal" },
