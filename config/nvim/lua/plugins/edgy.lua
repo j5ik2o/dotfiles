@@ -10,8 +10,12 @@ return {
   event = "VeryLazy",
   opts = {
     -- 下部パネル（診断など）
-    -- Note: toggletermはマウスリサイズを有効にするためedgy管理外
     bottom = {
+      {
+        ft = "toggleterm",
+        title = "Terminal",
+        size = { height = 0.3 },
+      },
       {
         ft = "trouble",
         title = "Diagnostics",

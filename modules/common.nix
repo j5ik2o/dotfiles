@@ -23,7 +23,6 @@
     gwq               # Git worktree マネージャ
     tig
     # lazygit は programs.lazygit で管理
-    delta
 
     # シェルツール
     zsh

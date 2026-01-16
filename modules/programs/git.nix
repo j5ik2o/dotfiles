@@ -216,7 +216,8 @@ in
   # ============================================================
   programs.delta = {
     enable = true;
-    enableGitIntegration = true;
+    # Git CLI ではデフォルトの diff 出力にして、lazygit 側だけ delta を使う
+    enableGitIntegration = false;
     options = {
       navigate = true;
       light = false;

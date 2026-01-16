@@ -187,7 +187,7 @@ return {
       { [[<leader>tf]], "<cmd>ToggleTerm direction=float<CR>", desc = "Float terminal" },
       { [[<leader>th]], "<cmd>ToggleTerm direction=horizontal<CR>", desc = "Horizontal terminal" },
       { [[<leader>tv]], "<cmd>ToggleTerm direction=vertical<CR>", desc = "Vertical terminal" },
-      -- 番号付きターミナル（常に下部に固定、フォーカスのみ・トグルしない）
+      -- 番号付きターミナル（常に下部、フォーカスのみ・トグルしない）
       {
         [[<leader>t1]],
         function()
