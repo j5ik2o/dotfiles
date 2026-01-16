@@ -1,11 +1,8 @@
 -- ============================================================
 -- toggleterm.nvim - Multiple terminal management
 -- ============================================================
--- Integrated with edgy.nvim for proper layout management
--- ============================================================
 
 return {
-  -- toggleterm for multiple terminals
   {
     "akinsho/toggleterm.nvim",
     version = "*",
@@ -47,21 +44,5 @@ return {
       persist_size = true,
       persist_mode = true,
     },
-  },
-
-  -- edgy integration for toggleterm
-  {
-    "folke/edgy.nvim",
-    opts = function(_, opts)
-      -- Add toggleterm to bottom panel
-      opts.bottom = opts.bottom or {}
-      table.insert(opts.bottom, {
-        ft = "toggleterm",
-        size = { height = 0.3 },
-        filter = function(buf, win)
-          return vim.api.nvim_win_get_config(win).relative == ""
-        end,
-      })
-    end,
   },
 }
