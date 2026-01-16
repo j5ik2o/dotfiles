@@ -56,6 +56,10 @@ return {
       shading_factor = 2,
       persist_size = true,
       persist_mode = true,
+      on_open = function(term)
+        -- <Esc><Esc> でターミナルモードからNORMALモードに切り替え
+        vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { buffer = term.bufnr, desc = "Exit terminal mode" })
+      end,
     },
   },
 }
