@@ -8,8 +8,8 @@
 |------|------|
 | `Space` | Leader キー |
 | `Space w` | 保存 (LazyVim) |
-| `Space q q` | 終了 |
-| `Space q Q` | 全終了（強制） |
+| `Space q q` | 全終了 (:qa) |
+| `:qa!` | 全終了（強制・保存なし） |
 | `Esc` | 検索ハイライト解除 |
 
 ## ウィンドウ操作
@@ -29,9 +29,11 @@
 
 | キー | 動作 |
 |------|------|
+| `Space ,` | バッファ一覧 (Telescope) |
+| `Space f b` | バッファ検索 (Telescope) |
+| `Space b b` | 直前のバッファに切り替え |
 | `Shift+h` | 前のバッファ |
 | `Shift+l` | 次のバッファ |
-| `Space b b` | バッファ一覧 (Telescope) |
 | `Space b d` | バッファ削除 |
 | `Space b D` | 他のバッファを全削除 |
 | `Space b p` | バッファをピン |
@@ -78,14 +80,31 @@
 
 ## ターミナル
 
+### 基本操作 (LazyVim)
+
 | キー | 動作 |
 |------|------|
 | `Ctrl+/` | ターミナル トグル (root) |
 | `Ctrl+_` | ターミナル トグル (root) |
 | `Space f t` | ターミナル (root) |
 | `Space f T` | ターミナル (cwd) |
-| `Space t s` | エディタ下にターミナル分割 (カスタム) |
 | `Esc Esc` | ターミナルモード終了 |
+
+### 複数ターミナル (toggleterm)
+
+| キー | 動作 |
+|------|------|
+| `Ctrl+\` | ターミナル トグル |
+| `Space t f` | フローティングターミナル |
+| `Space t h` | 水平ターミナル |
+| `Space t v` | 垂直ターミナル |
+| `Space t 1` | ターミナル #1 |
+| `Space t 2` | ターミナル #2 |
+| `Space t 3` | ターミナル #3 |
+| `Space t 4` | ターミナル #4 |
+| `Space t S` | ターミナル選択 |
+| `Space t N` | ターミナル名変更 |
+| `Space t a` | 全ターミナル トグル |
 
 ### ターミナルからのウィンドウ移動
 
@@ -233,6 +252,7 @@
 | `Space c` | Code |
 | `Space g` | Git |
 | `Space s` | Search |
+| `Space t` | Terminal (toggleterm) |
 | `Space u` | UI |
 | `Space w` | Window |
 | `Space x` | Diagnostics/Quickfix |
@@ -247,16 +267,23 @@
 |  Neo-tree  |       Editor           |
 |  (Space e) |                        |
 |            +------------------------+
-|            |  Terminal (Ctrl+/)     |
+|            |  Terminal (Ctrl+\)     |
 +------------+------------------------+
 ```
 
 ### クイックセットアップ
 
 1. `Space e` → Neo-tree を開く（左パネル固定）
-2. `Ctrl+/` → 下部にターミナル
+2. `Ctrl+\` → 下部にターミナル（toggleterm）
 3. `Ctrl+h/l` でパネル間移動
 4. `Space g g` → Lazygit でコミット
+
+### 複数ターミナル活用
+
+1. `Space t 1` → ターミナル #1 を開く
+2. `Space t 2` → ターミナル #2 を開く（別プロセス用）
+3. `Space t S` → ターミナル選択で切り替え
+4. `Space t a` → 全ターミナルを一括トグル
 
 ### Git ワークフロー
 
