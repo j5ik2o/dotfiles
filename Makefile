@@ -31,7 +31,7 @@ NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
 export NIX_CONFIG
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
-        clean update fmt sheldon-lock gc test secrets secrets-diff secrets-apply \
+        clean update fmt sheldon-lock gc test nvim-test secrets secrets-diff secrets-apply \
         plan plan-darwin plan-hm
 
 # デフォルトターゲット
@@ -53,6 +53,7 @@ help:
 	@echo "  check          Run nix flake check"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  test           Alias for check"
+	@echo "  nvim-test      Run Neovim config tests"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
@@ -116,6 +117,22 @@ check-update:
 	rm -f $$tmp; rm -rf $$outdir
 
 test: check
+
+# ============================================================
+# Neovim config tests
+# ============================================================
+
+nvim-test:
+	@echo "Running Neovim config tests..."
+	@tmp="$(CURDIR)/.tmp/nvim-test"; \
+	mkdir -p "$$tmp/config" "$$tmp/data" "$$tmp/state" "$$tmp/cache"; \
+	XDG_CONFIG_HOME="$$tmp/config" \
+	XDG_DATA_HOME="$$tmp/data" \
+	XDG_STATE_HOME="$$tmp/state" \
+	XDG_CACHE_HOME="$$tmp/cache" \
+	NVIM_TEST_ROOT="$(CURDIR)" \
+	nvim --headless -u "$(CURDIR)/config/nvim/tests/minimal_init.lua" \
+	-c "lua dofile(os.getenv('NVIM_TEST_ROOT') .. '/config/nvim/tests/run.lua')"
 
 # ============================================================
 # Build (dry-run / test)
