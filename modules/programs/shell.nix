@@ -122,11 +122,19 @@
     # CLI Tool Completions
     # ============================================================
 
-    # gh (GitHub CLI) 補完
+    # gh (GitHub CLI) 補完 (キャッシュ + 遅延読み込み)
     [plugins.gh-completion]
-    inline = 'eval "$(gh completion -s zsh)"'
+    inline = """
+    _gh_cache="$HOME/.cache/zsh/gh_completion.zsh"
+    if [[ ! -f "$_gh_cache" ]] || [[ $(command -v gh) -nt "$_gh_cache" ]]; then
+      mkdir -p "$HOME/.cache/zsh"
+      gh completion -s zsh > "$_gh_cache" 2>/dev/null
+    fi
+    [[ -f "$_gh_cache" ]] && source "$_gh_cache"
+    """
+    apply = ["defer"]
 
-    # AWS CLI 補完
+    # AWS CLI 補完 (遅延読み込み)
     [plugins.aws-completion]
     inline = """
     if command -v aws_completer &> /dev/null; then
@@ -134,8 +142,9 @@
       complete -C aws_completer aws
     fi
     """
+    apply = ["defer"]
 
-    # Google Cloud SDK 補完
+    # Google Cloud SDK 補完 (遅延読み込み)
     [plugins.gcloud-completion]
     inline = """
     if [[ -n "$CLOUDSDK_ROOT_DIR" ]]; then
@@ -144,14 +153,21 @@
       source "$HOME/google-cloud-sdk/completion.zsh.inc"
     fi
     """
+    apply = ["defer"]
 
-    # Docker 補完
+    # Docker 補完 (キャッシュ + 遅延読み込み)
     [plugins.docker-completion]
     inline = """
     if command -v docker &> /dev/null; then
-      eval "$(docker completion zsh 2>/dev/null)"
+      _docker_cache="$HOME/.cache/zsh/docker_completion.zsh"
+      if [[ ! -f "$_docker_cache" ]] || [[ $(command -v docker) -nt "$_docker_cache" ]]; then
+        mkdir -p "$HOME/.cache/zsh"
+        docker completion zsh > "$_docker_cache" 2>/dev/null
+      fi
+      [[ -f "$_docker_cache" ]] && source "$_docker_cache"
     fi
     """
+    apply = ["defer"]
 
     # ============================================================
     # Prompt & Tools (最後に読み込み)
@@ -198,7 +214,7 @@
     # 追加の initContent (initExtra から移行)
     initContent = ''
       # ============================================================
-      # Sheldon 初期化 (最優先で読み込み)
+      # Sheldon 初期化
       # ============================================================
       if command -v sheldon &> /dev/null; then
         eval "$(sheldon source)"
