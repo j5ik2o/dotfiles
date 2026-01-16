@@ -1,14 +1,30 @@
 -- ============================================================
--- image.nvim - Terminal image display (Kitty only)
+-- image.nvim - Terminal image display (Kitty protocol)
 -- ============================================================
--- Not included in LazyVim, custom plugin for Kitty terminal
--- Only loads when running in Kitty terminal
+-- Supports terminals with Kitty graphics protocol:
+-- - Kitty
+-- - Ghostty
+-- - WezTerm (partial support)
 -- ============================================================
 
--- Only enable in Kitty terminal
-local is_kitty = vim.env.TERM == "xterm-kitty" or vim.env.KITTY_WINDOW_ID ~= nil
+-- Detect terminals that support Kitty graphics protocol
+local function supports_kitty_graphics()
+  -- Kitty
+  if vim.env.TERM == "xterm-kitty" or vim.env.KITTY_WINDOW_ID ~= nil then
+    return true
+  end
+  -- Ghostty
+  if vim.env.TERM == "xterm-ghostty" or vim.env.GHOSTTY_RESOURCES_DIR ~= nil then
+    return true
+  end
+  -- WezTerm (has partial Kitty graphics support)
+  if vim.env.TERM_PROGRAM == "WezTerm" then
+    return true
+  end
+  return false
+end
 
-if not is_kitty then
+if not supports_kitty_graphics() then
   return {}
 end
 
