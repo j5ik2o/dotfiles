@@ -26,3 +26,6 @@ opt.fillchars = {
 
 -- Folding: disable by default (override LazyVim's UFO folding)
 opt.foldenable = false
+
+-- Spell check: disable (problematic with Japanese text)
+opt.spell = false

@@ -20,3 +20,4 @@ map("n", "<leader>w=", "<C-w>=", { desc = "Equal window size" })
 -- Terminal (custom - supplement LazyVim's terminal keymaps)
 -- ============================================================
 map("n", "<leader>ts", "<cmd>belowright split | terminal<CR>", { desc = "Terminal below (split)" })
+map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
