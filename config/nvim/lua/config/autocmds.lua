@@ -19,6 +19,17 @@ autocmd("TermOpen", {
 })
 
 -- ============================================================
+-- Disable spell check (override LazyVim default)
+-- ============================================================
+autocmd("FileType", {
+  group = augroup("lazyvim_wrap_spell", { clear = true }),
+  pattern = { "text", "plaintex", "typst", "gitcommit", "markdown" },
+  callback = function()
+    vim.opt_local.spell = false
+  end,
+})
+
+-- ============================================================
 -- Trim trailing whitespace on save
 -- ============================================================
 autocmd("BufWritePre", {

@@ -43,8 +43,6 @@ return {
         gopls = {},
         -- Python
         pyright = {},
-        -- Markdown
-        marksman = {},
         -- JSON
         jsonls = {},
         -- YAML
