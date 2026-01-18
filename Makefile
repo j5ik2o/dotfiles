@@ -31,8 +31,8 @@ NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
 export NIX_CONFIG
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
-        clean nvim-clean update fmt sheldon-lock gc test nvim-test secrets secrets-diff secrets-apply \
-        plan plan-darwin plan-hm
+        rollback rollback-hm rollback-darwin clean nvim-clean update fmt sheldon-lock gc test nvim-test \
+        secrets secrets-diff secrets-apply plan plan-darwin plan-hm
 
 # デフォルトターゲット
 help:
@@ -48,6 +48,7 @@ help:
 	@echo "  apply          Apply all (darwin on macOS, hm on Linux)"
 	@echo "  apply-hm       Apply Home Manager configuration"
 	@echo "  apply-darwin   Apply nix-darwin configuration (macOS only)"
+	@echo "  rollback       Rollback to previous generation"
 	@echo ""
 	@echo "Other targets:"
 	@echo "  check          Run nix flake check"
@@ -214,6 +215,29 @@ else
 	$(MAKE) apply-hm
 endif
 
+# ============================================================
+# Rollback
+# ============================================================
+
+rollback-hm:
+	@echo "Rolling back Home Manager to previous generation..."
+	home-manager switch --rollback
+
+rollback-darwin:
+ifeq ($(UNAME),Darwin)
+	@echo "Rolling back nix-darwin to previous generation..."
+	sudo darwin-rebuild switch --rollback
+else
+	@echo "nix-darwin is only available on macOS"
+	@exit 1
+endif
+
+rollback:
+ifeq ($(UNAME),Darwin)
+	$(MAKE) rollback-darwin
+else
+	$(MAKE) rollback-hm
+endif
 
 init-darwin:
 ifeq ($(UNAME),Darwin)
