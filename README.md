@@ -20,15 +20,17 @@ dotfiles/
 └── Makefile            # ビルド・適用コマンド
 ```
 
-## クリーンインストール (macOS)
+## クリーンインストール
 
-### 1. Xcode Command Line Tools
+### macOS
+
+#### 1. Xcode Command Line Tools
 
 ```bash
 xcode-select --install
 ```
 
-### 2. Homebrew
+#### 2. Homebrew
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -44,7 +46,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 eval "$(/usr/local/bin/brew shellenv)"
 ```
 
-### 3. Nix
+#### 3. Nix
 
 ```bash
 sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
@@ -56,7 +58,7 @@ sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
 exec $SHELL
 ```
 
-### 4. dotfiles クローン
+#### 4. dotfiles クローン
 
 ```bash
 mkdir -p ~/Sources
@@ -64,35 +66,84 @@ git clone https://github.com/j5ik2o/dotfiles.git ~/Sources/dotfiles
 cd ~/Sources/dotfiles
 ```
 
-### 5. 初回適用
+#### 5. 初回適用
 
 ```bash
-make init-darwin
+make init
 ```
 
-初回は `init-darwin` を使います。これにより：
+これにより：
 - `/etc/nix/nix.conf`, `/etc/bashrc`, `/etc/zshrc` をバックアップ
 - nix-darwin を初回セットアップ
 
 初回は時間がかかります（Homebrew casks のダウンロードなど）。
 
-### 6. 再起動
+#### 6. 再起動
 
 設定を完全に反映させるため、再起動またはログアウト→ログインしてください。
+
+### Linux (Ubuntu/Debian)
+
+#### 1. 前提パッケージ
+
+```bash
+sudo apt update
+sudo apt install -y curl git xz-utils
+```
+
+#### 2. Nix
+
+```bash
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --daemon
+```
+
+インストール後、シェルを再起動：
+
+```bash
+exec $SHELL
+```
+
+#### 3. dotfiles クローン
+
+```bash
+mkdir -p ~/Sources
+git clone https://github.com/j5ik2o/dotfiles.git ~/Sources/dotfiles
+cd ~/Sources/dotfiles
+```
+
+#### 4. 初回適用
+
+```bash
+make init
+```
+
+これにより Home Manager が初回セットアップされます。
+
+#### 5. シェル再起動
+
+```bash
+exec $SHELL
+```
 
 ## 日常の使い方
 
 ### 設定を変更した後
 
 ```bash
-make switch
+make apply
 ```
 
 ### flake.lock を更新
 
 ```bash
 make update
-make switch
+make apply
+```
+
+### ロールバック（問題が発生した場合）
+
+```bash
+make rollback
 ```
 
 ### ビルドだけ（適用しない）
@@ -195,12 +246,14 @@ make help
 
 | ターゲット | 説明 |
 |-----------|------|
-| `init-darwin` | **初回のみ**: nix-darwin 初回セットアップ |
-| `switch` | 設定を適用（macOS: darwin-rebuild, Linux: home-manager） |
+| `init` | **初回のみ**: 初回セットアップ（OS自動判定） |
+| `apply` | 設定を適用（macOS: darwin-rebuild, Linux: home-manager） |
+| `rollback` | 前の世代にロールバック |
 | `build` | ビルドのみ（dry-run） |
 | `update` | flake inputs を更新 |
 | `check` | flake check 実行 |
 | `gc` | Nix ガベージコレクション |
+| `nvim-clean` | Neovim キャッシュ削除 |
 | `fmt` | Nix ファイルをフォーマット |
 | `secrets-init` | chezmoi 初期化 |
 | `secrets-diff` | シークレットの差分表示 |
@@ -221,7 +274,7 @@ make help
 LazyVim ベースの設定。プラグイン管理は LazyVim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
 
 **有効な Extras:**
-- 言語: rust, go, typescript, python, json, yaml, toml, markdown, nix
+- 言語: rust, go, typescript, python, json, yaml, toml, nix
 - エディタ: neo-tree, outline, edgy
 - UI: catppuccin
 - Git: gitui (lazygit)
