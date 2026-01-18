@@ -78,7 +78,13 @@ make init
 
 初回は時間がかかります（Homebrew casks のダウンロードなど）。
 
-#### 6. 再起動
+#### 6. デフォルトシェルの変更（手動）
+
+```bash
+chsh -s /run/current-system/sw/bin/zsh
+```
+
+#### 7. 再起動
 
 設定を完全に反映させるため、再起動またはログアウト→ログインしてください。
 
@@ -121,14 +127,10 @@ make init
 
 #### 5. デフォルトシェルの変更（手動）
 
-Linux では zsh をデフォルトシェルに設定するために手動操作が必要です：
-
 ```bash
 sudo sh -c "echo $HOME/.nix-profile/bin/zsh >> /etc/shells"
 chsh -s $HOME/.nix-profile/bin/zsh
 ```
-
-**Note:** macOS では nix-darwin が自動で設定するため、この手順は不要です。
 
 #### 6. シェル再起動
 
