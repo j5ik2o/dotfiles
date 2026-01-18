@@ -29,7 +29,7 @@
       taplo                   # TOML
 
       # フォーマッター
-      nixfmt-rfc-style
+      nixfmt
       stylua
       nodePackages.prettier
       rustfmt

@@ -1,0 +1,35 @@
+# Dotfiles Project Notes
+
+## Nix
+
+### パッケージ名の注意
+- `nixfmt-rfc-style` は `nixfmt` に統合された。`nixfmt` を使うこと
+
+### 仕組み
+- nixpkgsはある時点のパッケージセット全体のスナップショット
+- 特定パッケージだけバージョンアップは標準ではできない
+- 同じflake.lockなら同じ環境が再現される
+
+### flake inputs
+- `nix flake update` で全inputs更新
+- `nix flake update nixpkgs` で特定inputだけ更新
+
+### ワークフロー
+- `make update` → `make apply` → 問題あれば `make rollback`
+
+## Neovim
+
+### LazyVim
+- LazyVimのコードは `~/.local/share/nvim/lazy/LazyVim/` にあり直接編集不可
+- 設定を上書きするには自分のconfig内でaugroupを同名でclear=trueにする
+
+### キャッシュ
+- `make nvim-clean` で以下を削除:
+  - `~/.local/share/nvim`
+  - `~/.local/state/nvim`
+  - `~/.cache/nvim`
+- nix設定変更後、キャッシュ破棄が必要な場合あり
+
+### 不要な設定を入れない
+- 使わない機能は設定しない（marksman, markdownlintなど）
+- 「あったほうがいいかも」で足さない
