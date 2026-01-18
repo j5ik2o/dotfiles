@@ -62,8 +62,9 @@ exec $SHELL
 
 ```bash
 mkdir -p ~/Sources
-git clone https://github.com/j5ik2o/dotfiles.git ~/Sources/dotfiles
-cd ~/Sources/dotfiles
+cd ~/Sources
+git clone git@github.com/j5ik2o/dotfiles.git
+cd dotfiles
 ```
 
 #### 5. 初回適用
@@ -113,8 +114,9 @@ exec $SHELL
 
 ```bash
 mkdir -p ~/Sources
-git clone https://github.com/j5ik2o/dotfiles.git ~/Sources/dotfiles
-cd ~/Sources/dotfiles
+cd ~/Sources
+git clone git@github.com/j5ik2o/dotfiles.git
+cd dotfiles
 ```
 
 #### 4. 初回適用
