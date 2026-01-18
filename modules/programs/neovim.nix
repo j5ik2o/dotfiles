@@ -27,6 +27,7 @@
       pyright                 # Python
       marksman                # Markdown
       taplo                   # TOML
+      elan                    # Lean toolchain manager (Lean 4)
 
       # フォーマッター
       nixfmt
