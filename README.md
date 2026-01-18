@@ -119,7 +119,18 @@ make init
 
 これにより Home Manager が初回セットアップされます。
 
-#### 5. シェル再起動
+#### 5. デフォルトシェルの変更（手動）
+
+Linux では zsh をデフォルトシェルに設定するために手動操作が必要です：
+
+```bash
+sudo sh -c "echo $HOME/.nix-profile/bin/zsh >> /etc/shells"
+chsh -s $HOME/.nix-profile/bin/zsh
+```
+
+**Note:** macOS では nix-darwin が自動で設定するため、この手順は不要です。
+
+#### 6. シェル再起動
 
 ```bash
 exec $SHELL
