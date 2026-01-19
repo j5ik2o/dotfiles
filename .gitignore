@@ -1,6 +1,8 @@
 .idea/
 result
 
+.tmp/
+
 /.claude/settings.local.json
 /.codex/sessions/
 /.codex/log/
