@@ -64,6 +64,7 @@
     "nvim" = {
       source = nvimConfigPath;
       recursive = true;
+      force = true;
     };
   };
 
