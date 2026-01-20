@@ -120,6 +120,11 @@
     # Lean 4 (定理証明 / 関数型言語)
     elan              # Lean バージョンマネージャ (rustup 相当)
 
+    # Haskell
+    ghc
+    cabal-install
+    stack
+
     # Protocol Buffers
     protobuf
   ];

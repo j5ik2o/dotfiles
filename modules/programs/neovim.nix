@@ -25,6 +25,7 @@
       rust-analyzer           # Rust
       gopls                   # Go
       pyright                 # Python
+      haskell-language-server # Haskell
       marksman                # Markdown
       taplo                   # TOML
       elan                    # Lean toolchain manager (Lean 4)
@@ -37,12 +38,14 @@
       gofumpt
       black
       isort
+      fourmolu
       shfmt
 
       # リンター
       shellcheck
       hadolint
       statix
+      hlint
 
       # ツール
       ripgrep

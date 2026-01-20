@@ -5,6 +5,7 @@ result
 
 /.claude/settings.local.json
 /.codex/sessions/
+/.codex/tmp/
 /.codex/log/
 /.codex/auth.json
 /.codex/history.jsonl

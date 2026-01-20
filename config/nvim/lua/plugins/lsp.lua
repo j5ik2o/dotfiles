@@ -18,6 +18,19 @@ return {
     name = "mason-lspconfig.nvim",
   },
 
+  -- Language-specific plugins
+  {
+    "Julian/lean.nvim",
+    event = { "BufReadPre *.lean", "BufNewFile *.lean" },
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    main = "lean",
+    opts = {
+      mappings = true,
+    },
+  },
+
   -- LSP server settings (servers are installed via Nix)
   {
     "neovim/nvim-lspconfig",
@@ -43,6 +56,8 @@ return {
         gopls = {},
         -- Python
         pyright = {},
+        -- Haskell
+        hls = {},
         -- JSON
         jsonls = {},
         -- YAML
