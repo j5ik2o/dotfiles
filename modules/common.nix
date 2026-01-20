@@ -80,6 +80,7 @@
     # AI ツール
     claude-code
     codex              # OpenAI Codex CLI
+    opencode
     gemini-cli         # Google Gemini CLI
 
     # ============================================================
@@ -132,6 +133,7 @@
     ./programs/starship.nix
     ./programs/neovim.nix
     ./programs/direnv.nix
+    ./programs/opencode.nix
   ];
 
   # ============================================================
