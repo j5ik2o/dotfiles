@@ -260,6 +260,15 @@
       # 起動時は insert mode
       printf '\e[6 q'
 
+      # Ghostty tab title: user@host:cwd
+      autoload -Uz add-zsh-hook
+      _ghostty_tab_title() {
+        [[ -z "${GHOSTTY_RESOURCES_DIR}" ]] && return
+        print -Pn "\e]2;%n@%m:%~\a"
+      }
+      add-zsh-hook precmd _ghostty_tab_title
+      add-zsh-hook preexec _ghostty_tab_title
+
       # history-substring-search のキーバインド
       bindkey '^[[A' history-substring-search-up
       bindkey '^[[B' history-substring-search-down

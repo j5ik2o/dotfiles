@@ -50,6 +50,8 @@ in
       confirm-close-surface = false;
       # shell-integration: SSH先で問題が起きる場合は "none" に変更
       # shell-integration = "zsh";
+      # Disable shell integration title updates; we set titles in the shell.
+      shell-integration-features = "no-title";
 
       # TERM変数: リモートSSH先でghostty terminfoがない場合の互換性確保
       term = "xterm-256color";
