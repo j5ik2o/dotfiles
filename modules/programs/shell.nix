@@ -263,7 +263,7 @@
       # Ghostty tab title: user@host:cwd
       autoload -Uz add-zsh-hook
       _ghostty_tab_title() {
-        [[ -z "${GHOSTTY_RESOURCES_DIR}" ]] && return
+        [[ -z "$GHOSTTY_RESOURCES_DIR" ]] && return
         print -Pn "\e]2;%n@%m:%~\a"
       }
       add-zsh-hook precmd _ghostty_tab_title
