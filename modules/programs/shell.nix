@@ -125,49 +125,73 @@
     # gh (GitHub CLI) 補完 (キャッシュ + 遅延読み込み)
     [plugins.gh-completion]
     inline = """
-    _gh_cache="$HOME/.cache/zsh/gh_completion.zsh"
-    if [[ ! -f "$_gh_cache" ]] || [[ $(command -v gh) -nt "$_gh_cache" ]]; then
-      mkdir -p "$HOME/.cache/zsh"
-      gh completion -s zsh > "$_gh_cache" 2>/dev/null
+    _gh_completion_defer() {
+      _gh_cache="$HOME/.cache/zsh/gh_completion.zsh"
+      if [[ ! -f "$_gh_cache" ]] || [[ $(command -v gh) -nt "$_gh_cache" ]]; then
+        mkdir -p "$HOME/.cache/zsh"
+        gh completion -s zsh > "$_gh_cache" 2>/dev/null
+      fi
+      [[ -f "$_gh_cache" ]] && source "$_gh_cache"
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _gh_completion_defer
+    else
+      _gh_completion_defer
     fi
-    [[ -f "$_gh_cache" ]] && source "$_gh_cache"
     """
-    apply = ["defer"]
 
     # AWS CLI 補完 (遅延読み込み)
     [plugins.aws-completion]
     inline = """
-    if command -v aws_completer &> /dev/null; then
-      autoload -Uz bashcompinit && bashcompinit
-      complete -C aws_completer aws
+    _aws_completion_defer() {
+      if command -v aws_completer &> /dev/null; then
+        autoload -Uz bashcompinit && bashcompinit
+        complete -C aws_completer aws
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _aws_completion_defer
+    else
+      _aws_completion_defer
     fi
     """
-    apply = ["defer"]
 
     # Google Cloud SDK 補完 (遅延読み込み)
     [plugins.gcloud-completion]
     inline = """
-    if [[ -n "$CLOUDSDK_ROOT_DIR" ]]; then
-      source "$CLOUDSDK_ROOT_DIR/completion.zsh.inc" 2>/dev/null
-    elif [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]]; then
-      source "$HOME/google-cloud-sdk/completion.zsh.inc"
+    _gcloud_completion_defer() {
+      if [[ -n "$CLOUDSDK_ROOT_DIR" ]]; then
+        source "$CLOUDSDK_ROOT_DIR/completion.zsh.inc" 2>/dev/null
+      elif [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]]; then
+        source "$HOME/google-cloud-sdk/completion.zsh.inc"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _gcloud_completion_defer
+    else
+      _gcloud_completion_defer
     fi
     """
-    apply = ["defer"]
 
     # Docker 補完 (キャッシュ + 遅延読み込み)
     [plugins.docker-completion]
     inline = """
-    if command -v docker &> /dev/null; then
-      _docker_cache="$HOME/.cache/zsh/docker_completion.zsh"
-      if [[ ! -f "$_docker_cache" ]] || [[ $(command -v docker) -nt "$_docker_cache" ]]; then
-        mkdir -p "$HOME/.cache/zsh"
-        docker completion zsh > "$_docker_cache" 2>/dev/null
+    _docker_completion_defer() {
+      if command -v docker &> /dev/null; then
+        _docker_cache="$HOME/.cache/zsh/docker_completion.zsh"
+        if [[ ! -f "$_docker_cache" ]] || [[ $(command -v docker) -nt "$_docker_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          docker completion zsh > "$_docker_cache" 2>/dev/null
+        fi
+        [[ -f "$_docker_cache" ]] && source "$_docker_cache"
       fi
-      [[ -f "$_docker_cache" ]] && source "$_docker_cache"
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _docker_completion_defer
+    else
+      _docker_completion_defer
     fi
     """
-    apply = ["defer"]
 
     # ============================================================
     # Prompt & Tools (最後に読み込み)
