@@ -18,6 +18,8 @@ return {
         "bash-language-server",
         "gopls",
         "jdtls",
+        "haskell-language-server",
+        "ocaml-lsp",
 
         -- install formatters
         "stylua",

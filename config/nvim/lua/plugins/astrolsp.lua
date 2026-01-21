@@ -45,11 +45,21 @@ return {
       "gopls",
       "metals",
       "jdtls",
+      "hls",
+      "ocamllsp",
+      "leanls",
     },
     -- customize language server configuration options passed to `lspconfig`
     ---@diagnostic disable: missing-fields
     config = {
-      -- clangd = { capabilities = { offsetEncoding = "utf-8" } },
+      rust_analyzer = {
+        settings = {
+          ["rust-analyzer"] = {
+            cargo = { allFeatures = true, allTargets = true },
+            procMacro = { enable = true },
+          },
+        },
+      },
     },
     -- customize how language servers are attached
     handlers = {

@@ -282,6 +282,8 @@ make help
 ## ドキュメント
 
 - [Neovim キーマップ (AstroNvim)](docs/neovim.md)
+- [Neovim LSP これだけ](docs/lsp.md)
+- [Neovim Tree-sitter これだけ](docs/tree-sitter.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
 
 ## Neovim (AstroNvim)

@@ -6,6 +6,8 @@ AstroNvim ベースの設定。標準キーマップは公式ドキュメント�
 
 - AstroNvim docs: https://docs.astronvim.com/
 - WhichKey: `:WhichKey`
+- LSP これだけ: `docs/lsp.md`
+- Tree-sitter これだけ: `docs/tree-sitter.md`
 
 ## カスタム追加
 
