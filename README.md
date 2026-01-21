@@ -281,27 +281,24 @@ make help
 
 ## ドキュメント
 
-- [Neovim キーマップ (LazyVim)](docs/neovim.md)
+- [Neovim キーマップ (AstroNvim)](docs/neovim.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
 
-## Neovim (LazyVim)
+## Neovim (AstroNvim)
 
-LazyVim ベースの設定。プラグイン管理は LazyVim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
+AstroNvim ベースの設定。プラグイン管理は AstroNvim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
+edgy は使用しない。
 
-**有効な Extras:**
-- 言語: rust, go, typescript, python, json, yaml, toml, nix
-- エディタ: neo-tree, outline, edgy
-- UI: catppuccin
-- Git: gitui (lazygit)
+**主なカスタム:**
+- ターミナル: `Space t 1-4` で番号付きターミナル / `Esc Esc` でターミナルモード終了
+- ウィンドウサイズ調整: `Space w h/l/j/k`, `Space w =`
+- Neo-tree Buffers の TERMINALS は既存ターミナルへフォーカス
 
 詳細は [docs/neovim.md](docs/neovim.md) 参照。
 
 ## テーマ
 
-すべて **Catppuccin Mocha** で統一：
-- Neovim (LazyVim)
-- Ghostty
-- WezTerm
+テーマは各アプリの設定に準拠。Neovim は AstroNvim の colorscheme 設定に従う。
 
 ## 注意事項
 

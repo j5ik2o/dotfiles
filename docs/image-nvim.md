@@ -1,5 +1,8 @@
 #- image.nvim 画像表示プラグイン
 
+> NOTE: 現在の Neovim 設定は AstroNvim へ移行済みのため、`image.nvim` の設定ファイルはありません。  
+> このドキュメントは過去の参考情報として残しています。
+
 Neovim内でターミナル上に画像を表示するプラグイン。Ghostty (Kitty Graphics Protocol対応) で動作。
 
 ## キーバインド

@@ -19,9 +19,10 @@
 
 ## Neovim
 
-### LazyVim
-- LazyVimのコードは `~/.local/share/nvim/lazy/LazyVim/` にあり直接編集不可
-- 設定を上書きするには自分のconfig内でaugroupを同名でclear=trueにする
+### AstroNvim
+- AstroNvim のコードは `~/.local/share/nvim/lazy/AstroNvim/` にあり直接編集不可
+- 設定は `config/nvim` を正とする（必要なら `~/.config/nvim` へ同期）
+- edgy は使わない
 
 ### キャッシュ
 - `make nvim-clean` で以下を削除:
@@ -33,3 +34,8 @@
 ### 不要な設定を入れない
 - 使わない機能は設定しない（marksman, markdownlintなど）
 - 「あったほうがいいかも」で足さない
+
+### 追加カスタム
+- ターミナル: `Esc Esc` でターミナルモード終了、`Space t 1-4` で番号付きターミナル
+- ウィンドウ調整: `Space w h/l/j/k`, `Space w =`
+- Neo-tree Buffers の TERMINALS は既存ターミナルへフォーカス
