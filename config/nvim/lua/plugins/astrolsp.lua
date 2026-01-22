@@ -53,6 +53,24 @@ return {
     ---@diagnostic disable: missing-fields
     config = {
       rust_analyzer = {
+        root_dir = function(fname)
+          local util = require("lspconfig.util")
+          local uv = vim.uv or vim.loop
+          fname = (uv and uv.fs_realpath(fname)) or fname
+          return util.root_pattern("Cargo.toml", "rust-project.json")(fname) or util.find_git_ancestor(fname)
+        end,
+        on_new_config = function(new_config, root_dir)
+          local target = vim.env.RUST_ANALYZER_TARGET or vim.env.CARGO_BUILD_TARGET
+          if (not target or target == "") and root_dir and root_dir:find("fraktor%-rs") then
+            target = "thumbv8m.main-none-eabi"
+          end
+          if target and target ~= "" then
+            new_config.settings = new_config.settings or {}
+            new_config.settings["rust-analyzer"] = new_config.settings["rust-analyzer"] or {}
+            new_config.settings["rust-analyzer"].cargo = new_config.settings["rust-analyzer"].cargo or {}
+            new_config.settings["rust-analyzer"].cargo.target = target
+          end
+        end,
         settings = {
           ["rust-analyzer"] = {
             cargo = { allFeatures = true, allTargets = true },

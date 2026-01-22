@@ -18,8 +18,8 @@ return {
         "bash-language-server",
         "gopls",
         "jdtls",
-        "haskell-language-server",
-        "ocaml-lsp",
+        -- "haskell-language-server", -- managed by Nix
+        -- "ocaml-lsp", -- managed by Nix
 
         -- install formatters
         "stylua",

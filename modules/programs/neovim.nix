@@ -29,6 +29,8 @@
       marksman                # Markdown
       taplo                   # TOML
       elan                    # Lean toolchain manager (Lean 4)
+      opam                    # OCaml package manager (for mason)
+      ocamlPackages.ocaml-lsp # OCaml LSP
 
       # フォーマッター
       nixfmt
