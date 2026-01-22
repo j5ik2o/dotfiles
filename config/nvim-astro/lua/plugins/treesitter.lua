@@ -3,6 +3,7 @@
 ---@type LazySpec
 return {
   "nvim-treesitter/nvim-treesitter",
+  commit = "310f0925ec64c7e54f3ee952679d285b13e5a735", -- keep legacy configs module for textobjects
   opts = {
     ensure_installed = {
       "lua",

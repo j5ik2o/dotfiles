@@ -103,7 +103,7 @@ image:hue(value)         -- 色相調整
 
 ## 設定ファイル
 
-`config/nvim/lua/plugins/image.lua`:
+`config/nvim-astro/lua/plugins/image.lua`:
 
 ```lua
 opts = {

@@ -38,7 +38,7 @@
       hmConfigPath = ./modules;
 
       # Neovim Lua 設定のパス
-      nvimConfigPath = ./config/nvim;
+      nvimConfigPath = ./config/nvim-astro;
 
       # 共通の home-manager モジュール
       commonHomeModules = [

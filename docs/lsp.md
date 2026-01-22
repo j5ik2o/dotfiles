@@ -17,8 +17,8 @@
 
 ## このリポジトリの設定場所
 
-- LSP サーバの有効化: `config/nvim/lua/plugins/astrolsp.lua`
-- Mason の自動インストール: `config/nvim/lua/plugins/mason.lua`
+- LSP サーバの有効化: `config/nvim-astro/lua/plugins/astrolsp.lua`
+- Mason の自動インストール: `config/nvim-astro/lua/plugins/mason.lua`
 
 ## 主要キーバインド（AstroNvim デフォルト）
 

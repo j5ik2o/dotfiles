@@ -2,6 +2,16 @@
 
 AstroNvim ベースの設定。標準キーマップは公式ドキュメントと `:WhichKey` を参照。
 
+## 起動エイリアス
+
+複数ディストロを検証するため、`NVIM_APPNAME` で設定を分離しています。
+起動エイリアスは `modules/programs/shell.nix` に定義済みです。
+
+- Astro (default): `nvim` / `nva`
+- NvChad: `nvc`
+- LazyVim: `nvl`
+- LunarVim: `nvr`
+
 ## 参照
 
 - AstroNvim docs: https://docs.astronvim.com/

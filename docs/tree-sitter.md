@@ -17,7 +17,7 @@
 
 ## このリポジトリの設定場所
 
-- 追加インストール対象: `config/nvim/lua/plugins/treesitter.lua`
+- 追加インストール対象: `config/nvim-astro/lua/plugins/treesitter.lua`
 
 ## 主要キーバインド（Textobjects）
 

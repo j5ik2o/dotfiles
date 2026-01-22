@@ -291,6 +291,14 @@ make help
 AstroNvim ベースの設定。プラグイン管理は AstroNvim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
 edgy は使用しない。
 
+複数ディストロを検証するため、`NVIM_APPNAME` で設定を分離。
+- Astro (default): `nvim` / `nva`
+- NvChad: `nvc`
+- LazyVim: `nvl`
+- LunarVim: `nvr`
+
+起動エイリアスは `modules/programs/shell.nix` に定義済み。
+
 **主なカスタム:**
 - ターミナル: `Space t 1-4` で番号付きターミナル / `Esc Esc` でターミナルモード終了
 - ウィンドウサイズ調整: `Space w h/l/j/k`, `Space w =`

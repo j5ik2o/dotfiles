@@ -1,6 +1,12 @@
 { config, pkgs, lib, nvimConfigPath, ... }:
 
-{
+let
+  nvimConfigDir = builtins.dirOf (toString nvimConfigPath);
+  nvimAstroPath = nvimConfigPath;
+  nvimNvChadPath = "${nvimConfigDir}/nvim-nvchad";
+  nvimLazyPath = "${nvimConfigDir}/nvim-lazy";
+  nvimLunarPath = "${nvimConfigDir}/nvim-lunar";
+in {
   # ============================================================
   # Neovim 設定 (LazyVim 方式)
   # ============================================================
@@ -31,6 +37,8 @@
       elan                    # Lean toolchain manager (Lean 4)
       opam                    # OCaml package manager (for mason)
       ocamlPackages.ocaml-lsp # OCaml LSP
+      cmake                   # rust-analyzer build scripts (aws-lc-sys)
+      gcc-arm-embedded        # arm-none-eabi-gcc for no_std targets
 
       # フォーマッター
       nixfmt
@@ -67,7 +75,27 @@
   # Lua 設定ファイルをシンボリンク
   xdg.configFile = {
     "nvim" = {
-      source = nvimConfigPath;
+      source = nvimAstroPath;
+      recursive = true;
+      force = true;
+    };
+    "nvim-astro" = {
+      source = nvimAstroPath;
+      recursive = true;
+      force = true;
+    };
+    "nvim-nvchad" = {
+      source = nvimNvChadPath;
+      recursive = true;
+      force = true;
+    };
+    "nvim-lazy" = {
+      source = nvimLazyPath;
+      recursive = true;
+      force = true;
+    };
+    "nvim-lunar" = {
+      source = nvimLunarPath;
       recursive = true;
       force = true;
     };

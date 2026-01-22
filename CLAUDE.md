@@ -21,7 +21,7 @@
 
 ### AstroNvim
 - AstroNvim のコードは `~/.local/share/nvim/lazy/AstroNvim/` にあり直接編集不可
-- 設定は `config/nvim` を正とする（必要なら `~/.config/nvim` へ同期）
+- 設定は `config/nvim-astro` を正とする（必要なら `~/.config/nvim` へ同期）
 - edgy は使わない
 
 ### キャッシュ

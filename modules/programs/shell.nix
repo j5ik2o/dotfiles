@@ -358,6 +358,10 @@
       # エディタ
       v = "nvim";
       vim = "nvim";
+      nva = "NVIM_APPNAME=nvim-astro nvim";
+      nvc = "NVIM_APPNAME=nvim-nvchad nvim";
+      nvl = "NVIM_APPNAME=nvim-lazy nvim";
+      nvr = "NVIM_APPNAME=nvim-lunar nvim";
 
       # Git (追加)
       gs = "git status -sb";
