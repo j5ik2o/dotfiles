@@ -1,11 +1,10 @@
-# LunarVim Sandbox
+# starter.lvim (Rust)
 
-This directory is reserved for a LunarVim setup when using NVIM_APPNAME.
+This directory uses the LunarVim starter.lvim rust-ide preset.
 
 Usage:
-- Install LunarVim config here (copy your LunarVim config into this directory).
-- Launch with: NVIM_APPNAME=nvim-lunar nvim
+- Launch with: `NVIM_APPNAME=nvim-lunar nvim`
+- LunarVim core is auto-cloned into `~/.local/share/nvim-lunar/lunarvim`
 
-Notes:
-- This repo does not vendor LunarVim itself.
-- Keep your local changes inside this directory.
+Upstream README:
+A great starting point for your LunarVim Rust journey!
