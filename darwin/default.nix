@@ -1,6 +1,15 @@
 { config, pkgs, lib, inputs, username, ... }:
 
+let
+  # ユーザー名からhomebrew設定ファイル名を決定
+  # ドットをアンダースコアに変換（Nixファイルパス互換性のため）
+  safeUsername = builtins.replaceStrings [ "." ] [ "_" ] username;
+  homebrewConfigFile = ./homebrew/${safeUsername}.nix;
+in
 {
+  imports = [
+    homebrewConfigFile
+  ];
   # ============================================================
   # nix-darwin システムレベル設定
   # macOS のシステム設定を Nix で宣言的に管理
@@ -62,6 +71,7 @@
 
   # ============================================================
   # Homebrew 統合 (Cask アプリケーション用)
+  # casks はユーザーごとに darwin/homebrew/<username>.nix で定義
   # ============================================================
   homebrew = {
     enable = true;
@@ -77,74 +87,10 @@
 
     # CLI ツール (Nix にないもの)
     brews = [
-      # 例: "awscli"
-    ];
-
-    # GUI アプリケーション
-    casks = [
-      # ブラウザ
-      "google-chrome"
-      "firefox"
-      "arc"
-
-      # 開発ツール
-      "jetbrains-toolbox"
-      "visual-studio-code"
-      "zed"
-
-      "cursor"
-      "windsurf"
-      "antigravity"
-
-      "iterm2"
-      "warp"
-      "wezterm"
-      "ghostty"
-
-      "docker-desktop"
-      "github"
-
-      "parallels"
-
-      # AI / ML
-      "lm-studio"
-      "chatgpt"
-      "claude"
-
-      # ユーティリティ
-      "coteditor"
-      "raycast"
-      "1password"
-      "1password-cli"
-      "karabiner-elements"
-      "rectangle"
-      "alt-tab"
-      "stats"
-      "monitorcontrol"
-      "cleanshot"           # スクリーンショット
-      "angry-ip-scanner"
-      "tailscale-app"
-
-      # コミュニケーション
-      "slack"
-      "discord"
-      "zoom"
-
-      # クラウドストレージ
-      "dropbox"
-      "google-drive"
-
-      # その他
-      "notion"
-      "obsidian"
-      "mactex"              # LaTeX
-      "spotify"
     ];
 
     # Mac App Store アプリ
     masApps = {
-      # "App Name" = App ID;
-      # 例: "Xcode" = 497799835;
     };
   };
 
