@@ -72,20 +72,29 @@ return {
       opts.buffers.window = opts.buffers.window or {}
       opts.buffers.window.mappings = opts.buffers.window.mappings or {}
 
+      local function focus_existing_terminal(bufnr)
+        if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
+        if vim.bo[bufnr].buftype ~= "terminal" then
+          return false
+        end
+        local winids = vim.fn.win_findbuf(bufnr)
+        if #winids > 0 then
+          vim.api.nvim_set_current_win(winids[1])
+          return true
+        end
+        return false
+      end
+
       opts.buffers.commands.open_buffer = function(state)
         local node = state.tree and state.tree:get_node()
         if not node then
           return
         end
 
-        if node.type == "terminal" and node.extra and node.extra.bufnr then
-          local bufnr = node.extra.bufnr
-          local winid = vim.fn.bufwinid(bufnr)
-          if winid ~= -1 then
-            vim.api.nvim_set_current_win(winid)
-          else
-            vim.cmd("buffer " .. bufnr)
-          end
+        local bufnr = node.extra and node.extra.bufnr
+        if bufnr and focus_existing_terminal(bufnr) then
           return
         end
 
