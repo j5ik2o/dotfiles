@@ -110,6 +110,54 @@
         }
       ) {} users;
 
+      # nix-darwin 設定を生成する関数
+      mkDarwinConfiguration = { system, user }:
+        nix-darwin.lib.darwinSystem {
+          inherit system;
+          modules = [
+            ./darwin/default.nix
+            home-manager.darwinModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                backupFileExtension = "backup";  # 既存ファイルを .backup に退避
+                users.${user} = { pkgs, ... }: {
+                  imports = darwinHomeModules;
+                  home = {
+                    username = user;
+                    homeDirectory = "/Users/${user}";
+                    stateVersion = "24.11";
+                  };
+                };
+                extraSpecialArgs = {
+                  inherit self inputs nvimConfigPath;
+                  username = user;
+                };
+              };
+            }
+          ];
+          specialArgs = { inherit inputs; username = user; };
+        };
+
+      # ユーザー名を設定名用に正規化 (ドットをアンダースコアに置換)
+      sanitizeUsername = name: builtins.replaceStrings ["."] ["_"] name;
+
+      # 全ユーザー × macOSプラットフォームの darwinConfigurations を生成
+      mkAllDarwinConfigurations = nixpkgs.lib.foldl' (acc: user:
+        let safeName = sanitizeUsername user;
+        in acc // {
+          "${safeName}-darwin" = mkDarwinConfiguration {
+            system = "aarch64-darwin";
+            inherit user;
+          };
+          "${safeName}-darwin-x86" = mkDarwinConfiguration {
+            system = "x86_64-darwin";
+            inherit user;
+          };
+        }
+      ) {} users;
+
     in {
       # ============================================================
       # Home Manager Configurations (standalone)
@@ -119,66 +167,9 @@
 
       # ============================================================
       # nix-darwin Configurations (macOS system-level)
+      # 全ユーザー × macOSプラットフォームの組み合わせを自動生成
       # ============================================================
-      darwinConfigurations = {
-        # macOS (Apple Silicon)
-        "${defaultUser}-darwin" = nix-darwin.lib.darwinSystem {
-          system = "aarch64-darwin";
-          modules = [
-            ./darwin/default.nix
-            home-manager.darwinModules.home-manager
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                backupFileExtension = "backup";  # 既存ファイルを .backup に退避
-                users.${defaultUser} = { pkgs, ... }: {
-                  imports = darwinHomeModules;
-                  home = {
-                    username = defaultUser;
-                    homeDirectory = "/Users/${defaultUser}";
-                    stateVersion = "24.11";
-                  };
-                };
-                extraSpecialArgs = {
-                  inherit self inputs nvimConfigPath;
-                  username = defaultUser;
-                };
-              };
-            }
-          ];
-          specialArgs = { inherit inputs; username = defaultUser; };
-        };
-
-        # macOS (Intel) - 必要に応じて追加
-        "${defaultUser}-darwin-x86" = nix-darwin.lib.darwinSystem {
-          system = "x86_64-darwin";
-          modules = [
-            ./darwin/default.nix
-            home-manager.darwinModules.home-manager
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                backupFileExtension = "backup";  # 既存ファイルを .backup に退避
-                users.${defaultUser} = { pkgs, ... }: {
-                  imports = darwinHomeModules;
-                  home = {
-                    username = defaultUser;
-                    homeDirectory = "/Users/${defaultUser}";
-                    stateVersion = "24.11";
-                  };
-                };
-                extraSpecialArgs = {
-                  inherit self inputs nvimConfigPath;
-                  username = defaultUser;
-                };
-              };
-            }
-          ];
-          specialArgs = { inherit inputs; username = defaultUser; };
-        };
-      };
+      darwinConfigurations = mkAllDarwinConfigurations;
 
       # ============================================================
       # Development shells

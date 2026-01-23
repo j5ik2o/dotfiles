@@ -5,6 +5,9 @@
 # ユーザー名 (現在のログインユーザーを自動検出)
 USER := $(shell whoami)
 
+# ユーザー名を正規化 (ドットをアンダースコアに置換、darwin設定名用)
+SAFE_USER := $(subst .,_,$(USER))
+
 # システム検出
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
@@ -12,10 +15,10 @@ ARCH := $(shell uname -m)
 ifeq ($(UNAME),Darwin)
   ifeq ($(ARCH),arm64)
     HM_CONFIG := $(USER)@darwin-aarch64
-    DARWIN_CONFIG := $(USER)-darwin
+    DARWIN_CONFIG := $(SAFE_USER)-darwin
   else
     HM_CONFIG := $(USER)@darwin-x86_64
-    DARWIN_CONFIG := $(USER)-darwin-x86
+    DARWIN_CONFIG := $(SAFE_USER)-darwin-x86
   endif
 else
   ifeq ($(ARCH),x86_64)
@@ -103,7 +106,7 @@ check-update:
 		fi; \
 	else \
 		echo "Building Home Manager with updated inputs: $(HM_CONFIG)"; \
-		nix build --reference-lock-file $$tmp .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace --out-link $$outdir/result >/dev/null; \
+		nix build --reference-lock-file $$tmp '.#homeConfigurations."$(HM_CONFIG)".activationPackage' --show-trace --out-link $$outdir/result >/dev/null; \
 		profile="$$HOME/.local/state/nix/profiles/home-manager"; \
 		if [ -e $$profile ]; then \
 			if command -v nvd >/dev/null; then \
@@ -142,7 +145,7 @@ nvim-test:
 
 build-hm:
 	@echo "Building Home Manager configuration: $(HM_CONFIG)"
-	nix build .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace
+	nix build '.#homeConfigurations."$(HM_CONFIG)".activationPackage' --show-trace
 
 build-darwin:
 ifeq ($(UNAME),Darwin)
@@ -181,7 +184,7 @@ endif
 
 plan-hm:
 	@echo "Planning Home Manager configuration: $(HM_CONFIG)"
-	@nix build .#homeConfigurations.$(HM_CONFIG).activationPackage --show-trace
+	@nix build '.#homeConfigurations."$(HM_CONFIG)".activationPackage' --show-trace
 	@echo "Build successful. Run 'make apply' to apply."
 
 plan:
@@ -197,7 +200,7 @@ endif
 
 apply-hm:
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
-	home-manager switch --flake .#$(HM_CONFIG)
+	home-manager switch --flake '.#"$(HM_CONFIG)"'
 
 apply-darwin:
 ifeq ($(UNAME),Darwin)
@@ -257,7 +260,7 @@ init-linux:
 ifeq ($(UNAME),Linux)
 	@echo "Preparing for first home-manager installation on Linux..."
 	@echo "Running initial home-manager switch..."
-	nix run home-manager/master -- switch --flake .#$(HM_CONFIG)
+	nix run home-manager/master -- switch --flake '.#"$(HM_CONFIG)"'
 else
 	@echo "init-linux is only available on Linux"
 	@exit 1
