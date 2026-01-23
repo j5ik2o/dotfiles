@@ -288,10 +288,10 @@ clean:
 	rm -rf .direnv
 
 nvim-clean:
-	@echo "Cleaning Neovim cache..."
-	rm -rf ~/.local/share/nvim
-	rm -rf ~/.local/state/nvim
-	rm -rf ~/.cache/nvim
+	@echo "Cleaning all Neovim caches (nvim-*)..."
+	rm -rf ~/.local/share/nvim*
+	rm -rf ~/.local/state/nvim*
+	rm -rf ~/.cache/nvim*
 
 gc:
 	@echo "Running garbage collection..."

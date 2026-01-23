@@ -448,6 +448,10 @@
       grep = "rg";
       v = "nvim";
       vim = "nvim";
+      nva = "NVIM_APPNAME=nvim-astro nvim";
+      nvc = "NVIM_APPNAME=nvim-nvchad nvim";
+      nvl = "NVIM_APPNAME=nvim-lazy nvim";
+      nvr = "NVIM_APPNAME=nvim-lunar nvim";
       lg = "lazygit";
     };
 

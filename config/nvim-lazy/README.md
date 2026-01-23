@@ -1,11 +1,15 @@
-# LazyVim Sandbox
+# LazyVim (nvim-lazy)
 
-This directory is reserved for a LazyVim setup when using NVIM_APPNAME.
+LazyVim starter-style config for NVIM_APPNAME=nvim-lazy.
 
 Usage:
-- Install LazyVim here (use the LazyVim starter config in this directory).
-- Launch with: NVIM_APPNAME=nvim-lazy nvim
+- Launch: `nvl` (alias) or `NVIM_APPNAME=nvim-lazy nvim`
+- First launch bootstraps lazy.nvim and LazyVim
+
+Structure:
+- `init.lua`: entrypoint
+- `lua/config/`: options/keymaps/autocmds
+- `lua/plugins/`: extra plugin specs
 
 Notes:
-- This repo does not vendor LazyVim itself.
-- Keep your local changes inside this directory.
+- LazyVim itself is not vendored; it is pulled by lazy.nvim.
