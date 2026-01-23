@@ -7,10 +7,8 @@ result
 /.codex/sessions/
 /.codex/tmp/
 /.codex/log/
-/.codex/auth.json
 /.codex/history.jsonl
-/.codex/internal_storage.json
-/.codex/version.json
+/.codex/*.json
 /.serena/cache/
 
 

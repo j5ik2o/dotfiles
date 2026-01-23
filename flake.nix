@@ -32,6 +32,8 @@
       # カスタムパッケージの overlay
       customOverlay = final: prev: {
         gwq = final.callPackage ./packages/gwq.nix { };
+        codex = final.callPackage ./packages/codex.nix { };
+        claude-code = final.callPackage ./packages/claude-code.nix { };
       };
 
       # home-manager 設定のパス

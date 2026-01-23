@@ -28,6 +28,8 @@ in
   nixpkgs.overlays = [
     (final: prev: {
       gwq = final.callPackage ../packages/gwq.nix { };
+      codex = final.callPackage ../packages/codex.nix { };
+      claude-code = final.callPackage ../packages/claude-code.nix { };
     })
   ];
 
