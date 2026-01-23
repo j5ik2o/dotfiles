@@ -5,6 +5,58 @@ lvim.builtin.treesitter.ensure_installed = {
   "toml",
 }
 
+-- Diagnostics (Neovim 0.11+): configure signs via vim.diagnostic.config
+local diagnostic_signs = {
+  [vim.diagnostic.severity.ERROR] = lvim.icons.diagnostics.Error,
+  [vim.diagnostic.severity.WARN] = lvim.icons.diagnostics.Warning,
+  [vim.diagnostic.severity.HINT] = lvim.icons.diagnostics.Hint,
+  [vim.diagnostic.severity.INFO] = lvim.icons.diagnostics.Information,
+}
+
+vim.diagnostic.config {
+  signs = {
+    text = diagnostic_signs,
+    numhl = {
+      [vim.diagnostic.severity.ERROR] = "DiagnosticSignError",
+      [vim.diagnostic.severity.WARN] = "DiagnosticSignWarn",
+      [vim.diagnostic.severity.HINT] = "DiagnosticSignHint",
+      [vim.diagnostic.severity.INFO] = "DiagnosticSignInfo",
+    },
+  },
+  virtual_text = true,
+  update_in_insert = false,
+  underline = true,
+  severity_sort = true,
+  float = {
+    focusable = true,
+    style = "minimal",
+    border = "rounded",
+    source = "always",
+    header = "",
+    prefix = "",
+  },
+}
+
+-- Ensure callers provide position_encoding (required in Neovim 0.11+).
+do
+  local orig_make_position_params = vim.lsp.util.make_position_params
+  vim.lsp.util.make_position_params = function(window, position_encoding)
+    local win = window or 0
+    if not position_encoding then
+      local buf = vim.api.nvim_win_get_buf(win)
+      local clients = vim.lsp.get_clients { bufnr = buf }
+      position_encoding = (clients[1] and clients[1].offset_encoding) or "utf-16"
+    end
+    return orig_make_position_params(win, position_encoding)
+  end
+end
+
+-- Avoid Treesitter provider errors on Neovim 0.11+ with current plugins.
+-- Keep LSP + regex providers for illuminate.
+lvim.builtin.illuminate = lvim.builtin.illuminate or {}
+lvim.builtin.illuminate.options = lvim.builtin.illuminate.options or {}
+lvim.builtin.illuminate.options.providers = { "lsp", "regex" }
+
 vim.list_extend(lvim.lsp.automatic_configuration.skipped_servers, { "rust_analyzer" })
 
 local mason_path = vim.fn.glob(vim.fn.stdpath "data" .. "/mason/")
@@ -98,6 +150,41 @@ lvim.builtin.dap.on_config_done = function(dap)
 end
 
 vim.api.nvim_set_keymap("n", "<m-d>", "<cmd>RustOpenExternalDocs<Cr>", { noremap = true, silent = true })
+
+-- Terminal keymaps
+vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+local function toggle_lvim_term(id)
+  local ok_lazy, lazy = pcall(require, "lazy")
+  if ok_lazy then
+    lazy.load { plugins = { "toggleterm.nvim" } }
+  end
+  local ok, toggleterm = pcall(require, "toggleterm")
+  if not ok then
+    vim.notify("toggleterm is not available", vim.log.levels.WARN)
+    vim.cmd("terminal")
+    return
+  end
+  toggleterm.toggle(id, nil, nil, "horizontal")
+end
+vim.keymap.set("n", "<Leader>t1", function()
+  toggle_lvim_term(1)
+end, { desc = "Terminal #1" })
+vim.keymap.set("n", "<Leader>t2", function()
+  toggle_lvim_term(2)
+end, { desc = "Terminal #2" })
+vim.keymap.set("n", "<Leader>t3", function()
+  toggle_lvim_term(3)
+end, { desc = "Terminal #3" })
+vim.keymap.set("n", "<Leader>t4", function()
+  toggle_lvim_term(4)
+end, { desc = "Terminal #4" })
+
+-- Which-key group for terminals (show under <Leader>t)
+lvim.builtin.which_key.mappings["t"] = lvim.builtin.which_key.mappings["t"] or { name = "Terminal" }
+lvim.builtin.which_key.mappings["t"]["1"] = { "<Cmd>1ToggleTerm direction=horizontal<CR>", "Terminal #1" }
+lvim.builtin.which_key.mappings["t"]["2"] = { "<Cmd>2ToggleTerm direction=horizontal<CR>", "Terminal #2" }
+lvim.builtin.which_key.mappings["t"]["3"] = { "<Cmd>3ToggleTerm direction=horizontal<CR>", "Terminal #3" }
+lvim.builtin.which_key.mappings["t"]["4"] = { "<Cmd>4ToggleTerm direction=horizontal<CR>", "Terminal #4" }
 
 lvim.builtin.which_key.mappings["C"] = {
   name = "Rust",

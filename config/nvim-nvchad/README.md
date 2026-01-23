@@ -1,11 +1,13 @@
-# NvChad Sandbox
+**This repo is supposed to be used as config by NvChad users!**
 
-This directory is reserved for a NvChad setup when using NVIM_APPNAME.
+- The main nvchad repo (NvChad/NvChad) is used as a plugin by this repo.
+- So you just import its modules , like `require "nvchad.options" , require "nvchad.mappings"`
+- So you can delete the .git from this repo ( when you clone it locally ) or fork it :)
 
-Usage:
-- Install NvChad here (clone NvChad into this directory).
-- Launch with: NVIM_APPNAME=nvim-nvchad nvim
+## Local usage
 
-Notes:
-- This repo does not vendor NvChad itself.
-- Keep your local changes inside this directory.
+- Launch with: `NVIM_APPNAME=nvim-nvchad nvim` (alias: `nvc`)
+
+# Credits
+
+1) Lazyvim starter https://github.com/LazyVim/starter as nvchad's starter was inspired by Lazyvim's . It made a lot of things easier!
