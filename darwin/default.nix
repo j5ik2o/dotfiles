@@ -5,6 +5,10 @@ let
   # ドットをアンダースコアに変換（Nixファイルパス互換性のため）
   safeUsername = builtins.replaceStrings [ "." ] [ "_" ] username;
   homebrewConfigFile = ./homebrew/${safeUsername}.nix;
+  homebrewCleanup =
+    if username == "ex_j.kato" || username == "ex_j_kato"
+    then "none"
+    else "zap";
 in
 {
   imports = [
@@ -77,7 +81,7 @@ in
     enable = true;
     onActivation = {
       autoUpdate = true;
-      cleanup = "none";
+      cleanup = homebrewCleanup;
       upgrade = true;
     };
 
