@@ -114,7 +114,6 @@
       # ユーティリティ
       "coteditor"
       "raycast"
-      "alfred"
       "1password"
       "1password-cli"
       "karabiner-elements"
