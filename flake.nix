@@ -18,7 +18,7 @@
   outputs = { self, nixpkgs, home-manager, nix-darwin, ... }@inputs:
     let
       # サポートするユーザー一覧
-      users = [ "j5ik2o" "parallels" ];
+      users = [ "j5ik2o" "parallels" "ex_j.kato" ];
 
       # デフォルトユーザー (nix-darwin用)
       defaultUser = "j5ik2o";
