@@ -361,6 +361,7 @@
       nva = "NVIM_APPNAME=nvim-astro nvim";
       nvc = "NVIM_APPNAME=nvim-nvchad nvim";
       nvl = "NVIM_APPNAME=nvim-lazy nvim";
+      nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
       nvr = "NVIM_APPNAME=nvim-lunar nvim";
 
       # Git (追加)
@@ -451,6 +452,7 @@
       nva = "NVIM_APPNAME=nvim-astro nvim";
       nvc = "NVIM_APPNAME=nvim-nvchad nvim";
       nvl = "NVIM_APPNAME=nvim-lazy nvim";
+      nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
       nvr = "NVIM_APPNAME=nvim-lunar nvim";
       lg = "lazygit";
     };

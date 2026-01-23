@@ -295,6 +295,7 @@ edgy は使用しない。
 - Astro (default): `nvim` / `nva`
 - NvChad: `nvc`
 - LazyVim: `nvl`
+- LazyVim (Nix-managed): `nvn`
 - LunarVim: `nvr`
 
 起動エイリアスは `modules/programs/shell.nix` に定義済み。

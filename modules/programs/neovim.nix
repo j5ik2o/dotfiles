@@ -5,7 +5,49 @@ let
   nvimAstroPath = nvimConfigPath;
   nvimNvChadPath = "${nvimConfigDir}/nvim-nvchad";
   nvimLazyPath = "${nvimConfigDir}/nvim-lazy";
+  nvimNixLazyPath = "${nvimConfigDir}/nvim-nix-lazy";
   nvimLunarPath = "${nvimConfigDir}/nvim-lunar";
+  nvimNixLazyPlugins = [
+    { name = "LazyVim"; pkg = pkgs.vimPlugins.LazyVim; }
+    { name = "blink.cmp"; pkg = pkgs.vimPlugins.blink-cmp; }
+    { name = "bufferline.nvim"; pkg = pkgs.vimPlugins.bufferline-nvim; }
+    { name = "catppuccin"; pkg = pkgs.vimPlugins.catppuccin-nvim; }
+    { name = "conform.nvim"; pkg = pkgs.vimPlugins.conform-nvim; }
+    { name = "flash.nvim"; pkg = pkgs.vimPlugins.flash-nvim; }
+    { name = "friendly-snippets"; pkg = pkgs.vimPlugins.friendly-snippets; }
+    { name = "fzf-lua"; pkg = pkgs.vimPlugins.fzf-lua; }
+    { name = "gitsigns.nvim"; pkg = pkgs.vimPlugins.gitsigns-nvim; }
+    { name = "grug-far.nvim"; pkg = pkgs.vimPlugins.grug-far-nvim; }
+    { name = "lazy.nvim"; pkg = pkgs.vimPlugins.lazy-nvim; }
+    { name = "lazydev.nvim"; pkg = pkgs.vimPlugins.lazydev-nvim; }
+    { name = "lualine.nvim"; pkg = pkgs.vimPlugins.lualine-nvim; }
+    { name = "mason-lspconfig.nvim"; pkg = pkgs.vimPlugins.mason-lspconfig-nvim; }
+    { name = "mason.nvim"; pkg = pkgs.vimPlugins.mason-nvim; }
+    { name = "mini.ai"; pkg = pkgs.vimPlugins.mini-ai; }
+    { name = "mini.icons"; pkg = pkgs.vimPlugins.mini-icons; }
+    { name = "mini.pairs"; pkg = pkgs.vimPlugins.mini-pairs; }
+    { name = "neo-tree.nvim"; pkg = pkgs.vimPlugins.neo-tree-nvim; }
+    { name = "noice.nvim"; pkg = pkgs.vimPlugins.noice-nvim; }
+    { name = "nui.nvim"; pkg = pkgs.vimPlugins.nui-nvim; }
+    { name = "nvim-lint"; pkg = pkgs.vimPlugins.nvim-lint; }
+    { name = "nvim-lspconfig"; pkg = pkgs.vimPlugins.nvim-lspconfig; }
+    { name = "nvim-treesitter"; pkg = pkgs.vimPlugins.nvim-treesitter; }
+    { name = "nvim-treesitter-textobjects"; pkg = pkgs.vimPlugins.nvim-treesitter-textobjects; }
+    { name = "nvim-ts-autotag"; pkg = pkgs.vimPlugins.nvim-ts-autotag; }
+    { name = "persistence.nvim"; pkg = pkgs.vimPlugins.persistence-nvim; }
+    { name = "plenary.nvim"; pkg = pkgs.vimPlugins.plenary-nvim; }
+    { name = "snacks.nvim"; pkg = pkgs.vimPlugins.snacks-nvim; }
+    { name = "todo-comments.nvim"; pkg = pkgs.vimPlugins.todo-comments-nvim; }
+    { name = "toggleterm.nvim"; pkg = pkgs.vimPlugins.toggleterm-nvim; }
+    { name = "tokyonight.nvim"; pkg = pkgs.vimPlugins.tokyonight-nvim; }
+    { name = "trouble.nvim"; pkg = pkgs.vimPlugins.trouble-nvim; }
+    { name = "ts-comments.nvim"; pkg = pkgs.vimPlugins.ts-comments-nvim; }
+    { name = "which-key.nvim"; pkg = pkgs.vimPlugins.which-key-nvim; }
+  ];
+  nvimNixLazyPluginDir = pkgs.linkFarm "nvim-nix-lazy-plugins" (map (plugin: {
+    name = plugin.name;
+    path = plugin.pkg;
+  }) nvimNixLazyPlugins);
 in {
   # ============================================================
   # Neovim 設定 (LazyVim 方式)
@@ -20,6 +62,7 @@ in {
     viAlias = true;
     vimAlias = true;
     vimdiffAlias = true;
+    plugins = map (plugin: plugin.pkg) nvimNixLazyPlugins;
 
     # 外部ツール（LSP、フォーマッター等）- Nix で管理
     extraPackages = with pkgs; [
@@ -72,6 +115,10 @@ in {
     extraLuaPackages = ps: [ ps.magick ];
   };
 
+  home.sessionVariables = {
+    NVIM_NIX_LAZY_PLUGIN_DIR = "${nvimNixLazyPluginDir}";
+  };
+
   # Lua 設定ファイルをシンボリンク
   xdg.configFile = {
     "nvim" = {
@@ -91,6 +138,11 @@ in {
     };
     "nvim-lazy" = {
       source = nvimLazyPath;
+      recursive = true;
+      force = true;
+    };
+    "nvim-nix-lazy" = {
+      source = nvimNixLazyPath;
       recursive = true;
       force = true;
     };

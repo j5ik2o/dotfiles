@@ -218,6 +218,7 @@ Nix で管理しているファイルは chezmoi で管理しないよう除外:
 .config/nvim-astro
 .config/nvim-nvchad
 .config/nvim-lazy
+.config/nvim-nix-lazy
 .config/nvim-lunar
 .config/helix
 
