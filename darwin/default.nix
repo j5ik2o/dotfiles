@@ -67,7 +67,7 @@
     enable = true;
     onActivation = {
       autoUpdate = true;
-      cleanup = "zap";  # "zap" は全ての未定義 cask を削除するので危険
+      cleanup = "none";
       upgrade = true;
     };
 
