@@ -201,11 +201,19 @@ endif
 apply-hm:
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
 	home-manager switch --flake '.#"$(HM_CONFIG)"'
+	@if command -v sheldon >/dev/null 2>&1; then \
+		echo "Locking sheldon plugins..."; \
+		sheldon lock; \
+	fi
 
 apply-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
 	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
+	@if command -v sheldon >/dev/null 2>&1; then \
+		echo "Locking sheldon plugins..."; \
+		sheldon lock; \
+	fi
 else
 	@echo "nix-darwin is only available on macOS"
 	@exit 1
