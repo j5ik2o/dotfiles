@@ -6,9 +6,11 @@ result
 /.claude/settings.local.json
 /.codex/sessions/
 /.codex/tmp/
-/.codex/log/
+/.codex/log
+/.codex/auth.json
 /.codex/history.jsonl
-/.codex/*.json
+/.codex/model_cache.json
+/.codex/version.json
 /.serena/cache/
 
 
