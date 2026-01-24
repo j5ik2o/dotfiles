@@ -29,6 +29,16 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 メモ:
 - 直接コマンドなら `:2ToggleTerm` のように番号付きで開ける。
 
+### Diagnostics
+
+コード中には表示せず、別ビューで確認する。
+
+| キー | 動作 |
+|------|------|
+| `Space x x` | Diagnostics を Trouble で表示 |
+| `Space x X` | 現在バッファの Diagnostics を Trouble で表示 |
+| `Space x l` | Diagnostics を loclist に表示 |
+
 ### Neo-tree Buffers
 
 - Buffers の TERMINALS をクリックしても新規ペインは作られず、既存ターミナルへフォーカスする。

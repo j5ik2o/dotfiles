@@ -9,3 +9,15 @@ vim.keymap.set("v", "<D-s>", "<Cmd>w<CR>", { desc = "Save file" })
 vim.keymap.set("n", "<C-s>", "<Cmd>w<CR>", { desc = "Save file" })
 vim.keymap.set("i", "<C-s>", "<C-o><Cmd>w<CR>", { desc = "Save file" })
 vim.keymap.set("v", "<C-s>", "<Cmd>w<CR>", { desc = "Save file" })
+
+-- Diagnostics (separate view)
+vim.keymap.set("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", { desc = "Diagnostics (Trouble)" })
+vim.keymap.set(
+  "n",
+  "<leader>xX",
+  "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+  { desc = "Buffer Diagnostics (Trouble)" }
+)
+vim.keymap.set("n", "<leader>xl", function()
+  vim.diagnostic.setloclist()
+end, { desc = "Diagnostics (LocList)" })
