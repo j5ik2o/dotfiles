@@ -4,7 +4,6 @@ let
   nvimConfigDir = builtins.dirOf (toString nvimConfigPath);
   nvimAstroPath = nvimConfigPath;
   nvimNvChadPath = "${nvimConfigDir}/nvim-nvchad";
-  nvimLazyPath = "${nvimConfigDir}/nvim-lazy";
   nvimNixLazyPath = "${nvimConfigDir}/nvim-nix-lazy";
   nvimLunarPath = "${nvimConfigDir}/nvim-lunar";
   nvimNixLazyPlugins = [
@@ -122,7 +121,7 @@ in {
   # Lua 設定ファイルをシンボリンク
   xdg.configFile = {
     "nvim" = {
-      source = nvimAstroPath;
+      source = nvimNixLazyPath;
       recursive = true;
       force = true;
     };
@@ -133,11 +132,6 @@ in {
     };
     "nvim-nvchad" = {
       source = nvimNvChadPath;
-      recursive = true;
-      force = true;
-    };
-    "nvim-lazy" = {
-      source = nvimLazyPath;
       recursive = true;
       force = true;
     };

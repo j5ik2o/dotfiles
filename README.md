@@ -292,10 +292,9 @@ AstroNvim ベースの設定。プラグイン管理は AstroNvim に委譲し�
 edgy は使用しない。
 
 複数ディストロを検証するため、`NVIM_APPNAME` で設定を分離。
-- Astro (default): `nvim` / `nva`
+- LazyVim (Nix-managed, default): `nvim` / `nvn`
+- Astro: `nva`
 - NvChad: `nvc`
-- LazyVim: `nvl`
-- LazyVim (Nix-managed): `nvn`
 - LunarVim: `nvr`
 
 起動エイリアスは `modules/programs/shell.nix` に定義済み。
