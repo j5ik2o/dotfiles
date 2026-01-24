@@ -15,16 +15,19 @@
       command_timeout = 1000;
       add_newline = false;
 
-      # Powerline寄りのフォーマット
+      # 参照デザインに合わせたPowerlineフォーマット
       format = lib.concatStrings [
-        "$username"
-        "$hostname"
+        "[](bg:#030B16 fg:#7DF9AA)"
+        "[ 󰀵 ](bg:#7DF9AA fg:#090c0c)"
+        "[](fg:#7DF9AA bg:#1C3A5E)"
+        "$time"
+        "[](fg:#1C3A5E bg:#3B76F0)"
         "$directory"
+        "[](fg:#3B76F0 bg:#FCF392)"
         "$git_branch"
         "$git_status"
-        "$nix_shell"
-        "\${env_var.DEVBOX_PROJECT_ROOT}"
-        "\n"
+        "$git_metrics"
+        "[](fg:#FCF392 bg:#030B16)"
         "$character"
       ];
 
@@ -51,26 +54,26 @@
 
       # ディレクトリ
       directory = {
-        style = "bg:#5E81AC fg:#ECEFF4";
-        format = "[ $path ]($style)[](fg:#5E81AC)";
+        style = "fg:#E4E4E4 bg:#3B76F0";
+        format = "[  $path ]($style)";
         truncate_to_repo = false;
         truncation_length = 0;
         # 読み取り専用マーカー
         read_only = " 󰌾";
-        read_only_style = "bg:#5E81AC fg:#BF616A";
+        read_only_style = "fg:#BF616A bg:#3B76F0";
       };
 
       # Git ブランチ
       git_branch = {
-        symbol = " ";
-        style = "bg:#A3BE8C fg:#2E3440";
-        format = "[](fg:#A3BE8C)[$symbol$branch ]($style)[](fg:#A3BE8C)";
+        symbol = "  ";
+        style = "fg:#1C3A5E bg:#FCF392";
+        format = "[ $symbol$branch(:$remote_branch) ]($style)";
       };
 
       # Git ステータス（シンプル）
       git_status = {
-        style = "bg:#A3BE8C fg:#2E3440";
-        format = "[](fg:#A3BE8C)[ $all_status$ahead_behind ]($style)[](fg:#A3BE8C)";
+        style = "fg:#1C3A5E bg:#FCF392";
+        format = "[ $all_status ]($style)";
         conflicted = "⚡";
         ahead = "⇡";
         behind = "⇣";
@@ -82,6 +85,13 @@
         staged = "+";
         renamed = "»";
         deleted = "✘";
+      };
+
+      git_metrics = {
+        disabled = false;
+        format = "([+$added]($added_style))[]($added_style)";
+        added_style = "fg:#1C3A5E bg:#FCF392";
+        deleted_style = "fg:bright-red bg:235";
       };
 
       # Nix シェル
@@ -103,16 +113,23 @@
 
       # プロンプト文字
       character = {
-        success_symbol = "[❯](bold #A3BE8C)";
-        error_symbol = "[❯](bold #BF616A)";
-        vimcmd_symbol = "[❮](bold #A3BE8C)";
+        success_symbol = "[ ➜](bold green)";
+        error_symbol = "[ ✗](#E84D44)";
+        vimcmd_symbol = "[ ➜](bold green)";
+      };
+
+      time = {
+        disabled = false;
+        time_format = "%R";
+        style = "bg:#1d2230";
+        format = "[[ 󱑍 $time ](bg:#1C3A5E fg:#8DFBD2)]($style)";
       };
 
       # コマンド実行時間（2秒以上のみ表示）
       cmd_duration = {
         min_time = 2000;
-        format = "[⏱ $duration]($style) ";
-        style = "fg:#EBCB8B";
+        format = "[  $duration ]($style)";
+        style = "fg:bright-white bg:18";
       };
 
       # 終了ステータス（エラー時のみ）
@@ -127,7 +144,6 @@
       gcloud.disabled = true;
       kubernetes.disabled = true;
       docker_context.disabled = true;
-      time.disabled = true;
 
       # 言語は全て無効化
       c.disabled = true;
