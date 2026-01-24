@@ -10,7 +10,7 @@ result
 /.codex/auth.json
 /.codex/history.jsonl
 /.codex/model_cache.json
+/.codex/models_cache.json
 /.codex/version.json
 /.serena/cache/
-
 
