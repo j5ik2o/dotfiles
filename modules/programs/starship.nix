@@ -23,11 +23,11 @@
         "$time"
         "[](fg:#1C3A5E bg:#3B76F0)"
         "$directory"
-        "[](fg:#3B76F0 bg:#FCF392)"
+        "[](fg:#3B76F0 bg:yellow)"
         "$git_branch"
         "$git_status"
         "$git_metrics"
-        "[](fg:#FCF392 bg:#030B16)"
+        "[](fg:yellow bg:#030B16)"
         "$character"
       ];
 
@@ -66,13 +66,13 @@
       # Git ブランチ
       git_branch = {
         symbol = "  ";
-        style = "fg:#1C3A5E bg:#FCF392";
+        style = "fg:#1C3A5E bg:yellow";
         format = "[ $symbol$branch(:$remote_branch) ]($style)";
       };
 
       # Git ステータス（シンプル）
       git_status = {
-        style = "fg:#1C3A5E bg:#FCF392";
+        style = "fg:#1C3A5E bg:yellow";
         format = "[ $all_status ]($style)";
         conflicted = "⚡";
         ahead = "⇡";
@@ -90,7 +90,7 @@
       git_metrics = {
         disabled = false;
         format = "([+$added]($added_style))[]($added_style)";
-        added_style = "fg:#1C3A5E bg:#FCF392";
+        added_style = "fg:#1C3A5E bg:yellow";
         deleted_style = "fg:bright-red bg:235";
       };
 
