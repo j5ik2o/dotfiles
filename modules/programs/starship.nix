@@ -15,20 +15,15 @@
       command_timeout = 1000;
       add_newline = false;
 
-      # Agnoster風シンプルフォーマット
+      # Powerline寄りのフォーマット
       format = lib.concatStrings [
-        "[](fg:#3B4252)"
         "$username"
         "$hostname"
-        "[](bg:#5E81AC fg:#3B4252)"
         "$directory"
-        "[](fg:#5E81AC bg:#A3BE8C)"
         "$git_branch"
         "$git_status"
-        "[](fg:#A3BE8C bg:#EBCB8B)"
         "$nix_shell"
         "\${env_var.DEVBOX_PROJECT_ROOT}"
-        "[](fg:#EBCB8B)"
         "\n"
         "$character"
       ];
@@ -44,20 +39,20 @@
         show_always = true;
         style_user = "bg:#3B4252 fg:#D8DEE9";
         style_root = "bg:#BF616A fg:#D8DEE9";
-        format = "[ $user]($style)";
+        format = "[](fg:#3B4252)[ $user ]($style)";
       };
 
       # ホスト名
       hostname = {
         ssh_only = false;
         style = "bg:#3B4252 fg:#D8DEE9";
-        format = "[@$hostname ]($style)";
+        format = "[@$hostname ]($style)[](fg:#3B4252 bg:#5E81AC)";
       };
 
       # ディレクトリ
       directory = {
         style = "bg:#5E81AC fg:#ECEFF4";
-        format = "[ $path ]($style)";
+        format = "[ $path ]($style)[](fg:#5E81AC)";
         truncate_to_repo = false;
         truncation_length = 0;
         # 読み取り専用マーカー
@@ -69,13 +64,13 @@
       git_branch = {
         symbol = " ";
         style = "bg:#A3BE8C fg:#2E3440";
-        format = "[$symbol$branch ]($style)";
+        format = "[](fg:#A3BE8C)[$symbol$branch ]($style)[](fg:#A3BE8C)";
       };
 
       # Git ステータス（シンプル）
       git_status = {
         style = "bg:#A3BE8C fg:#2E3440";
-        format = "[$all_status$ahead_behind]($style)";
+        format = "[](fg:#A3BE8C)[ $all_status$ahead_behind ]($style)[](fg:#A3BE8C)";
         conflicted = "⚡";
         ahead = "⇡";
         behind = "⇣";
@@ -94,7 +89,7 @@
         disabled = false;
         symbol = " ";
         style = "bg:#EBCB8B fg:#2E3440";
-        format = "[$symbol$state]($style)";
+        format = "[](fg:#EBCB8B)[$symbol$state ]($style)[](fg:#EBCB8B)";
       };
 
       # Devbox シェル検出 (direnv経由の場合はDEVBOX_PROJECT_ROOTを使用)
@@ -102,7 +97,7 @@
         DEVBOX_PROJECT_ROOT = {
           symbol = "📦 ";
           style = "bg:#EBCB8B fg:#2E3440";
-          format = "[$symbol devbox]($style)";
+          format = "[](fg:#EBCB8B)[$symbol devbox ]($style)[](fg:#EBCB8B)";
         };
       };
 
