@@ -1,47 +1,56 @@
 {
   lib,
   stdenv,
-  rustPlatform,
-  fetchFromGitHub,
+  fetchurl,
   installShellFiles,
   makeBinaryWrapper,
   nix-update-script,
-  pkg-config,
-  openssl,
   ripgrep,
   versionCheckHook,
   installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
 }:
-rustPlatform.buildRustPackage (finalAttrs: {
+let
+  platformMap = {
+    "x86_64-linux" = "x86_64-unknown-linux-musl";
+    "aarch64-linux" = "aarch64-unknown-linux-musl";
+    "x86_64-darwin" = "x86_64-apple-darwin";
+    "aarch64-darwin" = "aarch64-apple-darwin";
+  };
+
+  platform = platformMap.${stdenv.hostPlatform.system}
+    or (throw "unsupported platform: ${stdenv.hostPlatform.system}");
+
+  hashes = {
+    "aarch64-darwin" = "sha256-hoRaw3UWpS0npu2gWlWpL6+EZ5qP9uSalChDw0PC2eM=";
+    "x86_64-darwin" = "sha256-Nsu4F1CW2OaR9mFu0Kq8YWsnvSBNWK/iAIDN1v/834g=";
+    "aarch64-linux" = "sha256-C/CPgP04Jc11jg8jo15Ex5B1R2xIgOVhPypgWntatTw=";
+    "x86_64-linux" = "sha256-t2PiNVc7Tcvy8jnzrk+XEGRNRq0qKSYnRyWEdspGAAM=";
+  };
+in
+stdenv.mkDerivation (finalAttrs: {
   pname = "codex";
   version = "0.89.0";
 
-  src = fetchFromGitHub {
-    owner = "openai";
-    repo = "codex";
-    tag = "rust-v${finalAttrs.version}";
-    hash = "sha256-VFbtxGOqX80qWqVo+BG+BnUr8DiLCfcJCrN9fwy7utY=";
+  src = fetchurl {
+    url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-${platform}.tar.gz";
+    hash = hashes.${stdenv.hostPlatform.system}
+      or (throw "missing hash for ${stdenv.hostPlatform.system}");
   };
-
-  sourceRoot = "${finalAttrs.src.name}/codex-rs";
-
-  cargoHash = "sha256-gg7KPEMO2aiBcIN8TllaDQeTLyw+WLfmMrXBKV/L53M=";
 
   nativeBuildInputs = [
     installShellFiles
     makeBinaryWrapper
-    pkg-config
   ];
 
-  buildInputs = [ openssl ];
+  dontUnpack = true;
+  dontBuild = true;
 
-  # NOTE: part of the test suite requires access to networking, local shells,
-  # apple system configuration, etc. since this is a very fast moving target
-  # (for now), with releases happening every other day, constantly figuring out
-  # which tests need to be skipped, or finding workarounds, was too burdensome,
-  # and in practice not adding any real value. this decision may be reversed in
-  # the future once this software stabilizes.
-  doCheck = false;
+  installPhase = ''
+    runHook preInstall
+    tar -xzf "$src"
+    install -Dm755 "codex-${platform}" "$out/bin/codex"
+    runHook postInstall
+  '';
 
   postInstall = lib.optionalString installShellCompletions ''
     installShellCompletion --cmd codex \
