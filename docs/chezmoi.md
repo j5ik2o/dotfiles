@@ -215,10 +215,7 @@ Nix で管理しているファイルは chezmoi で管理しないよう除外:
 .config/wezterm
 .config/ghostty
 .config/nvim
-.config/nvim-astro
-.config/nvim-nvchad
 .config/nvim-nix-lazy
-.config/nvim-lunar
 .config/helix
 
 # OS 固有

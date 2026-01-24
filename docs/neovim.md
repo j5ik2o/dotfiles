@@ -1,20 +1,16 @@
-# Neovim キーマップ カンペ (AstroNvim)
+# Neovim キーマップ カンペ (LazyVim)
 
-AstroNvim ベースの設定。標準キーマップは公式ドキュメントと `:WhichKey` を参照。
+LazyVim ベースの設定。標準キーマップは公式ドキュメントと `:WhichKey` を参照。
 
 ## 起動エイリアス
 
-複数ディストロを検証するため、`NVIM_APPNAME` で設定を分離しています。
+`NVIM_APPNAME` は `nvim-nix-lazy` のみ運用。
 起動エイリアスは `modules/programs/shell.nix` に定義済みです。
 
 - LazyVim (Nix-managed, default): `nvim` / `nvn`
-- Astro: `nva`
-- NvChad: `nvc`
-- LunarVim: `nvr`
 
 ## 参照
 
-- AstroNvim docs: https://docs.astronvim.com/
 - WhichKey: `:WhichKey`
 - LSP これだけ: `docs/lsp.md`
 - Tree-sitter これだけ: `docs/tree-sitter.md`
@@ -33,16 +29,6 @@ AstroNvim ベースの設定。標準キーマップは公式ドキュメント�
 
 メモ:
 - 直接コマンドなら `:2ToggleTerm` のように番号付きで開ける。
-
-### ウィンドウサイズ調整
-
-| キー | 動作 |
-|------|------|
-| `Space w h` | 幅 -2 |
-| `Space w l` | 幅 +2 |
-| `Space w j` | 高さ -2 |
-| `Space w k` | 高さ +2 |
-| `Space w =` | サイズ均等化 |
 
 ### Neo-tree Buffers
 

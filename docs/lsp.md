@@ -17,10 +17,10 @@
 
 ## このリポジトリの設定場所
 
-- LSP サーバの有効化: `config/nvim-astro/lua/plugins/astrolsp.lua`
-- Mason の自動インストール: `config/nvim-astro/lua/plugins/mason.lua`
+- LSP 設定は LazyVim のデフォルトを使用
+- 追加設定は `config/nvim-nix-lazy/lua/plugins/` に配置
 
-## 主要キーバインド（AstroNvim デフォルト）
+## 主要キーバインド（LazyVim デフォルト）
 
 前提: LSP がアタッチされたときのみ有効。`<Leader>` は `Space`。
 `gd` / `gD` など **g で始まるものは Leader 不要**（ノーマルモードで `g` → `d` の順に押す）。

@@ -2,10 +2,7 @@
 
 let
   nvimConfigDir = builtins.dirOf (toString nvimConfigPath);
-  nvimAstroPath = nvimConfigPath;
-  nvimNvChadPath = "${nvimConfigDir}/nvim-nvchad";
   nvimNixLazyPath = "${nvimConfigDir}/nvim-nix-lazy";
-  nvimLunarPath = "${nvimConfigDir}/nvim-lunar";
   nvimNixLazyPlugins = [
     { name = "LazyVim"; pkg = pkgs.vimPlugins.LazyVim; }
     { name = "blink.cmp"; pkg = pkgs.vimPlugins.blink-cmp; }
@@ -125,23 +122,8 @@ in {
       recursive = true;
       force = true;
     };
-    "nvim-astro" = {
-      source = nvimAstroPath;
-      recursive = true;
-      force = true;
-    };
-    "nvim-nvchad" = {
-      source = nvimNvChadPath;
-      recursive = true;
-      force = true;
-    };
     "nvim-nix-lazy" = {
       source = nvimNixLazyPath;
-      recursive = true;
-      force = true;
-    };
-    "nvim-lunar" = {
-      source = nvimLunarPath;
       recursive = true;
       force = true;
     };

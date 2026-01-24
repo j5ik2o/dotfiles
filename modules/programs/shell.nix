@@ -360,10 +360,7 @@
       v = "NVIM_APPNAME=nvim-nix-lazy command nvim";
       vi = "NVIM_APPNAME=nvim-nix-lazy command nvim";
       vim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      nva = "NVIM_APPNAME=nvim-astro nvim";
-      nvc = "NVIM_APPNAME=nvim-nvchad nvim";
       nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
-      nvr = "NVIM_APPNAME=nvim-lunar nvim";
 
       # Git (追加)
       gs = "git status -sb";
@@ -452,10 +449,7 @@
       v = "NVIM_APPNAME=nvim-nix-lazy command nvim";
       vi = "NVIM_APPNAME=nvim-nix-lazy command nvim";
       vim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      nva = "NVIM_APPNAME=nvim-astro nvim";
-      nvc = "NVIM_APPNAME=nvim-nvchad nvim";
       nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
-      nvr = "NVIM_APPNAME=nvim-lunar nvim";
       lg = "lazygit";
     };
 

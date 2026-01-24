@@ -17,7 +17,8 @@
 
 ## このリポジトリの設定場所
 
-- 追加インストール対象: `config/nvim-astro/lua/plugins/treesitter.lua`
+- Tree-sitter 設定は LazyVim のデフォルトを使用
+- 追加設定は `config/nvim-nix-lazy/lua/plugins/` に配置
 
 ## 主要キーバインド（Textobjects）
 

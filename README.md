@@ -281,34 +281,29 @@ make help
 
 ## ドキュメント
 
-- [Neovim キーマップ (AstroNvim)](docs/neovim.md)
+- [Neovim キーマップ (LazyVim)](docs/neovim.md)
 - [Neovim LSP これだけ](docs/lsp.md)
 - [Neovim Tree-sitter これだけ](docs/tree-sitter.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
 
-## Neovim (AstroNvim)
+## Neovim (LazyVim)
 
-AstroNvim ベースの設定。プラグイン管理は AstroNvim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
-edgy は使用しない。
+LazyVim ベースの設定。プラグイン管理は LazyVim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
 
-複数ディストロを検証するため、`NVIM_APPNAME` で設定を分離。
+`NVIM_APPNAME` は `nvim-nix-lazy` のみ運用。
 - LazyVim (Nix-managed, default): `nvim` / `nvn`
-- Astro: `nva`
-- NvChad: `nvc`
-- LunarVim: `nvr`
 
 起動エイリアスは `modules/programs/shell.nix` に定義済み。
 
 **主なカスタム:**
 - ターミナル: `Space t 1-4` で番号付きターミナル / `Esc Esc` でターミナルモード終了
-- ウィンドウサイズ調整: `Space w h/l/j/k`, `Space w =`
 - Neo-tree Buffers の TERMINALS は既存ターミナルへフォーカス
 
 詳細は [docs/neovim.md](docs/neovim.md) 参照。
 
 ## テーマ
 
-テーマは各アプリの設定に準拠。Neovim は AstroNvim の colorscheme 設定に従う。
+テーマは各アプリの設定に準拠。Neovim は LazyVim の colorscheme 設定に従う。
 
 ## 注意事項
 

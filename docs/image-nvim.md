@@ -1,6 +1,6 @@
 #- image.nvim 画像表示プラグイン
 
-> NOTE: 現在の Neovim 設定は AstroNvim へ移行済みのため、`image.nvim` の設定ファイルはありません。  
+> NOTE: 現在の Neovim 設定は nvim-nix-lazy (LazyVim) 運用のため、`image.nvim` は未設定です。  
 > このドキュメントは過去の参考情報として残しています。
 
 Neovim内でターミナル上に画像を表示するプラグイン。Ghostty (Kitty Graphics Protocol対応) で動作。
@@ -95,33 +95,11 @@ image:hue(value)         -- 色相調整
 
 ## 自動機能
 
-設定済みの機能:
+現在の `nvim-nix-lazy` には image.nvim の設定は未配置。以下は参考メモ。
 
 - **画像ファイルを直接開く**: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.avif` を開くと自動表示
 - **Markdown内の画像**: `![alt](path/to/image.png)` が自動表示
 - **リモート画像**: Markdown内のURL画像も自動ダウンロード・表示
-
-## 設定ファイル
-
-`config/nvim-astro/lua/plugins/image.lua`:
-
-```lua
-opts = {
-  backend = "kitty",              -- Ghostty対応
-  processor = "magick_rock",      -- ImageMagick FFI使用
-  integrations = {
-    markdown = {
-      enabled = true,
-      clear_in_insert_mode = false,  -- 挿入モードでも表示維持
-      download_remote_images = true, -- URLからダウンロード
-      only_render_image_at_cursor = false,
-    },
-  },
-  max_height_window_percentage = 50,  -- 画像の最大高さ (%)
-  window_overlap_clear_enabled = true,
-  hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
-}
-```
 
 ## トラブルシューティング
 
