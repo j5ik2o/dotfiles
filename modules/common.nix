@@ -1,4 +1,11 @@
-{ config, pkgs, lib, username, self, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  self,
+  ...
+}:
 
 {
   # ============================================================
@@ -20,7 +27,7 @@
     git
     gh
     ghq
-    gwq               # Git worktree マネージャ
+    gwq # Git worktree マネージャ
     tig
     # lazygit は programs.lazygit で管理
 
@@ -52,14 +59,14 @@
     google-cloud-sdk
 
     # IaC (Infrastructure as Code)
-    opentofu          # Terraform のオープンソースフォーク
-    tflint            # Terraform リンター
-    terraform-docs    # ドキュメント生成
+    opentofu # Terraform のオープンソースフォーク
+    tflint # Terraform リンター
+    terraform-docs # ドキュメント生成
 
     # コンテナ
     lazydocker
-    dive        # Docker イメージ解析
-    ctop        # コンテナ監視
+    dive # Docker イメージ解析
+    ctop # コンテナ監視
 
     # アーカイブ
     unzip
@@ -73,15 +80,15 @@
     procs
     tokei
     hyperfine
-    devbox            # Nix ベース開発環境
-    chezmoi           # シークレット管理付き dotfiles
-    nvd               # Nix パッケージ差分表示
+    devbox # Nix ベース開発環境
+    chezmoi # シークレット管理付き dotfiles
+    nvd # Nix パッケージ差分表示
 
     # AI ツール
     claude-code
-    codex              # OpenAI Codex CLI
+    codex # OpenAI Codex CLI
     opencode
-    gemini-cli         # Google Gemini CLI
+    gemini-cli # Google Gemini CLI
 
     # ============================================================
     # 言語ランタイム (mise から移行)
@@ -106,7 +113,7 @@
 
     # Python
     python313
-    uv                    # Python パッケージマネージャ
+    uv # Python パッケージマネージャ
 
     # Ruby
     ruby_3_3
@@ -118,7 +125,7 @@
     zig
 
     # Lean 4 (定理証明 / 関数型言語)
-    elan              # Lean バージョンマネージャ (rustup 相当)
+    elan # Lean バージョンマネージャ (rustup 相当)
 
     # Haskell
     ghc

@@ -1,4 +1,10 @@
-{ config, pkgs, lib, username, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  ...
+}:
 
 {
   # ============================================================
@@ -27,8 +33,8 @@
     # (pbcopy/pbpaste は macOS 標準)
 
     # macOS 固有ツール
-    m-cli  # macOS コマンドラインツール
-    mas    # Mac App Store CLI
+    m-cli # macOS コマンドラインツール
+    mas # Mac App Store CLI
   ];
 
   # ============================================================
