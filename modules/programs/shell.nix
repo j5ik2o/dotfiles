@@ -247,6 +247,11 @@
       # キーバインド (Vi style)
       bindkey -v
 
+      # Ctrl+S/Cmd+S で端末が止まらないようにする
+      if [[ -t 0 ]] && command -v stty &> /dev/null; then
+        stty -ixon
+      fi
+
       # Vi モードでのカーソル形状変更
       function zle-keymap-select {
         if [[ $KEYMAP == vicmd ]]; then
@@ -417,6 +422,11 @@
     interactiveShellInit = ''
       # 挨拶無効化
       set -g fish_greeting
+
+      # Ctrl+S/Cmd+S で端末が止まらないようにする
+      if test -t 0
+        command -q stty; and stty -ixon
+      end
 
       # カラー設定
       set -g fish_color_command green
