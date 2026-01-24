@@ -1,14 +1,14 @@
-# LazyVim (nvim-nix-lazy)
+# LazyVim (nvim)
 
-LazyVim starter-style config for NVIM_APPNAME=nvim-nix-lazy.
+LazyVim starter-style config for the default `nvim` config.
 
 Usage:
-- Launch: `nvn` (alias) or `NVIM_APPNAME=nvim-nix-lazy nvim`
+- Launch: `nvim` (or `nvn` alias if you keep it)
 - First launch bootstraps lazy.nvim and LazyVim
 
 Nix-managed plugins:
 - Plugins are provided by Home Manager via `programs.neovim.plugins`.
-- Lazy.nvim is pointed at the Nix plugin dir via `NVIM_NIX_LAZY_PLUGIN_DIR`.
+- Lazy.nvim is pointed at the Nix plugin dir via `NVIM_PLUGIN_DIR`.
 
 Structure:
 - `init.lua`: entrypoint

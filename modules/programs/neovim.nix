@@ -2,8 +2,8 @@
 
 let
   nvimConfigDir = builtins.dirOf (toString nvimConfigPath);
-  nvimNixLazyPath = "${nvimConfigDir}/nvim-nix-lazy";
-  nvimNixLazyPlugins = [
+  nvimPath = "${nvimConfigDir}/nvim";
+  nvimPlugins = [
     { name = "LazyVim"; pkg = pkgs.vimPlugins.LazyVim; }
     { name = "blink.cmp"; pkg = pkgs.vimPlugins.blink-cmp; }
     { name = "bufferline.nvim"; pkg = pkgs.vimPlugins.bufferline-nvim; }
@@ -40,10 +40,10 @@ let
     { name = "ts-comments.nvim"; pkg = pkgs.vimPlugins.ts-comments-nvim; }
     { name = "which-key.nvim"; pkg = pkgs.vimPlugins.which-key-nvim; }
   ];
-  nvimNixLazyPluginDir = pkgs.linkFarm "nvim-nix-lazy-plugins" (map (plugin: {
+  nvimPluginDir = pkgs.linkFarm "nvim-plugins" (map (plugin: {
     name = plugin.name;
     path = plugin.pkg;
-  }) nvimNixLazyPlugins);
+  }) nvimPlugins);
 in {
   # ============================================================
   # Neovim 設定 (LazyVim 方式)
@@ -58,7 +58,7 @@ in {
     viAlias = true;
     vimAlias = true;
     vimdiffAlias = true;
-    plugins = map (plugin: plugin.pkg) nvimNixLazyPlugins;
+    plugins = map (plugin: plugin.pkg) nvimPlugins;
 
     # 外部ツール（LSP、フォーマッター等）- Nix で管理
     extraPackages = with pkgs; [
@@ -112,18 +112,13 @@ in {
   };
 
   home.sessionVariables = {
-    NVIM_NIX_LAZY_PLUGIN_DIR = "${nvimNixLazyPluginDir}";
+    NVIM_PLUGIN_DIR = "${nvimPluginDir}";
   };
 
   # Lua 設定ファイルをシンボリンク
   xdg.configFile = {
     "nvim" = {
-      source = nvimNixLazyPath;
-      recursive = true;
-      force = true;
-    };
-    "nvim-nix-lazy" = {
-      source = nvimNixLazyPath;
+      source = nvimPath;
       recursive = true;
       force = true;
     };

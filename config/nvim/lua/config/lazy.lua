@@ -1,6 +1,6 @@
 local uv = vim.uv or vim.loop
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-local nix_plugin_dir = vim.env.NVIM_NIX_LAZY_PLUGIN_DIR
+local plugin_dir = vim.env.NVIM_PLUGIN_DIR
 
 local function is_dir(path)
   if type(path) ~= "string" or path == "" then
@@ -14,12 +14,12 @@ local function has_plugin_dir(base, name)
   return is_dir(base) and is_dir(base .. "/" .. name)
 end
 
-local use_nix_plugins = has_plugin_dir(nix_plugin_dir, "LazyVim")
-if type(nix_plugin_dir) == "string" and nix_plugin_dir ~= "" and not use_nix_plugins then
+local use_nix_plugins = has_plugin_dir(plugin_dir, "LazyVim")
+if type(plugin_dir) == "string" and plugin_dir ~= "" and not use_nix_plugins then
   vim.schedule(function()
     vim.notify(
-      ("NVIM_NIX_LAZY_PLUGIN_DIR is set but LazyVim is missing: %s. Falling back to git install."):format(
-        nix_plugin_dir
+      ("NVIM_PLUGIN_DIR is set but LazyVim is missing: %s. Falling back to git install."):format(
+        plugin_dir
       ),
       vim.log.levels.WARN
     )
@@ -67,7 +67,7 @@ lazy.setup({
     -- version = "*", -- try installing the latest stable version for plugins that support semver
   },
   dev = use_nix_plugins and {
-    path = nix_plugin_dir,
+    path = plugin_dir,
     -- lazy.nvim matches patterns as literal substrings (plain find). "" matches all.
     patterns = { "" },
     fallback = false,

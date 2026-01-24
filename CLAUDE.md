@@ -21,7 +21,7 @@
 
 ### LazyVim
 - LazyVim 本体はプラグイン側で管理され、直接編集しない
-- 設定は `config/nvim-nix-lazy` を正とする（`~/.config/nvim` へ同期）
+- 設定は `config/nvim` を正とする（`~/.config/nvim` へ同期）
 
 ### キャッシュ
 - `make nvim-clean` で以下を削除:

@@ -40,7 +40,7 @@
       hmConfigPath = ./modules;
 
       # Neovim Lua 設定のパス
-      nvimConfigPath = ./config/nvim-nix-lazy;
+      nvimConfigPath = ./config/nvim;
 
       # 共通の home-manager モジュール
       commonHomeModules = [

@@ -356,11 +356,11 @@
       myip = "curl -s https://ipinfo.io/ip";
 
       # エディタ
-      nvim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      v = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      vi = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      vim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
+      nvim = "command nvim";
+      v = "command nvim";
+      vi = "command nvim";
+      vim = "command nvim";
+      nvn = "nvim";
 
       # Git (追加)
       gs = "git status -sb";
@@ -445,11 +445,11 @@
       # その他のエイリアスは zsh と共通
       cat = "bat";
       grep = "rg";
-      nvim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      v = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      vi = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      vim = "NVIM_APPNAME=nvim-nix-lazy command nvim";
-      nvn = "NVIM_APPNAME=nvim-nix-lazy nvim";
+      nvim = "command nvim";
+      v = "command nvim";
+      vi = "command nvim";
+      vim = "command nvim";
+      nvn = "nvim";
       lg = "lazygit";
     };
 

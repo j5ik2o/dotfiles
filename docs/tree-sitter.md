@@ -18,7 +18,7 @@
 ## このリポジトリの設定場所
 
 - Tree-sitter 設定は LazyVim のデフォルトを使用
-- 追加設定は `config/nvim-nix-lazy/lua/plugins/` に配置
+- 追加設定は `config/nvim/lua/plugins/` に配置
 
 ## 主要キーバインド（Textobjects）
 

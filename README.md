@@ -290,8 +290,7 @@ make help
 
 LazyVim ベースの設定。プラグイン管理は LazyVim に委譲し、Nix は外部ツール（LSP、フォーマッター等）のみ提供。
 
-`NVIM_APPNAME` は `nvim-nix-lazy` のみ運用。
-- LazyVim (Nix-managed, default): `nvim` / `nvn`
+LazyVim (Nix-managed, default): `nvim` / `nvn`
 
 起動エイリアスは `modules/programs/shell.nix` に定義済み。
 
