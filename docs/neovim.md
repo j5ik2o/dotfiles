@@ -6,7 +6,7 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 
 起動エイリアスは `modules/programs/shell.nix` に定義済みです。
 
-- LazyVim (Nix-managed, default): `nvim` / `nvn`
+- LazyVim (Nix-managed, default): `nvim` (also via `vi`, `vim`)
 
 ## 参照
 
@@ -46,7 +46,7 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 
 ### 起動
 
-- `nvim` (または `nvn` alias)
+- `nvim` (または `vi` / `vim`)
 
 ### プラグイン追加/更新
 

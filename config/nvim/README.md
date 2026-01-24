@@ -3,7 +3,7 @@
 LazyVim starter-style config for the default `nvim` config.
 
 Usage:
-- Launch: `nvim` (or `nvn` alias if you keep it)
+- Launch: `nvim` (or `vi` / `vim`)
 - First launch bootstraps lazy.nvim and LazyVim
 
 Nix-managed plugins:

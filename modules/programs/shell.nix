@@ -365,7 +365,6 @@
       v = "command nvim";
       vi = "command nvim";
       vim = "command nvim";
-      nvn = "nvim";
 
       # Git (追加)
       gs = "git status -sb";
@@ -459,7 +458,6 @@
       v = "command nvim";
       vi = "command nvim";
       vim = "command nvim";
-      nvn = "nvim";
       lg = "lazygit";
     };
 
