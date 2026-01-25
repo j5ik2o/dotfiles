@@ -53,8 +53,7 @@ in
       # Disable shell integration title updates; we set titles in the shell.
       shell-integration-features = "no-title";
 
-      # TERM変数: リモートSSH先でghostty terminfoがない場合の互換性確保
-      term = "xterm-256color";
+      # TERM is left as Ghostty's default; SSH fallback handled in shell init.
 
       # macOS: OptionキーをAltとして扱う (Claude Code/Codex の Shift+Option+Enter に必要)
       macos-option-as-alt = true;

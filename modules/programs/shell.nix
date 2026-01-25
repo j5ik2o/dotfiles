@@ -252,6 +252,13 @@
         stty -ixon
       fi
 
+      # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
+      if [[ -n "$SSH_CONNECTION" && "$TERM" == "xterm-ghostty" ]]; then
+        if command -v infocmp &> /dev/null && ! infocmp xterm-ghostty &> /dev/null; then
+          export TERM="xterm-256color"
+        fi
+      fi
+
       # Vi モードでのカーソル形状変更
       function zle-keymap-select {
         if [[ $KEYMAP == vicmd ]]; then
@@ -425,6 +432,13 @@
       # Ctrl+S/Cmd+S で端末が止まらないようにする
       if test -t 0
         command -q stty; and stty -ixon
+      end
+
+      # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
+      if set -q SSH_CONNECTION; and test "$TERM" = "xterm-ghostty"
+        if command -q infocmp; and not infocmp xterm-ghostty >/dev/null 2>&1
+          set -gx TERM xterm-256color
+        end
       end
 
       # カラー設定
