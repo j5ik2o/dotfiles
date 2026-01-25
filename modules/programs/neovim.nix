@@ -226,7 +226,7 @@ in
   };
 
   home.sessionVariables = {
-    NVIM_PLUGIN_DIR = "${nvimPluginDir}";
+    NVIM_PLUGIN_DIR = "${config.xdg.dataHome}/nvim-plugins";
   };
 
   # Lua 設定ファイルをシンボリンク
@@ -237,5 +237,8 @@ in
       force = true;
     };
   };
+
+  # Stable path for Nix-managed plugins to avoid hash path churn.
+  xdg.dataFile."nvim-plugins".source = nvimPluginDir;
 
 }
