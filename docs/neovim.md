@@ -13,6 +13,7 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 - WhichKey: `:WhichKey`
 - LSP これだけ: `docs/lsp.md`
 - Tree-sitter これだけ: `docs/tree-sitter.md`
+- Neo-tree これだけ: `docs/neo-tree.md`
 
 ## カスタム追加
 

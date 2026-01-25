@@ -21,6 +21,9 @@ return {
       opts.filesystem.filtered_items.visible = true
       opts.filesystem.filtered_items.hide_dotfiles = false
       opts.filesystem.filtered_items.hide_gitignored = false
+      opts.filesystem.commands = opts.filesystem.commands or {}
+      opts.filesystem.window = opts.filesystem.window or {}
+      opts.filesystem.window.mappings = opts.filesystem.window.mappings or {}
 
       opts.buffers = opts.buffers or {}
       opts.buffers.commands = opts.buffers.commands or {}
@@ -42,6 +45,59 @@ return {
         return false
       end
 
+      local function normalize_path(path)
+        if type(path) ~= "string" or path == "" then
+          return nil
+        end
+        local normalized = vim.fn.fnamemodify(path, ":p")
+        normalized = normalized:gsub("/+$", "")
+        if normalized == "" then
+          normalized = "/"
+        end
+        return normalized
+      end
+
+      local function project_root_for(path)
+        if vim.fs and vim.fs.root then
+          local root = vim.fs.root(path, {
+            ".git",
+            "pyproject.toml",
+            "package.json",
+            "Cargo.toml",
+            "go.mod",
+            "Makefile",
+            "flake.nix",
+          })
+          if root and root ~= "" then
+            return root
+          end
+        end
+        return vim.fn.getcwd()
+      end
+
+      local function relative_to_root(path)
+        local abs_path = normalize_path(path)
+        local abs_root = normalize_path(project_root_for(path))
+        if not abs_path or not abs_root then
+          return path
+        end
+        if abs_path == abs_root then
+          return "."
+        end
+        if abs_path:sub(1, #abs_root + 1) == abs_root .. "/" then
+          return abs_path:sub(#abs_root + 2)
+        end
+        return abs_path
+      end
+
+      local function copy_to_clipboard(text)
+        if not text or text == "" then
+          return
+        end
+        vim.fn.setreg("+", text)
+        vim.fn.setreg("*", text)
+      end
+
       opts.buffers.commands.open_buffer = function(state)
         local node = state.tree and state.tree:get_node()
         if not node then
@@ -58,6 +114,20 @@ return {
 
       opts.buffers.window.mappings["<cr>"] = "open_buffer"
       opts.buffers.window.mappings["<2-LeftMouse>"] = "open_buffer"
+      opts.filesystem.commands.copy_relative_path = function(state)
+        local node = state.tree and state.tree:get_node()
+        if not node then
+          return
+        end
+        local path = node.path or node:get_id()
+        if not path then
+          return
+        end
+        local relpath = relative_to_root(path)
+        copy_to_clipboard(relpath)
+        vim.notify(("Copied relative path: %s"):format(relpath))
+      end
+      opts.filesystem.window.mappings["yr"] = "copy_relative_path"
 
       return opts
     end,

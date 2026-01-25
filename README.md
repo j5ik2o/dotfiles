@@ -284,6 +284,7 @@ make help
 - [Neovim キーマップ (LazyVim)](docs/neovim.md)
 - [Neovim LSP これだけ](docs/lsp.md)
 - [Neovim Tree-sitter これだけ](docs/tree-sitter.md)
+- [Neo-tree これだけ](docs/neo-tree.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
 
 ## Neovim (LazyVim)
