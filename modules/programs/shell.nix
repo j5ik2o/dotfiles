@@ -225,6 +225,13 @@
     enableCompletion = true;
     syntaxHighlighting.enable = false;
 
+    # hm-session-vars が親プロセスからのフラグでスキップされる場合でも、
+    # NVIM_PLUGIN_DIR を固定パスに戻す（macOS/Linux 共通）。
+    envExtra = ''
+      unset __HM_SESS_VARS_SOURCED
+      export NVIM_PLUGIN_DIR="${config.xdg.dataHome}/nvim-plugins"
+    '';
+
     # XDG 準拠の設定ディレクトリ
     dotDir = "${config.xdg.configHome}/zsh";
 
