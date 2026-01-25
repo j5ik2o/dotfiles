@@ -20,6 +20,50 @@
 - LSP 設定は LazyVim のデフォルトを使用
 - 追加設定は `config/nvim/lua/plugins/` に配置
 
+## Python プロジェクト (uv) の読み込み
+
+Pyright に `.venv` を認識させる設定が必要。以下のどちらかで OK。
+
+### 最短手順
+
+1) プロジェクトルートで `.venv` を作成
+
+```
+uv venv
+```
+
+2) Pyright に `.venv` を教える（どちらか一方）
+
+`pyproject.toml`:
+
+```
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+```
+
+`pyrightconfig.json`:
+
+```
+{
+  "venvPath": ".",
+  "venv": ".venv"
+}
+```
+
+3) プロジェクトルートで `nvim` を起動し、`:LspInfo` で pyright がアタッチされるか確認
+
+### direnv で自動化（任意）
+
+`.envrc` を置いて `.venv` を自動有効化すると、LSP 以外のツールも安定する。
+
+```
+export VIRTUAL_ENV="$PWD/.venv"
+PATH_add "$VIRTUAL_ENV/bin"
+```
+
+`direnv allow` 後に `nvim` を起動。
+
 ## 主要キーバインド（LazyVim デフォルト）
 
 前提: LSP がアタッチされたときのみ有効。`<Leader>` は `Space`。
