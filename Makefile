@@ -303,10 +303,10 @@ clean:
 	rm -rf .direnv
 
 nvim-clean:
-	@echo "Cleaning all Neovim caches (nvim-*)..."
-	rm -rf ~/.local/share/nvim*
-	rm -rf ~/.local/state/nvim*
-	rm -rf ~/.cache/nvim*
+	@echo "Cleaning Neovim caches (share/state/cache)..."
+	rm -rf ~/.local/share/nvim
+	rm -rf ~/.local/state/nvim
+	rm -rf ~/.cache/nvim
 
 gc:
 	@echo "Running garbage collection..."

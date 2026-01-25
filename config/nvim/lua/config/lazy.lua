@@ -27,6 +27,15 @@ if type(plugin_dir) == "string" and plugin_dir ~= "" and not use_nix_plugins the
 end
 -- Nix-managed plugin flow (overview in docs/neovim.md).
 
+-- Ensure trouble.nvim runtime files are visible when using Nix plugin dir.
+-- trouble.nvim scans runtimepath for its sources; without this, lualine statusline can error.
+if use_nix_plugins then
+  local trouble_dir = plugin_dir .. "/trouble.nvim"
+  if is_dir(trouble_dir) then
+    vim.opt.rtp:append(trouble_dir)
+  end
+end
+
 -- Prefer Nix-managed lazy.nvim (runtimepath) if available, otherwise bootstrap.
 local ok_lazy, lazy = pcall(require, "lazy")
 if not ok_lazy then
@@ -54,6 +63,8 @@ lazy.setup({
     -- import LazyVim extras
     { import = "lazyvim.plugins.extras.editor.neo-tree" },
     { import = "lazyvim.plugins.extras.editor.fzf" },
+    { import = "lazyvim.plugins.extras.lang.java" },
+    { import = "lazyvim.plugins.extras.lang.scala" },
     -- import/override with your plugins
     { import = "plugins" },
   },

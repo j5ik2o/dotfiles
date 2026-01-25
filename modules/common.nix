@@ -101,6 +101,8 @@
     # Scala
     scala_3
     sbt
+    gradle
+    maven
 
     # Go
     go

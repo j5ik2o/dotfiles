@@ -103,6 +103,14 @@ let
       pkg = pkgs.vimPlugins.nvim-lspconfig;
     }
     {
+      name = "nvim-jdtls";
+      pkg = pkgs.vimPlugins.nvim-jdtls;
+    }
+    {
+      name = "nvim-metals";
+      pkg = pkgs.vimPlugins.nvim-metals;
+    }
+    {
       name = "nvim-treesitter";
       pkg = pkgs.vimPlugins.nvim-treesitter;
     }
@@ -121,6 +129,10 @@ let
     {
       name = "plenary.nvim";
       pkg = pkgs.vimPlugins.plenary-nvim;
+    }
+    {
+      name = "telescope.nvim";
+      pkg = pkgs.vimPlugins.telescope-nvim;
     }
     {
       name = "snacks.nvim";
@@ -185,6 +197,8 @@ in
       gopls # Go
       pyright # Python
       haskell-language-server # Haskell
+      jdt-language-server # Java
+      metals # Scala
       marksman # Markdown
       taplo # TOML
       elan # Lean toolchain manager (Lean 4)
@@ -216,6 +230,10 @@ in
       tree-sitter
       lazygit
       git
+
+      # Build tools (Java/Scala)
+      gradle
+      maven
 
       # 画像表示 (image.nvim 用)
       imagemagick
