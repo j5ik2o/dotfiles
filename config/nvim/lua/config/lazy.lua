@@ -1,6 +1,10 @@
 local uv = vim.uv or vim.loop
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+local data_path = vim.fn.stdpath("data")
+local lazypath = data_path .. "/lazy/lazy.nvim"
 local plugin_dir = vim.env.NVIM_PLUGIN_DIR
+if type(plugin_dir) ~= "string" or plugin_dir == "" then
+  plugin_dir = vim.fn.fnamemodify(data_path, ":h") .. "/nvim-plugins"
+end
 
 local function is_dir(path)
   if type(path) ~= "string" or path == "" then
