@@ -23,29 +23,6 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "missing command: $1"
 }
 
-replace_regex() {
-  local file="$1"
-  local pattern="$2"
-  local repl="$3"
-  REPLACE_FILE="$file" REPLACE_PATTERN="$pattern" REPLACE_REPL="$repl" python3 - <<'PY'
-import os
-import re
-import sys
-from pathlib import Path
-
-path = Path(os.environ["REPLACE_FILE"])
-pattern = os.environ["REPLACE_PATTERN"]
-repl = os.environ["REPLACE_REPL"]
-
-text = path.read_text()
-new_text, count = re.subn(pattern, repl, text, count=1, flags=re.MULTILINE)
-if count == 0:
-    sys.stderr.write(f"pattern not found in {path}: {pattern}\n")
-    sys.exit(1)
-path.write_text(new_text)
-PY
-}
-
 json_hash() {
   jq -r .hash
 }
@@ -55,6 +32,7 @@ json_store_path() {
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AI_TOOLS_FILE="${ROOT}/packages/ai-tools.toml"
 
 CODEX_VERSION="${CODEX_VERSION:-}"
 CLAUDE_VERSION="${CLAUDE_VERSION:-}"
@@ -96,13 +74,104 @@ require_cmd npm
 require_cmd python3
 require_cmd tar
 
+update_ai_tools_toml() {
+  AI_TOOLS_FILE="${AI_TOOLS_FILE}" \
+  CODEX_VERSION="${CODEX_VERSION:-}" \
+  CODEX_HASH_AARCH64_DARWIN="${CODEX_HASH_AARCH64_DARWIN:-}" \
+  CODEX_HASH_X86_64_DARWIN="${CODEX_HASH_X86_64_DARWIN:-}" \
+  CODEX_HASH_AARCH64_LINUX="${CODEX_HASH_AARCH64_LINUX:-}" \
+  CODEX_HASH_X86_64_LINUX="${CODEX_HASH_X86_64_LINUX:-}" \
+  CLAUDE_VERSION="${CLAUDE_VERSION:-}" \
+  CLAUDE_HASH="${CLAUDE_HASH:-}" \
+  CLAUDE_NPM_HASH="${CLAUDE_NPM_HASH:-}" \
+  python3 - <<'PY'
+import os
+from pathlib import Path
+
+try:
+    import tomllib  # py3.11+
+except Exception:
+    tomllib = None
+
+path = Path(os.environ["AI_TOOLS_FILE"])
+
+data = {}
+if path.exists():
+    if tomllib is None:
+        raise SystemExit("tomllib is required to read existing ai-tools.toml")
+    data = tomllib.loads(path.read_text())
+
+data.setdefault("codex", {})
+data["codex"].setdefault("hashes", {})
+data.setdefault("claude-code", {})
+
+# codex updates
+if os.environ.get("CODEX_VERSION"):
+    data["codex"]["version"] = os.environ["CODEX_VERSION"]
+hash_map = {
+    "aarch64-darwin": os.environ.get("CODEX_HASH_AARCH64_DARWIN", ""),
+    "x86_64-darwin": os.environ.get("CODEX_HASH_X86_64_DARWIN", ""),
+    "aarch64-linux": os.environ.get("CODEX_HASH_AARCH64_LINUX", ""),
+    "x86_64-linux": os.environ.get("CODEX_HASH_X86_64_LINUX", ""),
+}
+for key, value in hash_map.items():
+    if value:
+        data["codex"]["hashes"][key] = value
+
+# claude updates
+if os.environ.get("CLAUDE_VERSION"):
+    data["claude-code"]["version"] = os.environ["CLAUDE_VERSION"]
+if os.environ.get("CLAUDE_HASH"):
+    data["claude-code"]["hash"] = os.environ["CLAUDE_HASH"]
+if os.environ.get("CLAUDE_NPM_HASH"):
+    data["claude-code"]["npmDepsHash"] = os.environ["CLAUDE_NPM_HASH"]
+
+missing = []
+codex = data.get("codex", {})
+codex_hashes = codex.get("hashes", {})
+if not codex.get("version"):
+    missing.append("codex.version")
+for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
+    if not codex_hashes.get(key):
+        missing.append(f"codex.hashes.{key}")
+
+claude = data.get("claude-code", {})
+if not claude.get("version"):
+    missing.append("claude-code.version")
+if not claude.get("hash"):
+    missing.append("claude-code.hash")
+if not claude.get("npmDepsHash"):
+    missing.append("claude-code.npmDepsHash")
+
+if missing:
+    raise SystemExit("missing required keys in ai-tools.toml: " + ", ".join(missing))
+
+lines = []
+lines.append("[codex]")
+lines.append(f'version = "{codex["version"]}"')
+lines.append("")
+lines.append("[codex.hashes]")
+for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
+    lines.append(f'"{key}" = "{codex_hashes[key]}"')
+lines.append("")
+lines.append('["claude-code"]')
+lines.append(f'version = "{claude["version"]}"')
+lines.append(f'hash = "{claude["hash"]}"')
+lines.append(f'npmDepsHash = "{claude["npmDepsHash"]}"')
+lines.append("")
+
+path.write_text("\n".join(lines))
+PY
+}
+
 if [[ "$SKIP_CODEX" -eq 0 ]]; then
   if [[ -z "$CODEX_VERSION" ]]; then
     CODEX_TAG=$(
       git ls-remote --tags --refs https://github.com/openai/codex 'rust-v*' \
         | awk '{print $2}' \
         | sed 's@refs/tags/@@' \
-        | python3 - <<'PY'
+        | python3 -c "$(
+          cat <<'PY'
 import re
 import sys
 
@@ -110,17 +179,23 @@ tags = [line.strip() for line in sys.stdin if line.strip()]
 best = None
 best_tag = None
 for tag in tags:
-    m = re.match(r"^rust-v(\d+)\.(\d+)\.(\d+)$", tag)
+    m = re.match(r"^rust-v\.?(\d+)\.(\d+)\.(\d+)$", tag)
     if not m:
         continue
     version = tuple(int(x) for x in m.groups())
-    if best is None or version > best:
+    has_dot = tag.startswith("rust-v.")
+    if (
+        best is None
+        or version > best
+        or (version == best and best_tag and best_tag.startswith("rust-v.") and not has_dot)
+    ):
         best = version
         best_tag = tag
 if not best_tag:
     sys.exit("no rust-v tags found")
 print(best_tag)
 PY
+        )"
     )
     CODEX_VERSION="${CODEX_TAG#rust-v}"
   else
@@ -129,54 +204,25 @@ PY
 
   echo "==> codex: ${CODEX_VERSION}"
 
-  CODEX_SRC_HASH=$(
-    nix store prefetch-file --json --unpack \
-      "https://github.com/openai/codex/archive/refs/tags/${CODEX_TAG}.tar.gz" \
-      | json_hash
+  declare -A CODEX_TARGETS=(
+    ["aarch64-darwin"]="aarch64-apple-darwin"
+    ["x86_64-darwin"]="x86_64-apple-darwin"
+    ["aarch64-linux"]="aarch64-unknown-linux-musl"
+    ["x86_64-linux"]="x86_64-unknown-linux-musl"
   )
+  declare -A CODEX_HASHES=()
 
-  CODEX_EXPR=$(
-    cat <<EOF
-let flake = builtins.getFlake "path:${ROOT}";
-    pkgs = import flake.inputs.nixpkgs {
-      system = builtins.currentSystem;
-      config.allowUnfree = true;
-    };
-    src = pkgs.fetchFromGitHub {
-      owner = "openai";
-      repo = "codex";
-      tag = "${CODEX_TAG}";
-      hash = "${CODEX_SRC_HASH}";
-    };
-in pkgs.rustPlatform.buildRustPackage {
-  pname = "codex";
-  version = "${CODEX_VERSION}";
-  inherit src;
-  sourceRoot = "\${src.name}/codex-rs";
-  cargoHash = "";
-}
-EOF
-  )
+  for system in "${!CODEX_TARGETS[@]}"; do
+    target="${CODEX_TARGETS[$system]}"
+    url="https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${target}.tar.gz"
+    CODEX_HASHES["$system"]="$(nix store prefetch-file --json --unpack "${url}" | json_hash)"
+  done
 
-  set +e
-  CODEX_BUILD_OUTPUT="$(nix build --impure --expr "${CODEX_EXPR}" 2>&1)"
-  CODEX_BUILD_STATUS=$?
-  set -e
-
-  CODEX_CARGO_HASH="$(
-    echo "${CODEX_BUILD_OUTPUT}" \
-      | sed -nE 's/.*got: *(sha256-[A-Za-z0-9+/=-]+).*/\1/p' \
-      | tail -n 1
-  )"
-
-  if [[ -z "${CODEX_CARGO_HASH}" ]]; then
-    echo "${CODEX_BUILD_OUTPUT}" >&2
-    die "failed to compute codex cargoHash"
-  fi
-
-  replace_regex "${ROOT}/packages/codex.nix" 'version = "[^"]+";' "version = \"${CODEX_VERSION}\";"
-  replace_regex "${ROOT}/packages/codex.nix" 'hash = "sha256-[^"]+";' "hash = \"${CODEX_SRC_HASH}\";"
-  replace_regex "${ROOT}/packages/codex.nix" 'cargoHash = "sha256-[^"]+";' "cargoHash = \"${CODEX_CARGO_HASH}\";"
+  CODEX_HASH_AARCH64_DARWIN="${CODEX_HASHES[aarch64-darwin]}"
+  CODEX_HASH_X86_64_DARWIN="${CODEX_HASHES[x86_64-darwin]}"
+  CODEX_HASH_AARCH64_LINUX="${CODEX_HASHES[aarch64-linux]}"
+  CODEX_HASH_X86_64_LINUX="${CODEX_HASHES[x86_64-linux]}"
+  update_ai_tools_toml
 fi
 
 if [[ "$SKIP_CLAUDE" -eq 0 ]]; then
@@ -207,38 +253,14 @@ if [[ "$SKIP_CLAUDE" -eq 0 ]]; then
   popd >/dev/null
   cp "${TMPDIR}/package/package-lock.json" "${ROOT}/packages/claude-code-package-lock.json"
 
-  replace_regex "${ROOT}/packages/claude-code.nix" 'version = "[^"]+";' "version = \"${CLAUDE_VERSION}\";"
-  replace_regex "${ROOT}/packages/claude-code.nix" 'hash = "sha256-[^"]+";' "hash = \"${CLAUDE_SRC_HASH}\";"
-
-  CLAUDE_EXPR=$(
-    cat <<EOF
-let flake = builtins.getFlake "path:${ROOT}";
-    pkgs = import flake.inputs.nixpkgs {
-      system = builtins.currentSystem;
-      config.allowUnfree = true;
-    };
-    pkg = pkgs.callPackage ./packages/claude-code.nix { };
-in pkg.overrideAttrs (_: { npmDepsHash = ""; })
-EOF
-  )
-
-  set +e
-  CLAUDE_BUILD_OUTPUT="$(nix build --impure --expr "${CLAUDE_EXPR}" 2>&1)"
-  CLAUDE_BUILD_STATUS=$?
-  set -e
-
-  CLAUDE_NPM_HASH="$(
-    echo "${CLAUDE_BUILD_OUTPUT}" \
-      | sed -nE 's/.*got: *(sha256-[A-Za-z0-9+/=-]+).*/\1/p' \
-      | tail -n 1
-  )"
-
+  CLAUDE_NPM_HASH="$(nix run nixpkgs#prefetch-npm-deps -- "${ROOT}/packages/claude-code-package-lock.json")"
   if [[ -z "${CLAUDE_NPM_HASH}" ]]; then
-    echo "${CLAUDE_BUILD_OUTPUT}" >&2
     die "failed to compute claude-code npmDepsHash"
   fi
 
-  replace_regex "${ROOT}/packages/claude-code.nix" 'npmDepsHash = "sha256-[^"]+";' "npmDepsHash = \"${CLAUDE_NPM_HASH}\";"
+  CLAUDE_HASH="${CLAUDE_SRC_HASH}"
+  CLAUDE_NPM_HASH="${CLAUDE_NPM_HASH}"
+  update_ai_tools_toml
 fi
 
 echo "==> done"

@@ -1,0 +1,13 @@
+[codex]
+version = "0.89.0"
+
+[codex.hashes]
+"aarch64-darwin" = "sha256-ZB4jmInHol/ZWbGPZ4KE6jRKynXD5jGBWTiwPYYegDM="
+"x86_64-darwin" = "sha256-M6XtO9UOYq7sU3C44kezYgSHg2UjNV1WjlIVD98pALg="
+"aarch64-linux" = "sha256-1HCj3rEVNeuUgS4+96FjTXdSUooien6ppft8PFaWrnY="
+"x86_64-linux" = "sha256-hzVVacxgIe+7yJGPE/jkuz0b9MtLyyT+NNGYEdDMEnI="
+
+["claude-code"]
+version = "2.1.19"
+hash = "sha256-K2fJf1eRAyqmtAvKBzpAtMohQ4B1icwC9yf5zEf52C8="
+npmDepsHash = "sha256-C8HVKSz1ZQmYNMoLUKk2XUpf5y+Np4nTacCGMVEqO8c="

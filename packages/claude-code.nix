@@ -9,16 +9,20 @@
   procps,
   socat,
 }:
+let
+  toolVersions = lib.importTOML ./ai-tools.toml;
+  claude = toolVersions."claude-code";
+in
 buildNpmPackage (finalAttrs: {
   pname = "claude-code";
-  version = "2.1.17";
+  version = claude.version;
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-    hash = "sha256-cLJ8qKa8OhGpjdB7l1KAcG73EvH5T+OUww3flAKWihI=";
+    hash = claude.hash;
   };
 
-  npmDepsHash = "sha256-aUqPXF5L78wZ34pNRvpEJi6l2wl15Og1yCEvVoeV0tE=";
+  npmDepsHash = claude.npmDepsHash;
 
   strictDeps = true;
 

@@ -10,6 +10,8 @@
   installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
 }:
 let
+  toolVersions = lib.importTOML ./ai-tools.toml;
+  codex = toolVersions.codex;
   platformMap = {
     "x86_64-linux" = "x86_64-unknown-linux-musl";
     "aarch64-linux" = "aarch64-unknown-linux-musl";
@@ -20,16 +22,11 @@ let
   platform = platformMap.${stdenv.hostPlatform.system}
     or (throw "unsupported platform: ${stdenv.hostPlatform.system}");
 
-  hashes = {
-    "aarch64-darwin" = "sha256-hoRaw3UWpS0npu2gWlWpL6+EZ5qP9uSalChDw0PC2eM=";
-    "x86_64-darwin" = "sha256-Nsu4F1CW2OaR9mFu0Kq8YWsnvSBNWK/iAIDN1v/834g=";
-    "aarch64-linux" = "sha256-C/CPgP04Jc11jg8jo15Ex5B1R2xIgOVhPypgWntatTw=";
-    "x86_64-linux" = "sha256-t2PiNVc7Tcvy8jnzrk+XEGRNRq0qKSYnRyWEdspGAAM=";
-  };
+  hashes = codex.hashes;
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "codex";
-  version = "0.89.0";
+  version = codex.version;
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-${platform}.tar.gz";
