@@ -27,6 +27,7 @@
 
   # カスタムパッケージの overlay
   nixpkgs.overlays = [
+    inputs.nix-clawdbot.overlays.default
     (final: prev: {
       gwq = final.callPackage ../packages/gwq.nix { };
       codex = final.callPackage ../packages/codex.nix { };

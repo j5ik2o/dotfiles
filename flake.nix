@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-clawdbot = {
+      url = "github:clawdbot/nix-clawdbot";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     catppuccin = {
       url = "github:catppuccin/nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -67,6 +72,7 @@
       # 共通の home-manager モジュール
       commonHomeModules = [
         catppuccin.homeModules.catppuccin
+        inputs.nix-clawdbot.homeManagerModules.clawdbot
         "${hmConfigPath}/common.nix"
       ];
 
@@ -92,7 +98,10 @@
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ customOverlay ];
+            overlays = [
+              customOverlay
+              inputs.nix-clawdbot.overlays.default
+            ];
             config.allowUnfreePredicate =
               pkg:
               builtins.elem (nixpkgs.lib.getName pkg) [
