@@ -25,7 +25,8 @@
       # 旧レイアウト（Powerline）
       format = lib.concatStrings [
         "[](bg:crust fg:green)"
-        "[ 󰀵 ](bg:green fg:crust)"
+        "$os"
+        "$hostname"
         "[](fg:green bg:sapphire)"
         "$time"
         "[](fg:sapphire bg:blue)"
@@ -53,6 +54,20 @@
         # 読み取り専用マーカー
         read_only = " 󰌾";
         read_only_style = "fg:red bg:blue";
+      };
+
+      # OS アイコン
+      os = {
+        disabled = false;
+        style = "fg:crust bg:green";
+        format = "[ $symbol ]($style)";
+      };
+
+      # ホスト名（常に表示）
+      hostname = {
+        ssh_only = false;
+        style = "fg:crust bg:green";
+        format = "[ $hostname ]($style)";
       };
 
       # Git ブランチ

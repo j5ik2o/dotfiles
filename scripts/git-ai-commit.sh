@@ -26,7 +26,10 @@ diff:
 $DIFF"
 
 # 非対話モードで実行
-COMMIT_MSG=$(claude -p "$PROMPT" 2>/dev/null)
+if ! COMMIT_MSG=$(claude -p "$PROMPT"); then
+  echo "Error: Failed to generate commit message" >&2
+  exit 1
+fi
 
 if [ -z "$COMMIT_MSG" ]; then
   echo "Error: Failed to generate commit message" >&2
