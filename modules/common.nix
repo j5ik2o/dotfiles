@@ -144,6 +144,7 @@
     ./programs/shell.nix
     ./programs/starship.nix
     ./programs/neovim.nix
+    ./programs/helix.nix
     ./programs/direnv.nix
     ./programs/opencode.nix
   ];
