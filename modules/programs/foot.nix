@@ -50,6 +50,7 @@ in
         bright6 = "94e2d5";
         bright7 = "a6adc8";
       };
+
     };
   };
 }

@@ -31,8 +31,7 @@ in
       font-family-bold-italic = "JetBrainsMono Nerd Font";
       font-size = 14;
 
-      # テーマ (Catppuccin Mocha で統一)
-      theme = "Catppuccin Mocha";
+      # テーマは catppuccin.nix で一元管理
 
       # ウィンドウ
       window-padding-x = 4;

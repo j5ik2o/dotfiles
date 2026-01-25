@@ -74,7 +74,7 @@ lazy.setup({
   } or nil,
   install = {
     missing = not use_nix_plugins,
-    colorscheme = { "tokyonight", "habamax" },
+    colorscheme = { "catppuccin", "habamax" },
   },
   checker = {
     enabled = not use_nix_plugins, -- check for plugin updates periodically

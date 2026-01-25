@@ -143,6 +143,7 @@
     ./programs/git.nix
     ./programs/shell.nix
     ./programs/starship.nix
+    ./programs/catppuccin.nix
     ./programs/neovim.nix
     ./programs/helix.nix
     ./programs/direnv.nix

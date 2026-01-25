@@ -232,9 +232,6 @@ in
       light = false;
       side-by-side = true;
       line-numbers = true;
-      syntax-theme = "Dracula";
-      plus-style = "syntax #003800";
-      minus-style = "syntax #3f0001";
       decorations = {
         commit-decoration-style = "bold yellow box ul";
         file-style = "bold yellow ul";
@@ -278,9 +275,6 @@ in
     enable = true;
     settings = {
       gui = {
-        theme = {
-          selectedLineBgColor = [ "default" ];
-        };
         showIcons = true;
       };
       git = {

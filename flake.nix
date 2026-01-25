@@ -13,6 +13,11 @@
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    catppuccin = {
+      url = "github:catppuccin/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -21,6 +26,7 @@
       nixpkgs,
       home-manager,
       nix-darwin,
+      catppuccin,
       ...
     }@inputs:
     let
@@ -60,6 +66,7 @@
 
       # 共通の home-manager モジュール
       commonHomeModules = [
+        catppuccin.homeModules.catppuccin
         "${hmConfigPath}/common.nix"
       ];
 

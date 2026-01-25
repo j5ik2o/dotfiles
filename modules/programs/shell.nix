@@ -315,9 +315,6 @@
           --layout=reverse
           --border
           --inline-info
-          --color=dark
-          --color=fg:-1,bg:-1,hl:#c678dd,fg+:#ffffff,bg+:#4b5263,hl+:#d858fe
-          --color=info:#98c379,prompt:#61afef,pointer:#be5046,marker:#e5c07b,spinner:#61afef,header:#61afef
         '
       fi
 
@@ -507,16 +504,6 @@
       "--border"
       "--inline-info"
     ];
-    colors = {
-      "bg+" = "#3B4252";
-      "fg+" = "#ECEFF4";
-      "hl" = "#A3BE8C";
-      "hl+" = "#A3BE8C";
-      "info" = "#EBCB8B";
-      "prompt" = "#81A1C1";
-      "pointer" = "#BF616A";
-      "marker" = "#B48EAD";
-    };
   };
 
   # ============================================================
@@ -535,7 +522,6 @@
   programs.bat = {
     enable = true;
     config = {
-      theme = "Dracula";
       style = "numbers,changes,header";
       pager = "less -FR";
     };

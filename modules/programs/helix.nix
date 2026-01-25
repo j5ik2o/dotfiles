@@ -13,7 +13,6 @@
     enable = true;
     defaultEditor = false;
     settings = {
-      theme = "catppuccin_mocha";
       editor = {
         line-number = "relative";
         cursorline = true;
