@@ -7,7 +7,7 @@
 
 {
   # ============================================================
-  # Starship プロンプト設定 (Catppuccin Powerline)
+  # Starship プロンプト設定 (Catppuccin + 旧レイアウト)
   # ============================================================
   programs.starship = {
     enable = true;
@@ -16,194 +16,138 @@
     enableFishIntegration = true;
 
     settings = {
+      # 全体設定
       command_timeout = 1000;
       add_newline = false;
 
       palette = "catppuccin_${config.catppuccin.flavor}";
+
+      # 旧レイアウト（Powerline）
       format = lib.concatStrings [
-        "[](red)"
-        "$os"
-        "$username"
-        "[](bg:peach fg:red)"
+        "[](bg:crust fg:green)"
+        "[ 󰀵 ](bg:green fg:crust)"
+        "[](fg:green bg:sapphire)"
+        "$time"
+        "[](fg:sapphire bg:blue)"
         "$directory"
-        "[](bg:yellow fg:peach)"
+        "[](fg:blue bg:yellow)"
         "$git_branch"
         "$git_status"
-        "[](fg:yellow bg:green)"
-        "$c"
-        "$rust"
-        "$golang"
-        "$nodejs"
-        "$php"
-        "$java"
-        "$kotlin"
-        "$haskell"
-        "$python"
-        "[](fg:green bg:sapphire)"
-        "$conda"
-        "[](fg:sapphire bg:lavender)"
-        "$time"
-        "[ ](fg:lavender)"
-        "$cmd_duration"
-        "$line_break"
+        "$git_metrics"
+        "[](fg:yellow bg:crust)"
         "$character"
       ];
 
-      os = {
-        disabled = false;
-        style = "bg:red fg:crust";
-        symbols = {
-          Windows = "";
-          Ubuntu = "󰕈";
-          SUSE = "";
-          Raspbian = "󰐿";
-          Mint = "󰣭";
-          Macos = "󰀵";
-          Manjaro = "";
-          Linux = "󰌽";
-          Gentoo = "󰣨";
-          Fedora = "󰣛";
-          Alpine = "";
-          Amazon = "";
-          Android = "";
-          AOSC = "";
-          Arch = "󰣇";
-          Artix = "󰣇";
-          CentOS = "";
-          Debian = "󰣚";
-          Redhat = "󱄛";
-          RedHatEnterprise = "󱄛";
-        };
-      };
+      # 右プロンプト（最小限）
+      right_format = lib.concatStrings [
+        "$cmd_duration"
+        "$status"
+      ];
 
-      username = {
-        show_always = true;
-        style_user = "bg:red fg:crust";
-        style_root = "bg:red fg:crust";
-        format = "[ $user]($style)";
-      };
-
+      # ディレクトリ
       directory = {
-        style = "bg:peach fg:crust";
-        format = "[ $path ]($style)";
-        truncation_length = 3;
-        truncation_symbol = "…/";
-        substitutions = {
-          "Documents" = "󰈙 ";
-          "Downloads" = " ";
-          "Music" = "󰝚 ";
-          "Pictures" = " ";
-          "Developer" = "󰲋 ";
+        style = "fg:crust bg:blue";
+        format = "[  $path ]($style)";
+        truncate_to_repo = false;
+        truncation_length = 0;
+        # 読み取り専用マーカー
+        read_only = " 󰌾";
+        read_only_style = "fg:red bg:blue";
+      };
+
+      # Git ブランチ
+      git_branch = {
+        symbol = "  ";
+        style = "fg:crust bg:yellow";
+        format = "[ $symbol$branch(:$remote_branch) ]($style)";
+      };
+
+      # Git ステータス（シンプル）
+      git_status = {
+        style = "fg:crust bg:yellow";
+        format = "[ $all_status ]($style)";
+        conflicted = "⚡";
+        ahead = "⇡";
+        behind = "⇣";
+        diverged = "⇕";
+        up_to_date = "";
+        untracked = "?";
+        stashed = "📦";
+        modified = "!";
+        staged = "+";
+        renamed = "»";
+        deleted = "✘";
+      };
+
+      git_metrics = {
+        disabled = false;
+        format = "([+$added]($added_style))[]($added_style)";
+        added_style = "fg:crust bg:yellow";
+        deleted_style = "fg:red bg:yellow";
+      };
+
+      # Nix シェル
+      nix_shell = {
+        disabled = false;
+        symbol = " ";
+        style = "bg:yellow fg:crust";
+        format = "[](fg:yellow)[$symbol$state ]($style)[](fg:yellow)";
+      };
+
+      # Devbox シェル検出 (direnv経由の場合はDEVBOX_PROJECT_ROOTを使用)
+      env_var = {
+        DEVBOX_PROJECT_ROOT = {
+          symbol = "📦 ";
+          style = "bg:yellow fg:crust";
+          format = "[](fg:yellow)[$symbol devbox ]($style)[](fg:yellow)";
         };
       };
 
-      git_branch = {
-        symbol = "";
-        style = "bg:yellow";
-        format = "[[ $symbol $branch ](fg:crust bg:yellow)]($style)";
-      };
-
-      git_status = {
-        style = "bg:yellow";
-        format = "[[($all_status$ahead_behind )](fg:crust bg:yellow)]($style)";
-      };
-
-      nodejs = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      c = {
-        symbol = " ";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      rust = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      golang = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      php = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      java = {
-        symbol = " ";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      kotlin = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      haskell = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version) ](fg:crust bg:green)]($style)";
-      };
-
-      python = {
-        symbol = "";
-        style = "bg:green";
-        format = "[[ $symbol( $version)(\\(#$virtualenv\\)) ](fg:crust bg:green)]($style)";
-      };
-
-      docker_context = {
-        symbol = "";
-        style = "bg:sapphire";
-        format = "[[ $symbol( $context) ](fg:crust bg:sapphire)]($style)";
-      };
-
-      conda = {
-        symbol = "  ";
-        style = "fg:crust bg:sapphire";
-        format = "[$symbol$environment ]($style)";
-        ignore_base = false;
+      # プロンプト文字
+      character = {
+        success_symbol = "[ ➜](bold fg:green)";
+        error_symbol = "[ ✗](fg:red)";
+        vimcmd_symbol = "[ ➜](bold fg:green)";
       };
 
       time = {
         disabled = false;
         time_format = "%R";
-        style = "bg:lavender";
-        format = "[[  $time ](fg:crust bg:lavender)]($style)";
+        style = "bg:sapphire";
+        format = "[[ 󱑍 $time ](fg:crust bg:sapphire)]($style)";
       };
 
-      line_break = {
-        disabled = true;
-      };
-
-      character = {
-        disabled = false;
-        success_symbol = "[❯](bold fg:green)";
-        error_symbol = "[❯](bold fg:red)";
-        vimcmd_symbol = "[❮](bold fg:green)";
-        vimcmd_replace_one_symbol = "[❮](bold fg:lavender)";
-        vimcmd_replace_symbol = "[❮](bold fg:lavender)";
-        vimcmd_visual_symbol = "[❮](bold fg:yellow)";
-      };
-
+      # コマンド実行時間（2秒以上のみ表示）
       cmd_duration = {
-        show_milliseconds = true;
-        format = " in $duration ";
-        style = "bg:lavender";
-        disabled = false;
-        show_notifications = true;
-        min_time_to_notify = 45000;
+        min_time = 2000;
+        format = "[ ⏱ $duration ]($style)";
+        style = "fg:text bg:surface0";
       };
+
+      # 終了ステータス（エラー時のみ）
+      status = {
+        disabled = false;
+        format = "[✘ $status]($style) ";
+        style = "fg:red";
+      };
+
+      # 以下は無効化（シンプル化）
+      aws.disabled = true;
+      gcloud.disabled = true;
+      kubernetes.disabled = true;
+      docker_context.disabled = true;
+
+      # 言語は全て無効化
+      c.disabled = true;
+      rust.disabled = true;
+      golang.disabled = true;
+      nodejs.disabled = true;
+      python.disabled = true;
+      java.disabled = true;
+      scala.disabled = true;
+      kotlin.disabled = true;
+      lua.disabled = true;
+      zig.disabled = true;
 
       palettes = {
         catppuccin_mocha = {
