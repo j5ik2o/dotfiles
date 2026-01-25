@@ -291,7 +291,11 @@ update:
 
 fmt:
 	@echo "Formatting nix files..."
-	find . -name "*.nix" -exec nixfmt {} \; 2>/dev/null
+	@if command -v rg >/dev/null 2>&1; then \
+		rg --files -g '*.nix' -0 | xargs -0 nix run nixpkgs#nixfmt --; \
+	else \
+		find . -name "*.nix" -print0 | xargs -0 nix run nixpkgs#nixfmt --; \
+	fi
 
 clean:
 	@echo "Cleaning build artifacts..."
