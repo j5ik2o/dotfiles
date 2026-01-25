@@ -187,57 +187,63 @@ in
     plugins = map (plugin: plugin.pkg) nvimPlugins;
 
     # 外部ツール（LSP、フォーマッター等）- Nix で管理
-    extraPackages = with pkgs; [
-      # LSP サーバー
-      nil # Nix
-      lua-language-server # Lua
-      nodePackages.typescript-language-server # TypeScript/JavaScript
-      nodePackages.vscode-langservers-extracted # HTML/CSS/JSON
-      rust-analyzer # Rust
-      gopls # Go
-      pyright # Python
-      haskell-language-server # Haskell
-      jdt-language-server # Java
-      metals # Scala
-      marksman # Markdown
-      taplo # TOML
-      elan # Lean toolchain manager (Lean 4)
-      opam # OCaml package manager (for mason)
-      ocamlPackages.ocaml-lsp # OCaml LSP
-      cmake # rust-analyzer build scripts (aws-lc-sys)
-      gcc-arm-embedded # arm-none-eabi-gcc for no_std targets
+    extraPackages =
+      with pkgs;
+      [
+        # LSP サーバー
+        nil # Nix
+        lua-language-server # Lua
+        nodePackages.typescript-language-server # TypeScript/JavaScript
+        nodePackages.vscode-langservers-extracted # HTML/CSS/JSON
+        rust-analyzer # Rust
+        gopls # Go
+        pyright # Python
+        haskell-language-server # Haskell
+        jdt-language-server # Java
+        metals # Scala
+      ]
+      ++ lib.optionals (!pkgs.stdenv.isDarwin) [
+        marksman # Markdown (Darwin は swift ビルドクラッシュ回避のため除外)
+      ]
+      ++ [
+        taplo # TOML
+        elan # Lean toolchain manager (Lean 4)
+        opam # OCaml package manager (for mason)
+        ocamlPackages.ocaml-lsp # OCaml LSP
+        cmake # rust-analyzer build scripts (aws-lc-sys)
+        gcc-arm-embedded # arm-none-eabi-gcc for no_std targets
 
-      # フォーマッター
-      nixfmt
-      stylua
-      nodePackages.prettier
-      rustfmt
-      gofumpt
-      black
-      isort
-      fourmolu
-      shfmt
+        # フォーマッター
+        nixfmt
+        stylua
+        nodePackages.prettier
+        rustfmt
+        gofumpt
+        black
+        isort
+        fourmolu
+        shfmt
 
-      # リンター
-      shellcheck
-      hadolint
-      statix
-      hlint
+        # リンター
+        shellcheck
+        hadolint
+        statix
+        hlint
 
-      # ツール
-      ripgrep
-      fd
-      tree-sitter
-      lazygit
-      git
+        # ツール
+        ripgrep
+        fd
+        tree-sitter
+        lazygit
+        git
 
-      # Build tools (Java/Scala)
-      gradle
-      maven
+        # Build tools (Java/Scala)
+        gradle
+        maven
 
-      # 画像表示 (image.nvim 用)
-      imagemagick
-    ];
+        # 画像表示 (image.nvim 用)
+        imagemagick
+      ];
 
     # Lua パッケージ (image.nvim 用)
     extraLuaPackages = ps: [ ps.magick ];
