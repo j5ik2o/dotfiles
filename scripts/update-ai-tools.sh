@@ -215,7 +215,7 @@ PY
   for system in "${!CODEX_TARGETS[@]}"; do
     target="${CODEX_TARGETS[$system]}"
     url="https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${target}.tar.gz"
-    CODEX_HASHES["$system"]="$(nix store prefetch-file --json --unpack "${url}" | json_hash)"
+    CODEX_HASHES["$system"]="$(nix store prefetch-file --json "${url}" | json_hash)"
   done
 
   CODEX_HASH_AARCH64_DARWIN="${CODEX_HASHES[aarch64-darwin]}"
