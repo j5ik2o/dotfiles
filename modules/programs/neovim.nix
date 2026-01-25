@@ -19,12 +19,20 @@ let
       pkg = pkgs.vimPlugins.blink-cmp;
     }
     {
+      name = "blink-copilot";
+      pkg = pkgs.vimPlugins.blink-copilot;
+    }
+    {
       name = "bufferline.nvim";
       pkg = pkgs.vimPlugins.bufferline-nvim;
     }
     {
       name = "catppuccin";
       pkg = pkgs.vimPlugins.catppuccin-nvim;
+    }
+    {
+      name = "copilot.lua";
+      pkg = pkgs.vimPlugins.copilot-lua;
     }
     {
       name = "conform.nvim";
