@@ -1,5 +1,9 @@
 # Dotfiles Project Notes
 
+## 必ず守ること
+
+- 日本語で応対すること
+
 ## Nix
 
 ### パッケージ名の注意
