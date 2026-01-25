@@ -112,7 +112,9 @@ let
     }
     {
       name = "nvim-treesitter";
-      pkg = pkgs.vimPlugins.nvim-treesitter;
+      pkg = pkgs.vimPlugins.nvim-treesitter.withPlugins (plugins: [
+        plugins.java
+      ]);
     }
     {
       name = "nvim-treesitter-textobjects";
