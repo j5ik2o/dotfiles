@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # ============================================================
@@ -28,9 +33,17 @@
           display-messages = true;
         };
         statusline = {
-          left = [ "mode" "spinner" "version-control" ];
+          left = [
+            "mode"
+            "spinner"
+            "version-control"
+          ];
           center = [ "file-name" ];
-          right = [ "diagnostics" "position" "file-encoding" ];
+          right = [
+            "diagnostics"
+            "position"
+            "file-encoding"
+          ];
         };
       };
       keys.normal = {

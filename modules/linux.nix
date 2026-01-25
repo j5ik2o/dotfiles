@@ -1,4 +1,10 @@
-{ config, pkgs, lib, username, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  ...
+}:
 
 let
   # WSL 検出
@@ -26,61 +32,65 @@ in
   # ============================================================
   # Linux 固有パッケージ
   # ============================================================
-  home.packages = with pkgs; [
-    # 1Password CLI (macOS では Homebrew cask でインストール)
-    _1password-cli
+  home.packages =
+    with pkgs;
+    [
+      # 1Password CLI (macOS では Homebrew cask でインストール)
+      _1password-cli
 
-    # Nerd Fonts
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
-    nerd-fonts.hack
-    nerd-fonts.meslo-lg
+      # Nerd Fonts
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.fira-code
+      nerd-fonts.hack
+      nerd-fonts.meslo-lg
 
-    # 日本語フォント
-    noto-fonts
-    noto-fonts-cjk-sans
-    noto-fonts-cjk-serif
+      # 日本語フォント
+      noto-fonts
+      noto-fonts-cjk-sans
+      noto-fonts-cjk-serif
 
-    # システムモニタリング
-    iotop
-    iftop
-    nethogs
-    sysstat
+      # システムモニタリング
+      iotop
+      iftop
+      nethogs
+      sysstat
 
-    # ファイルシステム
-    ncdu
-    duf
+      # ファイルシステム
+      ncdu
+      duf
 
-    # ネットワーク
-    iproute2
-    nettools
-    traceroute
+      # ネットワーク
+      iproute2
+      nettools
+      traceroute
 
-  ] ++ lib.optionals (!isWSL) [
-    # クリップボード (X11/Wayland) - WSL では Windows 側を使用
-    xclip
-    wl-clipboard
+    ]
+    ++ lib.optionals (!isWSL) [
+      # クリップボード (X11/Wayland) - WSL では Windows 側を使用
+      xclip
+      wl-clipboard
 
-    # 通知
-    libnotify
+      # 通知
+      libnotify
 
-    # OpenGL/EGL (ターミナル用)
-    mesa
-    libGL
+      # OpenGL/EGL (ターミナル用)
+      mesa
+      libGL
 
-    # その他 Linux ツール
-    pciutils
-    usbutils
-    lsof
-    strace
+      # その他 Linux ツール
+      pciutils
+      usbutils
+      lsof
+      strace
 
-  ] ++ lib.optionals (!isWSL) [
-    # コンテナ - WSL では Docker Desktop を使用
-    docker-client
-    docker-compose
-    docker-buildx
-    lazydocker
-  ];
+    ]
+    ++ lib.optionals (!isWSL) [
+      # コンテナ - WSL では Docker Desktop を使用
+      docker-client
+      docker-compose
+      docker-buildx
+      lazydocker
+    ];
   # 注: dropbox/dropbox-cli は unfree パッケージのため削除
 
   # ============================================================
@@ -160,7 +170,8 @@ in
   home.shellAliases = {
     # クリップボード
     pbcopy = if isWSL then "clip.exe" else "xclip -selection clipboard";
-    pbpaste = if isWSL then "powershell.exe -command 'Get-Clipboard'" else "xclip -selection clipboard -o";
+    pbpaste =
+      if isWSL then "powershell.exe -command 'Get-Clipboard'" else "xclip -selection clipboard -o";
 
     # クリップボード (Wayland) - WSL では不要
     wlcopy = if isWSL then "clip.exe" else "wl-copy";

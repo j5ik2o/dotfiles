@@ -19,8 +19,9 @@ let
     "aarch64-darwin" = "aarch64-apple-darwin";
   };
 
-  platform = platformMap.${stdenv.hostPlatform.system}
-    or (throw "unsupported platform: ${stdenv.hostPlatform.system}");
+  platform =
+    platformMap.${stdenv.hostPlatform.system}
+      or (throw "unsupported platform: ${stdenv.hostPlatform.system}");
 
   hashes = codex.hashes;
 in
@@ -30,8 +31,8 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/openai/codex/releases/download/rust-v${finalAttrs.version}/codex-${platform}.tar.gz";
-    hash = hashes.${stdenv.hostPlatform.system}
-      or (throw "missing hash for ${stdenv.hostPlatform.system}");
+    hash =
+      hashes.${stdenv.hostPlatform.system} or (throw "missing hash for ${stdenv.hostPlatform.system}");
   };
 
   nativeBuildInputs = [

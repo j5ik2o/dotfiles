@@ -1,14 +1,18 @@
-{ config, pkgs, lib, inputs, username, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  inputs,
+  username,
+  ...
+}:
 
 let
   # ユーザー名からhomebrew設定ファイル名を決定
   # ドットをアンダースコアに変換（Nixファイルパス互換性のため）
   safeUsername = builtins.replaceStrings [ "." ] [ "_" ] username;
   homebrewConfigFile = ./homebrew/${safeUsername}.nix;
-  homebrewCleanup =
-    if username == "ex_j.kato" || username == "ex_j_kato"
-    then "none"
-    else "zap";
+  homebrewCleanup = if username == "ex_j.kato" || username == "ex_j_kato" then "none" else "zap";
 in
 {
   imports = [
@@ -20,9 +24,11 @@ in
   # ============================================================
 
   # unfree パッケージの許可 (claude-code など)
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-    "claude-code"
-  ];
+  nixpkgs.config.allowUnfreePredicate =
+    pkg:
+    builtins.elem (lib.getName pkg) [
+      "claude-code"
+    ];
 
   # カスタムパッケージの overlay
   nixpkgs.overlays = [
@@ -37,10 +43,17 @@ in
   nix = {
     settings = {
       # Flakes を有効化
-      experimental-features = [ "nix-command" "flakes" "auto-allocate-uids" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+        "auto-allocate-uids"
+      ];
 
       # 信頼するユーザー
-      trusted-users = [ "root" username ];
+      trusted-users = [
+        "root"
+        username
+      ];
 
       # バイナリキャッシュ
       substituters = [
@@ -60,7 +73,11 @@ in
     # ガベージコレクション
     gc = {
       automatic = true;
-      interval = { Weekday = 0; Hour = 2; Minute = 0; };
+      interval = {
+        Weekday = 0;
+        Hour = 2;
+        Minute = 0;
+      };
       options = "--delete-older-than 30d";
     };
   };
@@ -115,10 +132,10 @@ in
       orientation = "bottom";
       show-recents = false;
       tilesize = 48;
-      wvous-bl-corner = 1;  # Disabled
-      wvous-br-corner = 1;  # Disabled
-      wvous-tl-corner = 1;  # Disabled
-      wvous-tr-corner = 1;  # Disabled
+      wvous-bl-corner = 1; # Disabled
+      wvous-br-corner = 1; # Disabled
+      wvous-tl-corner = 1; # Disabled
+      wvous-tr-corner = 1; # Disabled
     };
 
     # Finder 設定
@@ -126,9 +143,9 @@ in
       AppleShowAllExtensions = true;
       AppleShowAllFiles = true;
       CreateDesktop = false;
-      FXDefaultSearchScope = "SCcf";  # 現在のフォルダを検索
+      FXDefaultSearchScope = "SCcf"; # 現在のフォルダを検索
       FXEnableExtensionChangeWarning = false;
-      FXPreferredViewStyle = "Nlsv";  # リスト表示
+      FXPreferredViewStyle = "Nlsv"; # リスト表示
       QuitMenuItem = true;
       ShowPathbar = true;
       ShowStatusBar = true;
@@ -137,7 +154,7 @@ in
 
     # トラックパッド設定
     trackpad = {
-      Clicking = true;  # タップでクリック
+      Clicking = true; # タップでクリック
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = true;
     };
@@ -148,9 +165,9 @@ in
       # 削除してOSデフォルトに任せる
 
       # その他
-      AppleInterfaceStyle = "Dark";  # ダークモード
-      AppleKeyboardUIMode = 3;  # フルキーボードアクセス
-      ApplePressAndHoldEnabled = false;  # キーリピートを有効化
+      AppleInterfaceStyle = "Dark"; # ダークモード
+      AppleKeyboardUIMode = 3; # フルキーボードアクセス
+      ApplePressAndHoldEnabled = false; # キーリピートを有効化
       AppleShowAllExtensions = true;
       AppleShowScrollBars = "WhenScrolling";
       NSAutomaticCapitalizationEnabled = false;

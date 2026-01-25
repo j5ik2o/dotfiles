@@ -15,16 +15,32 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, nix-darwin, ... }@inputs:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      home-manager,
+      nix-darwin,
+      ...
+    }@inputs:
     let
       # サポートするユーザー一覧
-      users = [ "j5ik2o" "parallels" "ex_j.kato" ];
+      users = [
+        "j5ik2o"
+        "parallels"
+        "ex_j.kato"
+      ];
 
       # デフォルトユーザー (nix-darwin用)
       defaultUser = "j5ik2o";
 
       # サポートするシステム
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
       # 各システム用の関数を生成
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -58,15 +74,24 @@
       ];
 
       # home-manager 設定を生成する関数
-      mkHomeConfiguration = { system, modules, username, homeDirectory, extraSpecialArgs ? {} }:
+      mkHomeConfiguration =
+        {
+          system,
+          modules,
+          username,
+          homeDirectory,
+          extraSpecialArgs ? { },
+        }:
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
             overlays = [ customOverlay ];
-            config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
-              "claude-code"
-              "1password-cli"
-            ];
+            config.allowUnfreePredicate =
+              pkg:
+              builtins.elem (nixpkgs.lib.getName pkg) [
+                "claude-code"
+                "1password-cli"
+              ];
           };
           modules = modules ++ [
             {
@@ -78,13 +103,21 @@
             }
           ];
           extraSpecialArgs = {
-            inherit self inputs username nvimConfigPath;
-          } // extraSpecialArgs;
+            inherit
+              self
+              inputs
+              username
+              nvimConfigPath
+              ;
+          }
+          // extraSpecialArgs;
         };
 
       # 全ユーザー × 全プラットフォームの homeConfigurations を生成
-      mkAllHomeConfigurations = nixpkgs.lib.foldl' (acc: user:
-        acc // {
+      mkAllHomeConfigurations = nixpkgs.lib.foldl' (
+        acc: user:
+        acc
+        // {
           "${user}@darwin-aarch64" = mkHomeConfiguration {
             system = "aarch64-darwin";
             modules = darwinHomeModules;
@@ -110,10 +143,11 @@
             homeDirectory = "/home/${user}";
           };
         }
-      ) {} users;
+      ) { } users;
 
       # nix-darwin 設定を生成する関数
-      mkDarwinConfiguration = { system, user }:
+      mkDarwinConfiguration =
+        { system, user }:
         nix-darwin.lib.darwinSystem {
           inherit system;
           modules = [
@@ -123,15 +157,17 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-                backupFileExtension = "backup";  # 既存ファイルを .backup に退避
-                users.${user} = { pkgs, ... }: {
-                  imports = darwinHomeModules;
-                  home = {
-                    username = user;
-                    homeDirectory = "/Users/${user}";
-                    stateVersion = "24.11";
+                backupFileExtension = "backup"; # 既存ファイルを .backup に退避
+                users.${user} =
+                  { pkgs, ... }:
+                  {
+                    imports = darwinHomeModules;
+                    home = {
+                      username = user;
+                      homeDirectory = "/Users/${user}";
+                      stateVersion = "24.11";
+                    };
                   };
-                };
                 extraSpecialArgs = {
                   inherit self inputs nvimConfigPath;
                   username = user;
@@ -139,16 +175,23 @@
               };
             }
           ];
-          specialArgs = { inherit inputs; username = user; };
+          specialArgs = {
+            inherit inputs;
+            username = user;
+          };
         };
 
       # ユーザー名を設定名用に正規化 (ドットをアンダースコアに置換)
-      sanitizeUsername = name: builtins.replaceStrings ["."] ["_"] name;
+      sanitizeUsername = name: builtins.replaceStrings [ "." ] [ "_" ] name;
 
       # 全ユーザー × macOSプラットフォームの darwinConfigurations を生成
-      mkAllDarwinConfigurations = nixpkgs.lib.foldl' (acc: user:
-        let safeName = sanitizeUsername user;
-        in acc // {
+      mkAllDarwinConfigurations = nixpkgs.lib.foldl' (
+        acc: user:
+        let
+          safeName = sanitizeUsername user;
+        in
+        acc
+        // {
           "${safeName}-darwin" = mkDarwinConfiguration {
             system = "aarch64-darwin";
             inherit user;
@@ -158,9 +201,10 @@
             inherit user;
           };
         }
-      ) {} users;
+      ) { } users;
 
-    in {
+    in
+    {
       # ============================================================
       # Home Manager Configurations (standalone)
       # 全ユーザー × 全プラットフォームの組み合わせを自動生成
@@ -176,10 +220,12 @@
       # ============================================================
       # Development shells
       # ============================================================
-      devShells = forAllSystems (system:
+      devShells = forAllSystems (
+        system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-        in {
+        in
+        {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
               nixfmt

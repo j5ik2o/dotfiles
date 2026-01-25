@@ -1,4 +1,8 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
 
 buildGoModule rec {
   pname = "gwq";
@@ -25,7 +29,7 @@ buildGoModule rec {
     description = "Git worktree manager for efficient parallel development";
     homepage = "https://github.com/d-kuro/gwq";
     license = licenses.mit;
-    maintainers = [];
+    maintainers = [ ];
     mainProgram = "gwq";
   };
 }

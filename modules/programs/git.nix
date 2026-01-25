@@ -1,4 +1,10 @@
-{ config, pkgs, lib, username, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  ...
+}:
 
 let
   # WSL 検出
@@ -16,7 +22,7 @@ in
       # ユーザー情報
       user = {
         name = "Junichi Kato";
-        email = "j5ik2o@gmail.com";  # 必要に応じて変更
+        email = "j5ik2o@gmail.com"; # 必要に応じて変更
       };
 
       # デフォルトブランチ
@@ -68,9 +74,12 @@ in
       # 認証設定
       credential = {
         helper =
-          if pkgs.stdenv.isDarwin then "osxkeychain"
-          else if isWSL then "/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe"
-          else "cache --timeout=3600";
+          if pkgs.stdenv.isDarwin then
+            "osxkeychain"
+          else if isWSL then
+            "/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe"
+          else
+            "cache --timeout=3600";
       };
 
       # GitHub CLI 統合
