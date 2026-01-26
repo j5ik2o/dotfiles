@@ -24,7 +24,7 @@
 
       # 旧レイアウト（Powerline）
       format = lib.concatStrings [
-        "[](bg:crust fg:green)"
+        "[░▒▓](bg:crust fg:green)"
         "$os"
         "$hostname"
         "[](fg:green bg:sapphire)"
@@ -36,6 +36,7 @@
         "$git_status"
         "$git_metrics"
         "[](fg:yellow bg:crust)"
+        "\n"
         "$character"
       ];
 
@@ -48,7 +49,7 @@
       # ディレクトリ
       directory = {
         style = "fg:crust bg:blue";
-        format = "[  $path ]($style)";
+        format = "[ $path ]($style)";
         truncate_to_repo = false;
         truncation_length = 0;
         # 読み取り専用マーカー
@@ -60,14 +61,14 @@
       os = {
         disabled = false;
         style = "fg:crust bg:green";
-        format = "[ $symbol ]($style)";
+        format = "[$symbol]($style)";
       };
 
       # ホスト名（常に表示）
       hostname = {
         ssh_only = false;
         style = "fg:crust bg:green";
-        format = "[ $hostname ]($style)";
+        format = "[$hostname ]($style)";
       };
 
       # Git ブランチ
@@ -120,9 +121,9 @@
 
       # プロンプト文字
       character = {
-        success_symbol = "[ ➜](bold fg:green)";
-        error_symbol = "[ ✗](fg:red)";
-        vimcmd_symbol = "[ ➜](bold fg:green)";
+        success_symbol = "[❯](bold fg:green)";
+        error_symbol = "[❯](fg:red)";
+        vimcmd_symbol = "[❯](bold fg:green)";
       };
 
       time = {
