@@ -19,6 +19,7 @@ local function has_plugin_dir(base, name)
 end
 
 local use_nix_plugins = has_plugin_dir(plugin_dir, "LazyVim")
+local rtp_paths = {}
 if type(plugin_dir) == "string" and plugin_dir ~= "" and not use_nix_plugins then
   vim.schedule(function()
     vim.notify(
@@ -37,6 +38,7 @@ if use_nix_plugins then
   local trouble_dir = plugin_dir .. "/trouble.nvim"
   if is_dir(trouble_dir) then
     vim.opt.rtp:append(trouble_dir)
+    table.insert(rtp_paths, trouble_dir)
   end
 end
 
@@ -110,6 +112,7 @@ lazy.setup({
         "tutor",
         "zipPlugin",
       },
+      paths = rtp_paths,
     },
   },
 })
