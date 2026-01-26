@@ -30,7 +30,6 @@
         "[@](fg:crust bg:green)"
         "$hostname"
         "[](fg:green bg:blue)"
-        "$direnv"
         "$directory"
         "[](fg:blue bg:yellow)"
         "$git_branch"
@@ -38,6 +37,7 @@
         "$git_metrics"
         "[](fg:yellow)"
         "$fill"
+        "$direnv"
         "\n"
         "$character"
       ];
@@ -51,7 +51,7 @@
 
       direnv = {
         style = "bold fg:crust bg:blue";
-        format = "[$symbol$allowed]($style) ";
+        format = "[](fg:blue)[ $symbol$allowed ](bold fg:crust bg:blue)[░▒▓](fg:crust bg:blue)";
         disabled = false;
       };
 
@@ -100,7 +100,7 @@
       git_branch = {
         symbol = "  ";
         style = "fg:crust bg:yellow";
-        format = "[ $symbol$branch(:$remote_branch) ]($style)";
+        format = "[ $symbol$branch(:$remote_branch)]($style)";
       };
 
       # Git ステータス（シンプル）
