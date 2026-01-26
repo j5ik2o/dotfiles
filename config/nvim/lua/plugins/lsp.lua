@@ -9,6 +9,10 @@ return {
       severity_sort = true,
     },
     servers = {
+      clangd = {
+        -- Nix provides the binary; don't install via mason
+        mason = false,
+      },
       rust_analyzer = {
         -- Nix provides the binary; don't install via mason
         mason = false,
