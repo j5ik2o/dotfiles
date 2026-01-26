@@ -105,30 +105,29 @@ in
   };
 
   # ============================================================
-  # /etc/hosts 追記 (非 NixOS 用のベストエフォート)
+  # /etc/hosts 追記 & デフォルトシェル設定
   # ============================================================
-  home.activation.hostsEntry = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    set -euo pipefail
-    line="10.0.1.160 j5ik2o-desktop"
-    if grep -qE '^10\.0\.1\.160[[:space:]]+j5ik2o-desktop$' /etc/hosts 2>/dev/null; then
-      exit 0
-    fi
-    if [ -w /etc/hosts ]; then
-      echo "$line" >> /etc/hosts
-      exit 0
-    fi
-    if command -v sudo >/dev/null 2>&1; then
-      sudo sh -c "echo \"$line\" >> /etc/hosts"
-      exit 0
-    fi
-    echo "home-manager: /etc/hosts を更新できません。手動で '$line' を追加してください。" >&2
-  '';
-
-  # ============================================================
-  # デフォルトシェル (Nix 管理の zsh)
-  # ============================================================
-  home.activation = lib.mkIf config.programs.zsh.enable {
-    setDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation = lib.mkMerge [
+    {
+      hostsEntry = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        set -euo pipefail
+        line="10.0.1.160 j5ik2o-desktop"
+        if grep -qE '^10\.0\.1\.160[[:space:]]+j5ik2o-desktop$' /etc/hosts 2>/dev/null; then
+          exit 0
+        fi
+        if [ -w /etc/hosts ]; then
+          echo "$line" >> /etc/hosts
+          exit 0
+        fi
+        if command -v sudo >/dev/null 2>&1; then
+          sudo sh -c "echo \"$line\" >> /etc/hosts"
+          exit 0
+        fi
+        echo "home-manager: /etc/hosts を更新できません。手動で '$line' を追加してください。" >&2
+      '';
+    }
+    (lib.mkIf config.programs.zsh.enable {
+      setDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       desired_shell="${config.home.profileDirectory}/bin/zsh"
       if [ ! -x "$desired_shell" ]; then
         desired_shell="${lib.getExe config.programs.zsh.package}"
@@ -182,7 +181,8 @@ in
         echo "home-manager: zsh not found at $desired_shell" >&2
       fi
     '';
-  };
+    })
+  ];
 
   # ============================================================
   # Linux 固有のシェルエイリアス
