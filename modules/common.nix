@@ -150,7 +150,7 @@
     ./programs/helix.nix
     ./programs/direnv.nix
     ./programs/opencode.nix
-    ./programs/clawdbot.nix
+   # ./programs/clawdbot.nix
   ];
 
   # ============================================================
