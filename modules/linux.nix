@@ -101,7 +101,8 @@ in
     XDG_RUNTIME_DIR = "/run/user/$(id -u)";
 
     # SSH Agent (systemd user)
-    SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent.socket";
+    # systemd ユニットの -a と合わせる
+    SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
   };
 
   # ============================================================
