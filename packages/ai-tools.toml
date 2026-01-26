@@ -1,11 +1,11 @@
 [codex]
-version = "0.89.0"
+version = "0.91.0"
 
 [codex.hashes]
-"aarch64-darwin" = "sha256-hoRaw3UWpS0npu2gWlWpL6+EZ5qP9uSalChDw0PC2eM="
-"x86_64-darwin" = "sha256-Nsu4F1CW2OaR9mFu0Kq8YWsnvSBNWK/iAIDN1v/834g="
-"aarch64-linux" = "sha256-C/CPgP04Jc11jg8jo15Ex5B1R2xIgOVhPypgWntatTw="
-"x86_64-linux" = "sha256-t2PiNVc7Tcvy8jnzrk+XEGRNRq0qKSYnRyWEdspGAAM="
+"aarch64-darwin" = "sha256-sWBtHwQ9bIfMkyblnSazE1PNgk0vp+n0ZeTxL69HWxg="
+"x86_64-darwin" = "sha256-sSr+bsL/AFiV46szHGfsr9P9D8N00GmL1WmPukK32Xc="
+"aarch64-linux" = "sha256-fFs0qQdMreYar1EBSgln1MY5cvpnoRvWhN70YFd9gfg="
+"x86_64-linux" = "sha256-xzPdhQbdANDsNvMjCN2QK65D6pNTYv18STPBWvTTxkE="
 
 ["claude-code"]
 version = "2.1.19"

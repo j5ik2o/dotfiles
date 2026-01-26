@@ -3,6 +3,9 @@ model_reasoning_effort = "xhigh"
 hide_agent_reasoning = true
 network_access = true
 
+[projects."/Users/j5ik2o/Sources/dotfiles"]
+trust_level = "trusted"
+
 [features]
 rmcp_client = true
 web_search_request = true
@@ -13,4 +16,3 @@ unified_exec = true
 command = "uvx"
 args = ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "codex", "--project", ".", "--enable-web-dashboard", "false"]
 startup_timeout_sec = 30.0
-

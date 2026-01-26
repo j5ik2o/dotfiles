@@ -44,6 +44,24 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 
 - Buffers の TERMINALS をクリックしても新規ペインは作られず、既存ターミナルへフォーカスする。
 
+### Copilot / Copilot Chat
+
+`<Leader>` は `Space`。
+
+**Copilot**
+
+- 初回ログイン: `:Copilot auth`
+- 状態確認: `:Copilot status`
+- 次/前の提案: `Alt-]` / `Alt-[`
+
+**Copilot Chat**
+
+- 開閉: `Space a a`
+- クイックチャット: `Space a q`
+- クリア: `Space a x`
+- プロンプト選択: `Space a p`
+- 送信: `Ctrl-s`（チャットバッファ内）
+
 ## nvim (Nix 管理の LazyVim)
 
 デフォルトの `~/.config/nvim` 用の構成。LazyVim は維持しつつ、プラグイン本体は Home Manager
