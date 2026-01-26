@@ -95,4 +95,14 @@
   # システムバージョン
   # ============================================================
   system.stateVersion = 5;
+
+  # ============================================================
+  # /etc/hosts 追記
+  # ============================================================
+  system.activationScripts.hostsEntry.text = ''
+    set -euo pipefail
+    if ! /usr/bin/grep -qE '^10\.0\.1\.160[[:space:]]+j5ik2o-desktop$' /etc/hosts; then
+      echo "10.0.1.160 j5ik2o-desktop" >> /etc/hosts
+    fi
+  '';
 }
