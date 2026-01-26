@@ -18,7 +18,7 @@ in
       terminfo_src="${pkgs.ghostty}/share/terminfo"
       if [ -d "$terminfo_src" ]; then
         mkdir -p "$HOME/.terminfo"
-        cp -rf "$terminfo_src"/. "$HOME/.terminfo/"
+        cp -rf --remove-destination "$terminfo_src"/. "$HOME/.terminfo/"
       fi
     '';
   };
