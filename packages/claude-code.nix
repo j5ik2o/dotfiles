@@ -2,7 +2,6 @@
   lib,
   stdenvNoCC,
   fetchurl,
-  autoPatchelfHook,
   makeWrapper,
   procps,
   bubblewrap,
@@ -12,7 +11,8 @@ let
   toolVersions = lib.importTOML ./ai-tools.toml;
   claude = toolVersions."claude-code";
 
-  baseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  # Claude 公式のインストーラ (claude.ai/install.sh) が参照している配布先
+  officialBaseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
 
   platformMap = {
     "aarch64-darwin" = "darwin-arm64";
@@ -20,23 +20,24 @@ let
     "aarch64-linux" = "linux-arm64";
     "x86_64-linux" = "linux-x64";
   };
+
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "claude-code";
   version = claude.version;
 
   src = fetchurl {
-    url = "${baseUrl}/${finalAttrs.version}/${platformMap.${stdenvNoCC.hostPlatform.system}}/claude";
+    url = "${officialBaseUrl}/${finalAttrs.version}/${platformMap.${stdenvNoCC.hostPlatform.system}}/claude";
     hash = claude.hashes.${stdenvNoCC.hostPlatform.system};
   };
 
   dontUnpack = true;
 
-  nativeBuildInputs =
-    [ makeWrapper ]
-    ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [
-      autoPatchelfHook
-    ];
+  nativeBuildInputs = [ makeWrapper ];
+
+  # 公式配布バイナリは自己完結型なので加工しない
+  dontStrip = true;
+  dontPatchELF = true;
 
   installPhase = ''
     runHook preInstall
