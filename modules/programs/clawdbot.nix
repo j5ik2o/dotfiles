@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  self,
   ...
 }:
 
@@ -19,6 +20,14 @@
           enable = true;
           launchd.label = "com.steipete.clawdbot.gateway";
           systemd.unitName = "clawdbot-gateway";
+          # Enable memory plugin provided via ~/.config/clawdbot/extensions.
+          configOverrides = {
+            plugins = {
+              slots = {
+                memory = "memory-core";
+              };
+            };
+          };
         };
       }
       (lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
@@ -42,5 +51,12 @@
         };
       })
     ];
+
+    home.file = {
+      ".clawdbot/extensions/memory-core/index.mjs".source =
+        "${self}/config/clawdbot/extensions/memory-core/index.mjs";
+      ".clawdbot/extensions/memory-core/clawdbot.plugin.json".source =
+        "${self}/config/clawdbot/extensions/memory-core/clawdbot.plugin.json";
+    };
   };
 }
