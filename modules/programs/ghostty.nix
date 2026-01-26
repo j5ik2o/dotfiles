@@ -20,10 +20,21 @@ in
       if isDarwin then
         ''
           # macOS: Ghostty.app の +tic コマンドで terminfo をインストール
-          ghostty_tic="/Applications/Ghostty.app/Contents/Resources/ghostty/+tic"
-          if [ -x "$ghostty_tic" ]; then
-            "$ghostty_tic" 2>/dev/null || true
+          # +tic は内部で tic(ncurses) を使うため PATH に追加する
+          _installed=0
+          for _app_dir in "/Applications/Ghostty.app" "$HOME/Applications/Ghostty.app"; do
+            _tic_cmd="$_app_dir/Contents/Resources/ghostty/+tic"
+            if [ -x "$_tic_cmd" ]; then
+              if PATH="${pkgs.ncurses}/bin:$PATH" "$_tic_cmd"; then
+                _installed=1
+                break
+              fi
+            fi
+          done
+          if [ "$_installed" -eq 0 ]; then
+            echo "WARNING: xterm-ghostty terminfo installation failed"
           fi
+          unset _installed _app_dir _tic_cmd
         ''
       else
         ''
