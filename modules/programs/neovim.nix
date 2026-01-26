@@ -126,6 +126,7 @@ let
       name = "nvim-treesitter";
       pkg = pkgs.vimPlugins.nvim-treesitter.withPlugins (plugins: [
         plugins.java
+        plugins.python
       ]);
     }
     {
