@@ -10,6 +10,20 @@ let
 in
 {
   # ============================================================
+  # Ghostty terminfo を ~/.terminfo にインストール
+  # SSH先で TERM=xterm-ghostty が認識されるようにする
+  # ============================================================
+  home.activation = lib.mkIf (!isDarwin) {
+    installGhosttyTerminfo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      terminfo_src="${pkgs.ghostty}/share/terminfo"
+      if [ -d "$terminfo_src" ]; then
+        mkdir -p "$HOME/.terminfo"
+        cp -rf "$terminfo_src"/. "$HOME/.terminfo/"
+      fi
+    '';
+  };
+
+  # ============================================================
   # Ghostty ターミナル設定
   # ============================================================
   programs.ghostty = {
