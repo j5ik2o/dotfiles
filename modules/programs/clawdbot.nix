@@ -7,19 +7,17 @@
 
 {
   # ============================================================
-  # Clawdbot 設定
+  # Clawdbot 設定 (macOS のみ)
   # ============================================================
-  programs.clawdbot = {
+  programs.clawdbot = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     # Avoid toolchain bundle conflicts (node/git/etc) with home.packages.
     package = pkgs.clawdbot-gateway;
+    appPackage = pkgs.clawdbot-app;
+    installApp = true;
     instances.default = {
       enable = true;
       launchd.label = "com.steipete.clawdbot.gateway";
-      systemd.unitName = "clawdbot-gateway";
     };
-  } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-    appPackage = pkgs.clawdbot-app;
-    installApp = true;
   };
 }
