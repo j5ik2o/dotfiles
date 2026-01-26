@@ -246,6 +246,13 @@
     envExtra = ''
       unset __HM_SESS_VARS_SOURCED
       export NVIM_PLUGIN_DIR="${config.xdg.dataHome}/nvim-plugins"
+
+      # Ghostty: SSH接続時の元のTERMを保存
+      # ~/.zshenv は /etc/zprofile → /etc/profile より前に実行されるため、
+      # /etc/profile が TERM を上書きする前の値を保持できる
+      if [[ -n "$SSH_CONNECTION" && -z "$_SSH_ORIGINAL_TERM" ]]; then
+        export _SSH_ORIGINAL_TERM="$TERM"
+      fi
     '';
 
     # XDG 準拠の設定ディレクトリ
@@ -280,19 +287,20 @@
         stty -ixon
       fi
 
-      # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
-      if [[ -n "$SSH_CONNECTION" && "$TERM" == "xterm-ghostty" ]]; then
-        _ghostty_ti_found=0
-        # ~/.terminfo を直接チェック (infocmp が Nix 版で検索パスが異なる場合に対応)
-        if [[ -f "$HOME/.terminfo/x/xterm-ghostty" || -f "$HOME/.terminfo/78/xterm-ghostty" ]]; then
-          _ghostty_ti_found=1
-        elif command -v infocmp &> /dev/null && infocmp xterm-ghostty &> /dev/null; then
-          _ghostty_ti_found=1
+      # Ghostty: SSH接続時のTERM復元/フォールバック
+      # ~/.zshenv で保存した _SSH_ORIGINAL_TERM を使い、
+      # /etc/profile 等に上書きされた TERM を復元する
+      if [[ -n "$SSH_CONNECTION" ]]; then
+        _ghostty_term="''${_SSH_ORIGINAL_TERM:-$TERM}"
+        if [[ "$_ghostty_term" == "xterm-ghostty" ]]; then
+          if [[ -f "$HOME/.terminfo/x/xterm-ghostty" || -f "$HOME/.terminfo/78/xterm-ghostty" ]] ||
+             { command -v infocmp &> /dev/null && infocmp xterm-ghostty &> /dev/null; }; then
+            export TERM="xterm-ghostty"
+          else
+            export TERM="xterm-256color"
+          fi
         fi
-        if (( ! _ghostty_ti_found )); then
-          export TERM="xterm-256color"
-        fi
-        unset _ghostty_ti_found
+        unset _SSH_ORIGINAL_TERM _ghostty_term
       fi
 
       # Vi モードでのカーソル形状変更
@@ -458,6 +466,14 @@
   programs.fish = {
     enable = true;
 
+    # shellInit は interactiveShellInit より前に実行される
+    shellInit = ''
+      # Ghostty: SSH接続時の元のTERMを保存
+      if set -q SSH_CONNECTION; and not set -q _SSH_ORIGINAL_TERM
+        set -gx _SSH_ORIGINAL_TERM $TERM
+      end
+    '';
+
     interactiveShellInit = ''
       # 挨拶無効化
       set -g fish_greeting
@@ -467,18 +483,19 @@
         command -q stty; and stty -ixon
       end
 
-      # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
-      if set -q SSH_CONNECTION; and test "$TERM" = "xterm-ghostty"
-        set -l _ghostty_ti_found 0
-        # ~/.terminfo を直接チェック (infocmp が Nix 版で検索パスが異なる場合に対応)
-        if test -f "$HOME/.terminfo/x/xterm-ghostty"; or test -f "$HOME/.terminfo/78/xterm-ghostty"
-          set _ghostty_ti_found 1
-        else if command -q infocmp; and infocmp xterm-ghostty >/dev/null 2>&1
-          set _ghostty_ti_found 1
+      # Ghostty: SSH接続時のTERM復元/フォールバック
+      if set -q SSH_CONNECTION
+        set -l _ghostty_term (if set -q _SSH_ORIGINAL_TERM; echo $_SSH_ORIGINAL_TERM; else; echo $TERM; end)
+        if test "$_ghostty_term" = "xterm-ghostty"
+          if test -f "$HOME/.terminfo/x/xterm-ghostty"; or test -f "$HOME/.terminfo/78/xterm-ghostty"
+            set -gx TERM xterm-ghostty
+          else if command -q infocmp; and infocmp xterm-ghostty >/dev/null 2>&1
+            set -gx TERM xterm-ghostty
+          else
+            set -gx TERM xterm-256color
+          end
         end
-        if test "$_ghostty_ti_found" -eq 0
-          set -gx TERM xterm-256color
-        end
+        set -e _SSH_ORIGINAL_TERM
       end
 
       # カラー設定
