@@ -70,10 +70,16 @@
       # Neovim Lua 設定のパス
       nvimConfigPath = ./config/nvim;
 
+      # ホスト定義
+      hosts = import ./hosts { inherit (nixpkgs) lib; };
+
+      isDarwinSystem = system: nixpkgs.lib.hasSuffix "darwin" system;
+
       # 共通の home-manager モジュール
       commonHomeModules = [
         catppuccin.homeModules.catppuccin
         inputs.nix-clawdbot.homeManagerModules.clawdbot
+        "${hmConfigPath}/dotfiles.nix"
         "${hmConfigPath}/common.nix"
       ];
 
@@ -164,7 +170,13 @@
 
       # nix-darwin 設定を生成する関数
       mkDarwinConfiguration =
-        { system, user }:
+        {
+          system,
+          user,
+          homeDirectory ? "/Users/${user}",
+          homeModules ? [],
+          extraSpecialArgs ? { },
+        }:
         nix-darwin.lib.darwinSystem {
           inherit system;
           modules = [
@@ -178,17 +190,18 @@
                 users.${user} =
                   { pkgs, ... }:
                   {
-                    imports = darwinHomeModules;
+                    imports = darwinHomeModules ++ homeModules;
                     home = {
                       username = user;
-                      homeDirectory = "/Users/${user}";
+                      homeDirectory = homeDirectory;
                       stateVersion = "24.11";
                     };
                   };
                 extraSpecialArgs = {
                   inherit self inputs nvimConfigPath;
                   username = user;
-                };
+                }
+                // extraSpecialArgs;
               };
             }
           ];
@@ -220,19 +233,72 @@
         }
       ) { } users;
 
+      defaultHomeDirectory = host:
+        if isDarwinSystem host.system
+        then "/Users/${host.username}"
+        else "/home/${host.username}";
+
+      hostNameModule = hostName: { ... }: {
+        dotfiles.hostName = hostName;
+      };
+
+      featureModulesForHost = host:
+        let
+          features = host.features or { };
+          enableClawdbot = features.clawdbot or false;
+        in
+        nixpkgs.lib.optionals enableClawdbot [
+          ({ ... }: { dotfiles.features.clawdbot = true; })
+        ];
+
+      mkHostHomeConfiguration = hostName: host:
+        let
+          baseModules = if isDarwinSystem host.system then darwinHomeModules else linuxHomeModules;
+          homeModules = host.homeModules or [];
+          featureModules = featureModulesForHost host;
+          homeDirectory = host.homeDirectory or (defaultHomeDirectory host);
+        in
+        mkHomeConfiguration {
+          system = host.system;
+          modules = baseModules ++ featureModules ++ homeModules ++ [ (hostNameModule hostName) ];
+          username = host.username;
+          homeDirectory = homeDirectory;
+          extraSpecialArgs = host.extraSpecialArgs or { };
+        };
+
+      mkHostDarwinConfiguration = hostName: host:
+        let
+          homeModules = host.homeModules or [];
+          featureModules = featureModulesForHost host;
+          homeDirectory = host.homeDirectory or (defaultHomeDirectory host);
+        in
+        mkDarwinConfiguration {
+          system = host.system;
+          user = host.username;
+          homeDirectory = homeDirectory;
+          homeModules = featureModules ++ homeModules ++ [ (hostNameModule hostName) ];
+          extraSpecialArgs = host.extraSpecialArgs or { };
+        };
+
+      hostHomeConfigurations = nixpkgs.lib.mapAttrs mkHostHomeConfiguration hosts;
+
+      hostDarwinConfigurations = nixpkgs.lib.mapAttrs mkHostDarwinConfiguration (
+        nixpkgs.lib.filterAttrs (_: host: isDarwinSystem host.system) hosts
+      );
+
     in
     {
       # ============================================================
       # Home Manager Configurations (standalone)
       # 全ユーザー × 全プラットフォームの組み合わせを自動生成
       # ============================================================
-      homeConfigurations = mkAllHomeConfigurations;
+      homeConfigurations = mkAllHomeConfigurations // hostHomeConfigurations;
 
       # ============================================================
       # nix-darwin Configurations (macOS system-level)
       # 全ユーザー × macOSプラットフォームの組み合わせを自動生成
       # ============================================================
-      darwinConfigurations = mkAllDarwinConfigurations;
+      darwinConfigurations = mkAllDarwinConfigurations // hostDarwinConfigurations;
 
       # ============================================================
       # Development shells

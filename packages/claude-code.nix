@@ -1,77 +1,69 @@
 {
   lib,
-  stdenv,
-  buildNpmPackage,
-  fetchzip,
-  versionCheckHook,
-  writableTmpDirAsHomeHook,
-  bubblewrap,
+  stdenvNoCC,
+  fetchurl,
+  autoPatchelfHook,
+  makeWrapper,
   procps,
+  bubblewrap,
   socat,
 }:
 let
   toolVersions = lib.importTOML ./ai-tools.toml;
   claude = toolVersions."claude-code";
+
+  baseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+
+  platformMap = {
+    "aarch64-darwin" = "darwin-arm64";
+    "x86_64-darwin" = "darwin-x64";
+    "aarch64-linux" = "linux-arm64";
+    "x86_64-linux" = "linux-x64";
+  };
 in
-buildNpmPackage (finalAttrs: {
+stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "claude-code";
   version = claude.version;
 
-  src = fetchzip {
-    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-    hash = claude.hash;
+  src = fetchurl {
+    url = "${baseUrl}/${finalAttrs.version}/${platformMap.${stdenvNoCC.hostPlatform.system}}/claude";
+    hash = claude.hashes.${stdenvNoCC.hostPlatform.system};
   };
 
-  npmDepsHash = claude.npmDepsHash;
+  dontUnpack = true;
 
-  strictDeps = true;
+  nativeBuildInputs =
+    [ makeWrapper ]
+    ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [
+      autoPatchelfHook
+    ];
 
-  postPatch = ''
-    cp ${./claude-code-package-lock.json} package-lock.json
+  installPhase = ''
+    runHook preInstall
 
-    # Replace hardcoded `/bin/bash` with `/usr/bin/env bash` for Nix compatibility
-    # https://github.com/anthropics/claude-code/issues/15195
-    substituteInPlace cli.js \
-      --replace-warn '#!/bin/bash' '#!/usr/bin/env bash'
-  '';
+    install -Dm755 $src $out/bin/claude
 
-  dontNpmBuild = true;
-
-  env.AUTHORIZED = "1";
-
-  # `claude-code` tries to auto-update by default, this disables that functionality.
-  # https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview#environment-variables
-  # The DEV=true env var causes claude to crash with `TypeError: window.WebSocket is not a constructor`
-  postInstall = ''
     wrapProgram $out/bin/claude \
       --set DISABLE_AUTOUPDATER 1 \
       --unset DEV \
       --prefix PATH : ${
         lib.makeBinPath (
           [
-            # claude-code uses [node-tree-kill](https://github.com/pkrumins/node-tree-kill) which requires procps's pgrep(darwin) or ps(linux)
             procps
           ]
-          # the following packages are required for the sandbox to work (Linux only)
-          ++ lib.optionals stdenv.hostPlatform.isLinux [
+          ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [
             bubblewrap
             socat
           ]
         )
       }
-  '';
 
-  doInstallCheck = true;
-  nativeInstallCheckInputs = [
-    writableTmpDirAsHomeHook
-    versionCheckHook
-  ];
-  versionCheckKeepEnvironment = [ "HOME" ];
+    runHook postInstall
+  '';
 
   meta = {
     description = "Agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster";
     homepage = "https://github.com/anthropics/claude-code";
-    downloadPage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
     license = lib.licenses.unfree;
     maintainers = with lib.maintainers; [
       adeci
@@ -81,5 +73,12 @@ buildNpmPackage (finalAttrs: {
       xiaoxiangmoe
     ];
     mainProgram = "claude";
+    platforms = [
+      "aarch64-darwin"
+      "x86_64-darwin"
+      "aarch64-linux"
+      "x86_64-linux"
+    ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 })

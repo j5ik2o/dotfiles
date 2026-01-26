@@ -11,20 +11,30 @@ SAFE_USER := $(subst .,_,$(USER))
 # システム検出
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
+HOST ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then scutil --get LocalHostName 2>/dev/null || hostname -s; else hostname -s; fi)
+HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
+HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
-ifeq ($(UNAME),Darwin)
-  ifeq ($(ARCH),arm64)
-    HM_CONFIG := $(USER)@darwin-aarch64
-    DARWIN_CONFIG := $(SAFE_USER)-darwin
-  else
-    HM_CONFIG := $(USER)@darwin-x86_64
-    DARWIN_CONFIG := $(SAFE_USER)-darwin-x86
+ifneq ($(HOST_CONFIG_FOUND),)
+  HM_CONFIG := $(HOST)
+  ifeq ($(UNAME),Darwin)
+    DARWIN_CONFIG := $(HOST)
   endif
 else
-  ifeq ($(ARCH),x86_64)
-    HM_CONFIG := $(USER)@linux-x86_64
+  ifeq ($(UNAME),Darwin)
+    ifeq ($(ARCH),arm64)
+      HM_CONFIG := $(USER)@darwin-aarch64
+      DARWIN_CONFIG := $(SAFE_USER)-darwin
+    else
+      HM_CONFIG := $(USER)@darwin-x86_64
+      DARWIN_CONFIG := $(SAFE_USER)-darwin-x86
+    endif
   else
-    HM_CONFIG := $(USER)@linux-aarch64
+    ifeq ($(ARCH),x86_64)
+      HM_CONFIG := $(USER)@linux-x86_64
+    else
+      HM_CONFIG := $(USER)@linux-aarch64
+    endif
   endif
 endif
 
@@ -73,6 +83,8 @@ help:
 	@echo ""
 	@echo "Detected configuration:"
 	@echo "  System: $(UNAME) ($(ARCH))"
+	@echo "  Host: $(HOST)"
+	@echo "  Host file: $(if $(HOST_CONFIG_FOUND),$(HOST_FILE),not found)"
 	@echo "  Home Manager: $(HM_CONFIG)"
 ifeq ($(UNAME),Darwin)
 	@echo "  nix-darwin: $(DARWIN_CONFIG)"
@@ -354,6 +366,8 @@ secrets: secrets-apply
 
 info:
 	@echo "System: $(UNAME) ($(ARCH))"
+	@echo "Host: $(HOST)"
+	@echo "Host file: $(if $(HOST_CONFIG_FOUND),$(HOST_FILE),not found)"
 	@echo "Home Manager config: $(HM_CONFIG)"
 ifeq ($(UNAME),Darwin)
 	@echo "nix-darwin config: $(DARWIN_CONFIG)"
