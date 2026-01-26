@@ -29,9 +29,8 @@
         "$username"
         "[@](fg:crust bg:green)"
         "$hostname"
-        "[](fg:green bg:sapphire)"
-        "$time"
-        "[](fg:sapphire bg:blue)"
+        "[](fg:green bg:blue)"
+        "$direnv"
         "$directory"
         "[](fg:blue bg:yellow)"
         "$git_branch"
@@ -45,9 +44,16 @@
 
       # 右プロンプト（最小限）
       right_format = lib.concatStrings [
+        "$time"
         "$cmd_duration"
         "$status"
       ];
+
+      direnv = {
+        style = "bold fg:crust bg:blue";
+        format = "[$symbol$allowed]($style) ";
+        disabled = false;
+      };
 
       # ディレクトリ
       directory = {
@@ -102,13 +108,13 @@
         style = "fg:crust bg:yellow";
         format = "[ $all_status ]($style)";
         conflicted = "⚡";
-        ahead = "⇡";
-        behind = "⇣";
+        ahead = "⇡\${count}";
+        behind = "⇣\${count}";
         diverged = "⇕";
-        up_to_date = "";
+        up_to_date = "✓";
         untracked = "?";
         stashed = "📦";
-        modified = "!";
+        modified = "!\${count}";
         staged = "+";
         renamed = "»";
         deleted = "✘";
@@ -126,7 +132,7 @@
         disabled = false;
         symbol = " ";
         style = "bg:yellow fg:crust";
-        format = "[](fg:yellow)[$symbol$state ]($style)[](fg:yellow)";
+        format = "[](fg:yellow)[$symbol$state ]($style)[](fg:yellow)";
       };
 
       # Devbox シェル検出 (direnv経由の場合はDEVBOX_PROJECT_ROOTを使用)
@@ -134,7 +140,7 @@
         DEVBOX_PROJECT_ROOT = {
           symbol = "📦 ";
           style = "bg:yellow fg:crust";
-          format = "[](fg:yellow)[$symbol devbox ]($style)[](fg:yellow)";
+          format = "[](fg:yellow)[$symbol devbox ]($style)[](fg:yellow)";
         };
       };
 
@@ -152,22 +158,23 @@
 
       time = {
         disabled = false;
-        time_format = "%R";
-        style = "bg:sapphire";
-        format = "[[ 󱑍 $time ](fg:crust bg:sapphire)]($style)";
+        style = "fg:sapphire";
+        format = "[ 󱩍 $time ]($style)";
+        time_format = "%T";
+        utc_time_offset = "+9";
       };
 
       # コマンド実行時間（2秒以上のみ表示）
       cmd_duration = {
         min_time = 2000;
-        format = "[ ⏱ $duration ]($style)";
-        style = "fg:text bg:surface0";
+        style = "fg:sapphire";
+        format = "[  $duration ]($style)";
       };
 
       # 終了ステータス（エラー時のみ）
       status = {
         disabled = false;
-        format = "[✘ $status]($style) ";
+        format = "[ ✘ $status ]($style) ";
         style = "fg:red";
       };
 
