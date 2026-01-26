@@ -78,7 +78,7 @@
       # 共通の home-manager モジュール
       commonHomeModules = [
         catppuccin.homeModules.catppuccin
-        inputs.nix-clawdbot.homeManagerModules.clawdbot
+        "${hmConfigPath}/overrides/clawdbot.nix"
         "${hmConfigPath}/dotfiles.nix"
         "${hmConfigPath}/common.nix"
       ];
