@@ -97,6 +97,11 @@ in
       # gpg.format = "ssh";
       # user.signingkey = "~/.ssh/id_ed25519.pub";
 
+      # ghq 設定
+      ghq = {
+        root = "/Users/${username}/Sources";
+      };
+
       # エイリアス
       alias = {
         # 基本操作
@@ -264,9 +269,7 @@ in
   # ============================================================
   # ghq 設定
   # ============================================================
-  # ghq はパッケージのみ (common.nix)。設定は ~/.config/git/config で管理
-  # [ghq]
-  #   root = ~/ghq
+  # ghq はパッケージのみ (common.nix)。設定は programs.git.settings で管理
 
   # ============================================================
   # lazygit 設定

@@ -44,6 +44,7 @@
     jq
     yq
     direnv
+    mise # 開発環境マネージャ
 
     # エディタ
     # neovim は programs.neovim で管理
