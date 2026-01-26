@@ -108,7 +108,7 @@
     go
 
     # Node.js
-    nodejs_20
+    nodejs_22
     pnpm
     bun
     yarn
