@@ -282,9 +282,17 @@
 
       # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
       if [[ -n "$SSH_CONNECTION" && "$TERM" == "xterm-ghostty" ]]; then
-        if command -v infocmp &> /dev/null && ! infocmp xterm-ghostty &> /dev/null; then
+        _ghostty_ti_found=0
+        # ~/.terminfo を直接チェック (infocmp が Nix 版で検索パスが異なる場合に対応)
+        if [[ -f "$HOME/.terminfo/x/xterm-ghostty" || -f "$HOME/.terminfo/78/xterm-ghostty" ]]; then
+          _ghostty_ti_found=1
+        elif command -v infocmp &> /dev/null && infocmp xterm-ghostty &> /dev/null; then
+          _ghostty_ti_found=1
+        fi
+        if (( ! _ghostty_ti_found )); then
           export TERM="xterm-256color"
         fi
+        unset _ghostty_ti_found
       fi
 
       # Vi モードでのカーソル形状変更
@@ -461,7 +469,14 @@
 
       # Ghostty: fall back TERM on SSH hosts without xterm-ghostty terminfo.
       if set -q SSH_CONNECTION; and test "$TERM" = "xterm-ghostty"
-        if command -q infocmp; and not infocmp xterm-ghostty >/dev/null 2>&1
+        set -l _ghostty_ti_found 0
+        # ~/.terminfo を直接チェック (infocmp が Nix 版で検索パスが異なる場合に対応)
+        if test -f "$HOME/.terminfo/x/xterm-ghostty"; or test -f "$HOME/.terminfo/78/xterm-ghostty"
+          set _ghostty_ti_found 1
+        else if command -q infocmp; and infocmp xterm-ghostty >/dev/null 2>&1
+          set _ghostty_ti_found 1
+        end
+        if test "$_ghostty_ti_found" -eq 0
           set -gx TERM xterm-256color
         end
       end
