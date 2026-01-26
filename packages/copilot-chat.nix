@@ -18,6 +18,9 @@ vimUtils.buildVimPlugin {
     hash = "sha256-MKGkcgyIwRDQs31yqaNrTvJOJlL5FErQjbINeJPlkiQ=";
   };
 
+  # 他のプラグイン (copilot.lua, plenary.nvim) に依存するため require check を無効化
+  doCheck = false;
+
   meta = {
     description = "Copilot Chat for Neovim";
     homepage = "https://github.com/CopilotC-Nvim/CopilotChat.nvim";
