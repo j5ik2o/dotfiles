@@ -1,32 +1,15 @@
-{
-  config,
-  pkgs,
-  lib,
-  username,
-  ...
-}:
+{ lib, ... }:
 
-let
-  # ユーザー名からhomebrew設定ファイル名を決定
-  # ドットをアンダースコアに変換（Nixファイルパス互換性のため）
-  safeUsername = builtins.replaceStrings [ "." ] [ "_" ] username;
-  homebrewConfigFile = ./homebrew/${safeUsername}.nix;
-  homebrewCleanup = if username == "ex_j.kato" || username == "ex_j_kato" then "none" else "zap";
-in
 {
-  imports = [
-    homebrewConfigFile
-  ];
-
   # ============================================================
-  # Homebrew 統合 (Cask アプリケーション用)
-  # casks はユーザーごとに darwin/homebrew/<username>.nix で定義
+  # Homebrew 共通設定
+  # casks はホストごとに darwin/hosts/<hostname>.nix で定義
   # ============================================================
   homebrew = {
     enable = true;
     onActivation = {
       autoUpdate = true;
-      cleanup = homebrewCleanup;
+      cleanup = lib.mkDefault "zap";
       upgrade = true;
     };
 

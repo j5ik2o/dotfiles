@@ -110,7 +110,7 @@ check-update:
 	fi; \
 	if [ "$(UNAME)" = "Darwin" ]; then \
 		echo "Building nix-darwin with updated inputs: $(DARWIN_CONFIG)"; \
-		nix build --reference-lock-file $$tmp .#darwinConfigurations.$(DARWIN_CONFIG).system --show-trace --out-link $$outdir/result >/dev/null; \
+		nix build --reference-lock-file $$tmp '.#darwinConfigurations."$(DARWIN_CONFIG)".system' --show-trace --out-link $$outdir/result >/dev/null; \
 		if command -v nvd >/dev/null; then \
 			nvd diff /run/current-system $$outdir/result; \
 		else \
@@ -162,7 +162,7 @@ build-hm:
 build-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Building nix-darwin configuration: $(DARWIN_CONFIG)"
-	nix build .#darwinConfigurations.$(DARWIN_CONFIG).system --show-trace
+	nix build '.#darwinConfigurations."$(DARWIN_CONFIG)".system' --show-trace
 else
 	@echo "nix-darwin is only available on macOS"
 	@exit 1
@@ -182,7 +182,7 @@ endif
 plan-darwin:
 ifeq ($(UNAME),Darwin)
 	@echo "Planning nix-darwin configuration: $(DARWIN_CONFIG)"
-	@nix build .#darwinConfigurations.$(DARWIN_CONFIG).system --show-trace
+	@nix build '.#darwinConfigurations."$(DARWIN_CONFIG)".system' --show-trace
 	@if command -v nvd &> /dev/null; then \
 		nvd diff /run/current-system ./result; \
 	else \

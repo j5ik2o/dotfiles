@@ -175,6 +175,7 @@
           user,
           homeDirectory ? "/Users/${user}",
           homeModules ? [],
+          darwinModules ? [],
           extraSpecialArgs ? { },
         }:
         nix-darwin.lib.darwinSystem {
@@ -204,7 +205,7 @@
                 // extraSpecialArgs;
               };
             }
-          ];
+          ] ++ darwinModules;
           specialArgs = {
             inherit inputs;
             username = user;
@@ -271,12 +272,16 @@
           homeModules = host.homeModules or [];
           featureModules = featureModulesForHost host;
           homeDirectory = host.homeDirectory or (defaultHomeDirectory host);
+          hostDarwinModule = ./darwin/hosts + "/${hostName}.nix";
+          hostDarwinModules =
+            if builtins.pathExists hostDarwinModule then [ hostDarwinModule ] else [ ];
         in
         mkDarwinConfiguration {
           system = host.system;
           user = host.username;
           homeDirectory = homeDirectory;
           homeModules = featureModules ++ homeModules ++ [ (hostNameModule hostName) ];
+          darwinModules = hostDarwinModules;
           extraSpecialArgs = host.extraSpecialArgs or { };
         };
 

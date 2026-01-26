@@ -1,10 +1,14 @@
+{ ... }:
+
 {
-  # j5ik2o 用 Homebrew casks (フルセット)
+  # ============================================================
+  # ex-j.kato (企業端末) 固有設定
+  # ============================================================
+
+  # Homebrew casks
   homebrew.casks = [
     # ブラウザ
     "google-chrome"
-    "firefox"
-    "arc"
 
     # 開発ツール
     "jetbrains-toolbox"
@@ -20,10 +24,7 @@
     "wezterm"
     "ghostty"
 
-    "docker-desktop"
     "github"
-
-    "parallels"
 
     # AI / ML
     "lm-studio"
@@ -33,30 +34,17 @@
     # ユーティリティ
     "coteditor"
     "raycast"
-    "1password"
-    "1password-cli"
-    "karabiner-elements"
     "rectangle"
     "alt-tab"
     "stats"
     "monitorcontrol"
     "cleanshot"
     "angry-ip-scanner"
-    "tailscale-app"
 
     # コミュニケーション
     "slack"
-    "discord"
-    "zoom"
-
-    # クラウドストレージ
-    "dropbox"
-    "google-drive"
-
-    # その他
-    "notion"
-    "obsidian"
-    "mactex"
-    "spotify"
   ];
+
+  # 企業端末のため cleanup は無効
+  homebrew.onActivation.cleanup = "none";
 }
