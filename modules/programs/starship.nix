@@ -26,6 +26,8 @@
       format = lib.concatStrings [
         "[░▒▓](bg:crust fg:green)"
         "$os"
+        "$username"
+        "[@](fg:crust bg:green)"
         "$hostname"
         "[](fg:green bg:sapphire)"
         "$time"
@@ -35,7 +37,8 @@
         "$git_branch"
         "$git_status"
         "$git_metrics"
-        "[](fg:yellow bg:crust)"
+        "[](fg:yellow)"
+        "$fill"
         "\n"
         "$character"
       ];
@@ -64,9 +67,25 @@
         format = "[$symbol]($style)";
       };
 
+      os.symbols = {
+        Macos = "  ";
+        Ubuntu = "  ";
+        Debian = "  ";
+      };
+
+      # ユーザ名（常に表示）
+      username = {
+        show_always = true;
+        style_user = "fg:crust bg:green";
+        style_root = "fg:crust bg:green";
+        format = "[$user]($style)";
+        disabled = false;
+      };
+
       # ホスト名（常に表示）
       hostname = {
         ssh_only = false;
+        ssh_symbol = "🌐";
         style = "fg:crust bg:green";
         format = "[$hostname ]($style)";
       };
@@ -117,6 +136,11 @@
           style = "bg:yellow fg:crust";
           format = "[](fg:yellow)[$symbol devbox ]($style)[](fg:yellow)";
         };
+      };
+
+      fill = {
+        style = "fg:surface1";
+        symbol = "─";
       };
 
       # プロンプト文字
