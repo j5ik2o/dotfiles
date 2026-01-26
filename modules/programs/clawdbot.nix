@@ -30,6 +30,11 @@
         appPackage = null;
         installApp = false;
         launchd.enable = false;
+        # macOS-only tools in nix-steipete-tools
+        excludeTools = [
+          "peekaboo"
+          "summarize"
+        ];
       })
     ];
   };
