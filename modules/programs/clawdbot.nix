@@ -35,6 +35,11 @@
           "peekaboo"
           "summarize"
         ];
+        # macOS-only first-party plugins
+        firstParty = {
+          peekaboo.enable = false;
+          summarize.enable = false;
+        };
       })
     ];
   };
