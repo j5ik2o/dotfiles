@@ -17,8 +17,13 @@ in
     installGhosttyTerminfo = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       terminfo_src="${pkgs.ghostty}/share/terminfo"
       if [ -d "$terminfo_src" ]; then
-        mkdir -p "$HOME/.terminfo"
-        cp -rf --remove-destination "$terminfo_src"/. "$HOME/.terminfo/"
+        # 既存ディレクトリを安全に削除（root所有や読み取り専用でも対応）
+        if [ -d "$HOME/.terminfo" ]; then
+          chmod -R u+rwx "$HOME/.terminfo" 2>/dev/null || true
+          rm -rf "$HOME/.terminfo" 2>/dev/null || true
+        fi
+        # --no-preserve=all でNix store由来の所有者・パーミッションを引き継がない
+        cp -rL --no-preserve=all "$terminfo_src" "$HOME/.terminfo"
       fi
     '';
   };
