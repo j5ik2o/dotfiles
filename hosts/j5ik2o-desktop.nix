@@ -6,6 +6,6 @@
   homeDirectory = "/home/j5ik2o";
 
   features = {
-    clawdbot = true;
+    clawdbot = false;
   };
 }
