@@ -88,6 +88,7 @@
     # AI ツール
     claude-code
     claude-code-acp
+    codex-acp
     codex # OpenAI Codex CLI
     opencode
     gemini-cli # Google Gemini CLI
