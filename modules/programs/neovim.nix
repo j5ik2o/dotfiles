@@ -35,8 +35,8 @@ let
       pkg = pkgs.vimPlugins.copilot-lua;
     }
     {
-      name = "CopilotChat.nvim";
-      pkg = pkgs.copilot-chat-nvim;
+      name = "codecompanion.nvim";
+      pkg = pkgs.vimPlugins.codecompanion-nvim;
     }
     {
       name = "conform.nvim";
