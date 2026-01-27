@@ -9,6 +9,27 @@ return {
       severity_sort = true,
     },
     servers = {
+      lua_ls = {
+        settings = {
+          Lua = {
+            runtime = {
+              version = "LuaJIT",
+            },
+            diagnostics = {
+              globals = { "vim" },
+            },
+            workspace = {
+              library = {
+                vim.env.VIMRUNTIME,
+              },
+              checkThirdParty = false,
+            },
+            telemetry = {
+              enable = false,
+            },
+          },
+        },
+      },
       clangd = {
         -- Nix provides the binary; don't install via mason
         mason = false,

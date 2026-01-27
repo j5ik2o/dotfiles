@@ -61,6 +61,7 @@
         gwq = final.callPackage ./packages/gwq.nix { };
         codex = final.callPackage ./packages/codex.nix { };
         claude-code = final.callPackage ./packages/claude-code.nix { };
+        claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
       };
 
       # home-manager 設定のパス

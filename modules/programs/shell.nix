@@ -247,6 +247,10 @@
       unset __HM_SESS_VARS_SOURCED
       export NVIM_PLUGIN_DIR="${config.xdg.dataHome}/nvim-plugins"
 
+      if [[ -f "$HOME/.config/claude-code/env" ]]; then
+        source "$HOME/.config/claude-code/env"
+      fi
+
       # Ghostty: SSH接続時の元のTERMを保存
       # ~/.zshenv は /etc/zprofile → /etc/profile より前に実行されるため、
       # /etc/profile が TERM を上書きする前の値を保持できる

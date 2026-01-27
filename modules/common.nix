@@ -87,6 +87,7 @@
 
     # AI ツール
     claude-code
+    claude-code-acp
     codex # OpenAI Codex CLI
     opencode
     gemini-cli # Google Gemini CLI
@@ -186,6 +187,12 @@
   home.file.".local/bin/git-ai-commit" = {
     source = "${self}/scripts/git-ai-commit.sh";
     executable = true;
+  };
+  home.file.".local/bin/claude" = {
+    source = "${pkgs.claude-code}/bin/claude";
+  };
+  home.file.".local/bin/claude-code-acp" = {
+    source = "${pkgs.claude-code-acp}/bin/claude-code-acp";
   };
 
   # ============================================================
