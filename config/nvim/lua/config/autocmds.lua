@@ -13,3 +13,14 @@ vim.api.nvim_create_autocmd("TermOpen", {
     end, opts)
   end,
 })
+
+local nospell_group = vim.api.nvim_create_augroup("UserNoSpell", { clear = true })
+
+vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
+  group = nospell_group,
+  callback = function()
+    vim.opt_local.spell = false
+  end,
+})
+
+vim.opt_local.spell = false
