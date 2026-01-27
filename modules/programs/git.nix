@@ -288,6 +288,17 @@ in
           }
         ];
       };
+      # Custom Commands
+      customCommands = [
+        {
+          key = "A";
+          context = "files";
+          description = "🤖 AI commit (generate message + commit)";
+          command = "bash ${config.home.homeDirectory}/Sources/dotfiles/scripts/git-ai-commit.sh";
+          output = "terminal";
+          loadingText = "Generating commit message with AI...";
+        }
+      ];
     };
   };
 }

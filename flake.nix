@@ -174,8 +174,8 @@
           system,
           user,
           homeDirectory ? "/Users/${user}",
-          homeModules ? [],
-          darwinModules ? [],
+          homeModules ? [ ],
+          darwinModules ? [ ],
           extraSpecialArgs ? { },
         }:
         nix-darwin.lib.darwinSystem {
@@ -205,7 +205,8 @@
                 // extraSpecialArgs;
               };
             }
-          ] ++ darwinModules;
+          ]
+          ++ darwinModules;
           specialArgs = {
             inherit inputs;
             username = user;
@@ -234,28 +235,36 @@
         }
       ) { } users;
 
-      defaultHomeDirectory = host:
-        if isDarwinSystem host.system
-        then "/Users/${host.username}"
-        else "/home/${host.username}";
+      defaultHomeDirectory =
+        host: if isDarwinSystem host.system then "/Users/${host.username}" else "/home/${host.username}";
 
-      hostNameModule = hostName: { ... }: {
-        dotfiles.hostName = hostName;
-      };
+      hostNameModule =
+        hostName:
+        { ... }:
+        {
+          dotfiles.hostName = hostName;
+        };
 
-      featureModulesForHost = host:
+      featureModulesForHost =
+        host:
         let
           features = host.features or { };
           enableClawdbot = features.clawdbot or false;
         in
         nixpkgs.lib.optionals enableClawdbot [
-          ({ ... }: { dotfiles.features.clawdbot = true; })
+          (
+            { ... }:
+            {
+              dotfiles.features.clawdbot = true;
+            }
+          )
         ];
 
-      mkHostHomeConfiguration = hostName: host:
+      mkHostHomeConfiguration =
+        hostName: host:
         let
           baseModules = if isDarwinSystem host.system then darwinHomeModules else linuxHomeModules;
-          homeModules = host.homeModules or [];
+          homeModules = host.homeModules or [ ];
           featureModules = featureModulesForHost host;
           homeDirectory = host.homeDirectory or (defaultHomeDirectory host);
         in
@@ -267,14 +276,14 @@
           extraSpecialArgs = host.extraSpecialArgs or { };
         };
 
-      mkHostDarwinConfiguration = hostName: host:
+      mkHostDarwinConfiguration =
+        hostName: host:
         let
-          homeModules = host.homeModules or [];
+          homeModules = host.homeModules or [ ];
           featureModules = featureModulesForHost host;
           homeDirectory = host.homeDirectory or (defaultHomeDirectory host);
           hostDarwinModule = ./darwin/hosts + "/${hostName}.nix";
-          hostDarwinModules =
-            if builtins.pathExists hostDarwinModule then [ hostDarwinModule ] else [ ];
+          hostDarwinModules = if builtins.pathExists hostDarwinModule then [ hostDarwinModule ] else [ ];
         in
         mkDarwinConfiguration {
           system = host.system;

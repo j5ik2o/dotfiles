@@ -27,7 +27,9 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   version = claude.version;
 
   src = fetchurl {
-    url = "${officialBaseUrl}/${finalAttrs.version}/${platformMap.${stdenvNoCC.hostPlatform.system}}/claude";
+    url = "${officialBaseUrl}/${finalAttrs.version}/${
+      platformMap.${stdenvNoCC.hostPlatform.system}
+    }/claude";
     hash = claude.hashes.${stdenvNoCC.hostPlatform.system};
   };
 

@@ -129,59 +129,59 @@ in
     }
     (lib.mkIf config.programs.zsh.enable {
       setDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      desired_shell="${config.home.profileDirectory}/bin/zsh"
-      if [ ! -x "$desired_shell" ]; then
-        desired_shell="${lib.getExe config.programs.zsh.package}"
-      fi
-
-      if [ -x "$desired_shell" ]; then
-        username="''${USER:-$(id -un)}"
-        current_shell=""
-        if command -v getent >/dev/null 2>&1; then
-          current_shell="$(getent passwd "$username" 2>/dev/null | awk -F: '{print $7}' || true)"
-        else
-          current_shell="$(awk -F: -v u="$username" '$1==u {print $7}' /etc/passwd 2>/dev/null || true)"
+        desired_shell="${config.home.profileDirectory}/bin/zsh"
+        if [ ! -x "$desired_shell" ]; then
+          desired_shell="${lib.getExe config.programs.zsh.package}"
         fi
 
-        if [ "$current_shell" != "$desired_shell" ]; then
-          failed=0
-          if [ -f /etc/shells ] && ! grep -qx "$desired_shell" /etc/shells 2>/dev/null; then
-            if [ -w /etc/shells ]; then
-              echo "$desired_shell" >> /etc/shells
-            elif command -v sudo >/dev/null 2>&1; then
-              if ! sudo sh -c 'echo "$1" >> /etc/shells' sh "$desired_shell"; then
-                failed=1
-              fi
-            else
-              failed=1
-            fi
+        if [ -x "$desired_shell" ]; then
+          username="''${USER:-$(id -un)}"
+          current_shell=""
+          if command -v getent >/dev/null 2>&1; then
+            current_shell="$(getent passwd "$username" 2>/dev/null | awk -F: '{print $7}' || true)"
+          else
+            current_shell="$(awk -F: -v u="$username" '$1==u {print $7}' /etc/passwd 2>/dev/null || true)"
           fi
 
-          if command -v chsh >/dev/null 2>&1; then
-            if ! chsh -s "$desired_shell"; then
-              if command -v sudo >/dev/null 2>&1; then
-                if ! sudo chsh -s "$desired_shell" "$username"; then
+          if [ "$current_shell" != "$desired_shell" ]; then
+            failed=0
+            if [ -f /etc/shells ] && ! grep -qx "$desired_shell" /etc/shells 2>/dev/null; then
+              if [ -w /etc/shells ]; then
+                echo "$desired_shell" >> /etc/shells
+              elif command -v sudo >/dev/null 2>&1; then
+                if ! sudo sh -c 'echo "$1" >> /etc/shells' sh "$desired_shell"; then
                   failed=1
                 fi
               else
                 failed=1
               fi
             fi
-          else
-            failed=1
-          fi
 
-          if [ "$failed" -ne 0 ]; then
-            echo "home-manager: failed to set login shell to $desired_shell" >&2
-            echo "home-manager: run the following once:" >&2
-            echo "  sudo sh -c \"echo $desired_shell >> /etc/shells\"" >&2
-            echo "  chsh -s $desired_shell" >&2
+            if command -v chsh >/dev/null 2>&1; then
+              if ! chsh -s "$desired_shell"; then
+                if command -v sudo >/dev/null 2>&1; then
+                  if ! sudo chsh -s "$desired_shell" "$username"; then
+                    failed=1
+                  fi
+                else
+                  failed=1
+                fi
+              fi
+            else
+              failed=1
+            fi
+
+            if [ "$failed" -ne 0 ]; then
+              echo "home-manager: failed to set login shell to $desired_shell" >&2
+              echo "home-manager: run the following once:" >&2
+              echo "  sudo sh -c \"echo $desired_shell >> /etc/shells\"" >&2
+              echo "  chsh -s $desired_shell" >&2
+            fi
           fi
+        else
+          echo "home-manager: zsh not found at $desired_shell" >&2
         fi
-      else
-        echo "home-manager: zsh not found at $desired_shell" >&2
-      fi
-    '';
+      '';
     })
   ];
 

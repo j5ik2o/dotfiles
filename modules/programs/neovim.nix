@@ -125,8 +125,43 @@ let
     {
       name = "nvim-treesitter";
       pkg = pkgs.vimPlugins.nvim-treesitter.withPlugins (plugins: [
+        plugins.c
+        plugins.cpp
+        plugins.rust
+        plugins.go
+        plugins.zig
         plugins.java
+        plugins.scala
+        plugins.kotlin
         plugins.python
+        plugins.ruby
+        plugins.lua
+        plugins.javascript
+        plugins.typescript
+        plugins.tsx
+        plugins.haskell
+        plugins.ocaml
+        plugins.markdown
+        plugins.markdown_inline
+        plugins.html
+        plugins.css
+        plugins.json
+        plugins.yaml
+        plugins.toml
+        plugins.xml
+        plugins.bash
+        plugins.fish
+        plugins.vim
+        plugins.regex
+        plugins.diff
+        plugins.git_config
+        plugins.git_rebase
+        plugins.gitcommit
+        plugins.gitignore
+        plugins.dockerfile
+        plugins.sql
+        plugins.graphql
+        plugins.proto
       ]);
     }
     {
