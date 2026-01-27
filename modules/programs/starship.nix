@@ -59,8 +59,10 @@
       directory = {
         style = "fg:crust bg:blue";
         format = "[ $path ]($style)";
+        home_symbol = " ~";
         truncate_to_repo = false;
-        truncation_length = 0;
+        truncation_symbol = " ";
+        truncation_length = 6;
         # 読み取り専用マーカー
         read_only = " 󰌾";
         read_only_style = "fg:red bg:blue";

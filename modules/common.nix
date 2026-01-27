@@ -189,6 +189,10 @@
     source = "${self}/scripts/git-ai-commit.sh";
     executable = true;
   };
+  home.file.".local/bin/clean-commit-msg.py" = {
+    source = "${self}/scripts/clean-commit-msg.py";
+    executable = true;
+  };
   home.file.".local/bin/claude" = {
     source = "${pkgs.claude-code}/bin/claude";
   };
