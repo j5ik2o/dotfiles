@@ -16,6 +16,10 @@ buildNpmPackage {
     hash = "sha256-ihRnjbzdTDrEcW4JvJpYNq8m5W9Wj1PDVNsIEUGymZs=";
   };
 
+  postPatch = ''
+    cp ${./claude-code-acp-lock.json} package-lock.json
+  '';
+
   npmDepsHash = "sha256-d1uhbixSt84XSl+tO2X12ST7Xi/fhzkpHKtsmJ4GMIw=";
   dontNpmBuild = true;
 
