@@ -59,6 +59,7 @@ help:
 	@echo ""
 	@echo "Apply targets:"
 	@echo "  apply          Apply all (darwin on macOS, hm on Linux)"
+	@echo "                 Requires host config file or FORCE=1"
 	@echo "  apply-hm       Apply Home Manager configuration"
 	@echo "  apply-darwin   Apply nix-darwin configuration (macOS only)"
 	@echo "  rollback       Rollback to previous generation"
@@ -211,6 +212,21 @@ endif
 # ============================================================
 
 apply-hm:
+ifndef FORCE
+ifeq ($(HOST_CONFIG_FOUND),)
+	@echo "ERROR: Host configuration file not found: $(HOST_FILE)"
+	@echo "This prevents accidental destruction of existing environment."
+	@echo ""
+	@echo "To create host configuration:"
+	@echo "  1. Create $(HOST_FILE)"
+	@echo "  2. Configure it for this specific host"
+	@echo "  3. Run 'make apply' again"
+	@echo ""
+	@echo "To force apply with fallback config (DANGEROUS):"
+	@echo "  FORCE=1 make apply"
+	@exit 1
+endif
+endif
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
 	home-manager switch --flake '.#"$(HM_CONFIG)"'
 	@if command -v sheldon >/dev/null 2>&1; then \
@@ -220,6 +236,21 @@ apply-hm:
 
 apply-darwin:
 ifeq ($(UNAME),Darwin)
+ifndef FORCE
+ifeq ($(HOST_CONFIG_FOUND),)
+	@echo "ERROR: Host configuration file not found: $(HOST_FILE)"
+	@echo "This prevents accidental destruction of existing environment."
+	@echo ""
+	@echo "To create host configuration:"
+	@echo "  1. Create $(HOST_FILE)"
+	@echo "  2. Configure it for this specific host"
+	@echo "  3. Run 'make apply' again"
+	@echo ""
+	@echo "To force apply with fallback config (DANGEROUS):"
+	@echo "  FORCE=1 make apply"
+	@exit 1
+endif
+endif
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
 	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
 	@if command -v sheldon >/dev/null 2>&1; then \
