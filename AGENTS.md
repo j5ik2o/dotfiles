@@ -29,6 +29,11 @@
 - LazyVim 本体はプラグイン側で管理され、直接編集しない
 - 設定は `config/nvim` を正とする（`~/.config/nvim` へ同期）
 
+### プラグイン管理
+- Neovim プラグインは Nix 管理（Home Manager の `programs.neovim.plugins`）
+- `NVIM_PLUGIN_DIR=~/.local/share/nvim-plugins` を参照して Lazy.nvim が Nix 側のプラグインを利用
+- `NVIM_PLUGIN_DIR` が無い場合のみ Lazy.nvim が Git で取得する
+
 ### キャッシュ
 - `make nvim-clean` で以下を削除:
   - `~/.local/share/nvim`
