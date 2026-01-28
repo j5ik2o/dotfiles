@@ -32,7 +32,7 @@
 ### プラグイン管理
 - Neovim プラグインは Nix 管理（Home Manager の `programs.neovim.plugins`）
 - `NVIM_PLUGIN_DIR=~/.local/share/nvim-plugins` を参照して Lazy.nvim が Nix 側のプラグインを利用
-- `NVIM_PLUGIN_DIR` が無い場合のみ Lazy.nvim が Git で取得する
+- `NVIM_PLUGIN_DIR` 配下に LazyVim が無い場合は異常終了（Git 取得しない）
 
 ### キャッシュ
 - `make nvim-clean` で以下を削除:

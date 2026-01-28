@@ -72,6 +72,7 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 - Nix で `vimPlugins` をリンクファーム化し、`NVIM_PLUGIN_DIR` に設定
 - `config/nvim/lua/config/lazy.lua` が `dev.path` をこのディレクトリに固定
 - `lazy.nvim` の自動インストール/更新は無効化（Nix 以外から取得しない）
+- `NVIM_PLUGIN_DIR` 配下に LazyVim が無い場合は起動を停止（フォールバックなし）
 
 ### 起動
 

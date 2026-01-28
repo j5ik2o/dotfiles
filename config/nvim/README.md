@@ -4,7 +4,7 @@ LazyVim starter-style config for the default `nvim` config.
 
 Usage:
 - Launch: `nvim` (or `vi` / `vim`)
-- First launch bootstraps lazy.nvim and LazyVim
+- Nix-managed plugins are required; missing LazyVim/lazy.nvim is a fatal error
 
 Nix-managed plugins:
 - Plugins are provided by Home Manager via `programs.neovim.plugins`.
