@@ -42,9 +42,10 @@ if use_nix_plugins then
   end
   -- Nix-managed treesitter grammars (parser .so + queries .scm).
   -- withPlugins の依存を symlinkJoin でまとめた derivation を rtp に載せる。
+  -- append でプラグイン側クエリを優先させる。
   local grammars_dir = plugin_dir .. "/nvim-treesitter-grammars"
   if is_dir(grammars_dir) then
-    vim.opt.rtp:prepend(grammars_dir)
+    vim.opt.rtp:append(grammars_dir)
     table.insert(rtp_paths, grammars_dir)
   end
 end
