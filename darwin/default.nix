@@ -4,7 +4,7 @@
   config,
   inputs,
   username,
-  expectedHostName ? null,  # flake.nix から渡される期待ホスト名
+  expectedHostName ? null, # flake.nix から渡される期待ホスト名
   ...
 }:
 
@@ -14,7 +14,7 @@
     ./homebrew.nix # Homebrew 共通設定
     ./system-settings.nix # macOS system settings
   ];
-  
+
   # ============================================================
   # ホスト名ガード：間違ったホストで実行されることを防ぐ
   # system activation時にホスト名をチェック
@@ -23,7 +23,7 @@
     echo "🔍 ホスト名チェック中..."
     ACTUAL_HOST=$(scutil --get LocalHostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
     EXPECTED_HOST="${expectedHostName}"
-    
+
     if [ "$ACTUAL_HOST" != "$EXPECTED_HOST" ]; then
       echo ""
       echo "❌ ホスト名が一致しません！"
@@ -40,7 +40,7 @@
     fi
     echo "✅ ホスト名チェック完了: $ACTUAL_HOST"
   '';
-  
+
   # ============================================================
   # nix-darwin システムレベル設定
   # macOS のシステム設定を Nix で宣言的に管理

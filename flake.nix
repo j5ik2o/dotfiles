@@ -177,7 +177,7 @@
           homeModules ? [ ],
           darwinModules ? [ ],
           extraSpecialArgs ? { },
-          expectedHostName ? null,  # ホスト名の期待値（チェック用）
+          expectedHostName ? null, # ホスト名の期待値（チェック用）
         }:
         nix-darwin.lib.darwinSystem {
           inherit system;
@@ -211,7 +211,7 @@
           specialArgs = {
             inherit inputs;
             username = user;
-            inherit expectedHostName;  # darwin/default.nix でチェック用に渡す
+            inherit expectedHostName; # darwin/default.nix でチェック用に渡す
           };
         };
 
@@ -294,7 +294,7 @@
           homeModules = featureModules ++ homeModules ++ [ (hostNameModule hostName) ];
           darwinModules = hostDarwinModules;
           extraSpecialArgs = host.extraSpecialArgs or { };
-          expectedHostName = hostName;  # ホスト名チェック用
+          expectedHostName = hostName; # ホスト名チェック用
         };
 
       hostHomeConfigurations = nixpkgs.lib.mapAttrs mkHostHomeConfiguration hosts;
