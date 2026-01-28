@@ -9,6 +9,54 @@
 let
   nvimConfigDir = builtins.dirOf (toString nvimConfigPath);
   nvimPath = "${nvimConfigDir}/nvim";
+  treesitterWithGrammars = pkgs.vimPlugins.nvim-treesitter.withPlugins (plugins: [
+    plugins.c
+    plugins.cpp
+    plugins.rust
+    plugins.go
+    plugins.zig
+    plugins.java
+    plugins.scala
+    plugins.kotlin
+    plugins.python
+    plugins.ruby
+    plugins.lua
+    plugins.javascript
+    plugins.typescript
+    plugins.tsx
+    plugins.haskell
+    plugins.ocaml
+    plugins.markdown
+    plugins.markdown_inline
+    plugins.html
+    plugins.css
+    plugins.json
+    plugins.yaml
+    plugins.toml
+    plugins.xml
+    plugins.bash
+    plugins.fish
+    plugins.vim
+    plugins.vimdoc
+    plugins.regex
+    plugins.diff
+    plugins.git_config
+    plugins.git_rebase
+    plugins.gitcommit
+    plugins.gitignore
+    plugins.dockerfile
+    plugins.sql
+    plugins.graphql
+    plugins.proto
+    plugins.nix
+    plugins.query
+  ]);
+  # withPlugins の passthru.dependencies にパーサー (.so) とクエリ (.scm) が
+  # 別 derivation として含まれる。symlinkJoin で1つにまとめて rtp に載せる。
+  treesitterGrammars = pkgs.symlinkJoin {
+    name = "nvim-treesitter-grammars";
+    paths = treesitterWithGrammars.passthru.dependencies;
+  };
   nvimPlugins = [
     {
       name = "LazyVim";
@@ -124,45 +172,7 @@ let
     }
     {
       name = "nvim-treesitter";
-      pkg = pkgs.vimPlugins.nvim-treesitter.withPlugins (plugins: [
-        plugins.c
-        plugins.cpp
-        plugins.rust
-        plugins.go
-        plugins.zig
-        plugins.java
-        plugins.scala
-        plugins.kotlin
-        plugins.python
-        plugins.ruby
-        plugins.lua
-        plugins.javascript
-        plugins.typescript
-        plugins.tsx
-        plugins.haskell
-        plugins.ocaml
-        plugins.markdown
-        plugins.markdown_inline
-        plugins.html
-        plugins.css
-        plugins.json
-        plugins.yaml
-        plugins.toml
-        plugins.xml
-        plugins.bash
-        plugins.fish
-        plugins.vim
-        plugins.regex
-        plugins.diff
-        plugins.git_config
-        plugins.git_rebase
-        plugins.gitcommit
-        plugins.gitignore
-        plugins.dockerfile
-        plugins.sql
-        plugins.graphql
-        plugins.proto
-      ]);
+      pkg = treesitterWithGrammars;
     }
     {
       name = "nvim-treesitter-textobjects";
@@ -214,10 +224,16 @@ let
     }
   ];
   nvimPluginDir = pkgs.linkFarm "nvim-plugins" (
-    map (plugin: {
+    (map (plugin: {
       name = plugin.name;
       path = plugin.pkg;
-    }) nvimPlugins
+    }) nvimPlugins)
+    ++ [
+      {
+        name = "nvim-treesitter-grammars";
+        path = treesitterGrammars;
+      }
+    ]
   );
 in
 {
