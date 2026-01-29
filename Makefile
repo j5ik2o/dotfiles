@@ -44,7 +44,7 @@ NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
 export NIX_CONFIG
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
-        rollback rollback-hm rollback-darwin clean nvim-clean update fmt sheldon-lock gc test nvim-test \
+        rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm
 
 # デフォルトターゲット
@@ -73,6 +73,7 @@ help:
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
 	@echo "  nvim-clean     Remove Neovim cache (share/state/cache)"
+	@echo "  zsh-clean      Remove zsh cache (sheldon, starship, etc)"
 	@echo "  gc             Run nix garbage collection"
 	@echo "  sheldon-lock   Lock sheldon plugins"
 	@echo ""
@@ -350,6 +351,10 @@ nvim-clean:
 	rm -rf ~/.local/share/nvim
 	rm -rf ~/.local/state/nvim
 	rm -rf ~/.cache/nvim
+
+zsh-clean:
+	@echo "Cleaning zsh caches (sheldon, starship, zoxide, compinit)..."
+	rm -rf ~/.cache/zsh
 
 gc:
 	@echo "Running garbage collection..."
