@@ -13,8 +13,24 @@
     [tools]
     java = "temurin-21"
     node = "22"
-    python = "3.13"
+    python = "3.13.11"
     ruby = "3.3"
+  '';
+
+  # make apply 後に自動で不足ランタイムを導入
+  home.activation.miseAutoInstall = lib.hm.dag.entryAfter [ "installPackages" ] ''
+    _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
+    _mise_pkg_config_path="${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig"
+    _mise_ruby_configure_opts="--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib"
+    if [ -x "${pkgs.mise}/bin/mise" ]; then
+      if env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls --global --missing --no-header 2>/dev/null | grep -q '.'; then
+        echo "home-manager: mise install (missing tools)" >&2
+        if ! env PATH="$_mise_path:$PATH" PKG_CONFIG_PATH="$_mise_pkg_config_path" RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts" "${pkgs.mise}/bin/mise" install --yes; then
+          echo "home-manager: mise install failed. Run 'mise install' manually." >&2
+        fi
+      fi
+    fi
+    unset _mise_path _mise_pkg_config_path _mise_ruby_configure_opts
   '';
 
   # ============================================================
