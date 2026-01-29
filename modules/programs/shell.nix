@@ -7,6 +7,17 @@
 
 {
   # ============================================================
+  # mise (言語ランタイム管理)
+  # ============================================================
+  xdg.configFile."mise/config.toml".text = ''
+    [tools]
+    java = "temurin-21"
+    node = "22"
+    python = "3.13"
+    ruby = "3.3"
+  '';
+
+  # ============================================================
   # Sheldon (Zsh プラグインマネージャー)
   # ============================================================
   home.packages = with pkgs; [
@@ -202,6 +213,14 @@
     # Prompt & Tools (最後に読み込み)
     # ============================================================
 
+    # mise (言語ランタイム管理)
+    [plugins.mise]
+    inline = """
+    if command -v mise &> /dev/null; then
+      eval "$(mise activate zsh)"
+    fi
+    """
+
     # direnv (環境自動切り替え)
     [plugins.direnv]
     inline = """
@@ -222,13 +241,26 @@
     fi
     """
 
-    # zoxide (スマート cd)
+    # zoxide (スマート cd) - キャッシュ版
     [plugins.zoxide]
-    inline = 'eval "$(zoxide init zsh)"'
+    inline = """
+    _zoxide_cache="$HOME/.cache/zsh/zoxide.zsh"
+    if [[ ! -f "$_zoxide_cache" ]] || [[ $(command -v zoxide) -nt "$_zoxide_cache" ]]; then
+      zoxide init zsh > "$_zoxide_cache"
+    fi
+    source "$_zoxide_cache"
+    """
 
-    # Starship プロンプト (最後に初期化)
+    # Starship プロンプト (最後に初期化) - キャッシュ版
     [plugins.starship]
-    inline = 'eval "$(starship init zsh)"'
+    inline = """
+    _starship_cache="$HOME/.cache/zsh/starship.zsh"
+    _starship_toml="$HOME/.config/starship.toml"
+    if [[ ! -f "$_starship_cache" ]] || [[ "$_starship_toml" -nt "$_starship_cache" ]] || [[ $(command -v starship) -nt "$_starship_cache" ]]; then
+      starship init zsh > "$_starship_cache"
+    fi
+    source "$_starship_cache"
+    """
   '';
 
   # ============================================================
@@ -238,7 +270,7 @@
     enable = true;
     # sheldon を使う場合、home-manager の組み込み機能は無効化
     autosuggestion.enable = false;
-    enableCompletion = true;
+    enableCompletion = false;  # カスタム最適化版を使用
     syntaxHighlighting.enable = false;
 
     # hm-session-vars が親プロセスからのフラグでスキップされる場合でも、
@@ -277,10 +309,44 @@
     # 追加の initContent (initExtra から移行)
     initContent = ''
       # ============================================================
-      # Sheldon 初期化
+      # 高速キャッシュ初期化
       # ============================================================
-      if command -v sheldon &> /dev/null; then
-        eval "$(sheldon source)"
+      _zsh_cache_dir="$HOME/.cache/zsh"
+      [[ -d "$_zsh_cache_dir" ]] || mkdir -p "$_zsh_cache_dir"
+
+      # compinit 最適化 (1日1回だけ dump 再構築) - sheldon より先に実行
+      autoload -Uz compinit
+      _comp_dump="$_zsh_cache_dir/.zcompdump"
+      if [[ -n "$_comp_dump"(#qN.mh+24) ]]; then
+        compinit -d "$_comp_dump"
+      else
+        compinit -C -d "$_comp_dump"
+      fi
+
+      # Sheldon キャッシュ (設定変更時のみ再生成)
+      _sheldon_cache="$_zsh_cache_dir/sheldon.zsh"
+      _sheldon_toml="$HOME/.config/sheldon/plugins.toml"
+      _sheldon_toml_target="$(readlink "$_sheldon_toml" 2>/dev/null || echo "$_sheldon_toml")"
+      _sheldon_toml_target_cache="$_zsh_cache_dir/sheldon.toml.target"
+      _sheldon_rebuild=0
+      if [[ ! -f "$_sheldon_cache" ]] || [[ "$_sheldon_toml" -nt "$_sheldon_cache" ]]; then
+        _sheldon_rebuild=1
+      elif [[ ! -f "$_sheldon_toml_target_cache" ]] || [[ "$_sheldon_toml_target" != "$(cat "$_sheldon_toml_target_cache" 2>/dev/null)" ]]; then
+        _sheldon_rebuild=1
+      fi
+      if (( _sheldon_rebuild )); then
+        sheldon source > "$_sheldon_cache"
+        printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
+      fi
+      source "$_sheldon_cache"
+      unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
+
+      # ============================================================
+      # JetBrains IDE ターミナル対策
+      # ============================================================
+      if [[ "$TERMINAL_EMULATOR" == JetBrains* ]]; then
+        export TERMINFO_DIRS="/Applications/Ghostty.app/Contents/Resources/terminfo:''${TERMINFO_DIRS:-}"
+        export TERM=xterm-ghostty
       fi
 
       # キーバインド (Vi style)
@@ -511,6 +577,9 @@
       set -gx FZF_DEFAULT_COMMAND 'fd --type f --hidden --follow --exclude .git'
       set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
       set -gx FZF_ALT_C_COMMAND 'fd --type d --hidden --follow --exclude .git'
+
+      # mise 初期化 (言語ランタイム管理)
+      mise activate fish | source
 
       # zoxide 初期化
       zoxide init fish | source

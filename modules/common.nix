@@ -94,15 +94,11 @@
     gemini-cli # Google Gemini CLI
 
     # ============================================================
-    # 言語ランタイム (mise から移行)
+    # 言語ランタイム (mise で管理)
     # ============================================================
+    # Java, Node.js 等のランタイムは mise use -g で管理
 
-    # Java (Temurin / Eclipse Adoptium)
-    # グローバルは 21 LTS のみ。他バージョンはプロジェクトの flake.nix で指定
-    temurin-bin-21
-
-    # Scala
-    scala_3
+    # Scala ビルドツール
     sbt
     gradle
     maven
@@ -110,18 +106,13 @@
     # Go
     go
 
-    # Node.js
-    nodejs_22
+    # Node.js パッケージマネージャ
     pnpm
     bun
     yarn
 
-    # Python
-    python313
-    uv # Python パッケージマネージャ
-
-    # Ruby
-    ruby_3_3
+    # Python パッケージマネージャ
+    uv
 
     # Rust (rustup で toolchain 管理)
     rustup
@@ -139,6 +130,11 @@
 
     # Protocol Buffers
     protobuf
+
+    # ビルド依存 (mise でのランタイムビルド用)
+    pkg-config
+    libyaml # Ruby psych extension
+    libyaml.dev # Ruby psych headers / pkg-config
   ];
 
   # ============================================================
@@ -165,9 +161,11 @@
     PAGER = "bat";
     LANG = "en_US.UTF-8";
     LC_ALL = "en_US.UTF-8";
+    # 言語ランタイム (JAVA_HOME 等) は mise で管理
 
-    # Java (デフォルトは 21 LTS)
-    JAVA_HOME = "${pkgs.temurin-bin-21}/lib/openjdk";
+    # mise での Ruby ビルド用 (libyaml, openssl)
+    PKG_CONFIG_PATH = "${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig";
+    RUBY_CONFIGURE_OPTS = "--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib";
   };
 
   # ============================================================
