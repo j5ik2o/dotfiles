@@ -11,25 +11,28 @@ SAFE_USER := $(subst .,_,$(USER))
 # システム検出
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
+# darwin-rebuild は LocalHostName を使用するため、同じ順序で取得
 HOST_RAW ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
-  _hn=$$(scutil --get HostName 2>/dev/null); \
+  _hn=$$(scutil --get LocalHostName 2>/dev/null); \
   if [ -n "$$_hn" ]; then \
     echo "$$_hn"; \
   else \
-    _hn=$$(scutil --get LocalHostName 2>/dev/null); \
+    _hn=$$(scutil --get HostName 2>/dev/null); \
     if [ -n "$$_hn" ]; then echo "$$_hn"; else hostname -s; fi; \
   fi; \
 else \
   hostname -s; \
 fi)
 HOST ?= $(subst .,_,$(subst -,_,$(HOST_RAW)))
-HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
+# ホストファイルは正規化前の名前で検索（darwin-rebuild と一致させるため）
+HOST_FILE := $(CURDIR)/hosts/$(HOST_RAW).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
 ifneq ($(HOST_CONFIG_FOUND),)
   HM_CONFIG := $(HOST)
   ifeq ($(UNAME),Darwin)
-    DARWIN_CONFIG := $(HOST)
+    # darwin-rebuild は正規化前の名前で設定を検索
+    DARWIN_CONFIG := $(HOST_RAW)
   endif
 else
   ifeq ($(UNAME),Darwin)
@@ -301,7 +304,7 @@ ifeq ($(HOST_CONFIG_FOUND),)
 endif
 endif
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
-	sudo $(DARWIN_REBUILD_ENV) darwin-rebuild switch --flake '.#"$(DARWIN_CONFIG)"' $(PROMPT_PROFILE_IMPURE)
+	sudo $(DARWIN_REBUILD_ENV) darwin-rebuild switch --flake '.#$(DARWIN_CONFIG)' $(PROMPT_PROFILE_IMPURE)
 	@if command -v sheldon >/dev/null 2>&1; then \
 		echo "Locking sheldon plugins..."; \
 		sheldon lock; \

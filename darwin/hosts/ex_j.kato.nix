@@ -2,10 +2,10 @@
 
 {
   # ============================================================
-  # ex-j.kato (企業端末) 固有設定
+  # ex-jkato (企業端末) 固有設定
   # ============================================================
 
-  # Homebrew casks
+  # Homebrew casks (フルセット)
   homebrew.casks = [
     # ブラウザ
     "google-chrome"
@@ -34,6 +34,8 @@
     # ユーティリティ
     "coteditor"
     "raycast"
+    "1password"
+    "1password-cli"
     "rectangle"
     "alt-tab"
     "stats"

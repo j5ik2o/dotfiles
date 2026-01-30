@@ -21,7 +21,8 @@
   # ============================================================
   system.activationScripts.preActivation.text = lib.optionalString (expectedHostName != null) ''
     echo "🔍 ホスト名チェック中..."
-    ACTUAL_HOST_RAW=$(scutil --get HostName 2>/dev/null || scutil --get LocalHostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
+    # darwin-rebuild は LocalHostName を使用するため、同じ順序で取得
+    ACTUAL_HOST_RAW=$(scutil --get LocalHostName 2>/dev/null || scutil --get HostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
     EXPECTED_HOST_RAW="${expectedHostName}"
     ACTUAL_HOST=$(echo "$ACTUAL_HOST_RAW" | tr '.-' '_')
     EXPECTED_HOST=$(echo "$EXPECTED_HOST_RAW" | tr '.-' '_')
