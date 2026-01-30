@@ -22,7 +22,7 @@ HOST_RAW ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
 else \
   hostname -s; \
 fi)
-HOST ?= $(subst .,_,$(HOST_RAW))
+HOST ?= $(subst .,_,$(subst -,_,$(HOST_RAW)))
 HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
