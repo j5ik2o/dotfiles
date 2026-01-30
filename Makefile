@@ -57,7 +57,7 @@ endif
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
-        secrets secrets-diff secrets-apply plan plan-darwin plan-hm
+        secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host
 
 # デフォルトターゲット
 help:
@@ -79,6 +79,8 @@ help:
 	@echo "Other targets:"
 	@echo "  check          Run nix flake check"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
+	@echo "  host-info      Show detected host/config info only"
+	@echo "  check-host     Fail if host config file is missing"
 	@echo "  test           Alias for check"
 	@echo "  nvim-test      Run Neovim config tests"
 	@echo "  update         Update flake inputs"
@@ -168,6 +170,28 @@ nvim-test:
 # ============================================================
 # Build (dry-run / test)
 # ============================================================
+
+host-info:
+	@echo "UNAME: $(UNAME)"
+	@echo "ARCH: $(ARCH)"
+	@echo "HOST: $(HOST)"
+	@echo "HOST_FILE: $(HOST_FILE)"
+	@if [ -n "$(HOST_CONFIG_FOUND)" ]; then \
+		echo "HOST_CONFIG_FOUND: yes"; \
+	else \
+		echo "HOST_CONFIG_FOUND: no"; \
+	fi
+	@echo "HM_CONFIG: $(HM_CONFIG)"
+	@echo "DARWIN_CONFIG: $(DARWIN_CONFIG)"
+
+check-host:
+	@echo "Checking host configuration: $(HOST)"
+	@if [ -n "$(HOST_CONFIG_FOUND)" ]; then \
+		echo "OK: $(HOST_FILE)"; \
+	else \
+		echo "NG: $(HOST_FILE)"; \
+		exit 1; \
+	fi
 
 build-hm:
 	@echo "Building Home Manager configuration: $(HM_CONFIG)"
