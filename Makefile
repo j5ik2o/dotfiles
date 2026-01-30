@@ -299,7 +299,7 @@ ifeq ($(HOST_CONFIG_FOUND),)
 endif
 endif
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
-	sudo $(DARWIN_REBUILD_ENV) darwin-rebuild switch --flake .#$(DARWIN_CONFIG) $(PROMPT_PROFILE_IMPURE)
+	sudo $(DARWIN_REBUILD_ENV) darwin-rebuild switch --flake '.#"$(DARWIN_CONFIG)"' $(PROMPT_PROFILE_IMPURE)
 	@if command -v sheldon >/dev/null 2>&1; then \
 		echo "Locking sheldon plugins..."; \
 		sheldon lock; \
