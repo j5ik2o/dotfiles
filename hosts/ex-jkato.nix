@@ -1,3 +1,7 @@
-# LocalHostName (ex-jkato) 用のエイリアス
-# 実体は ex_j_kato.nix
-args: import ./ex_j_kato.nix args
+{ lib, ... }:
+
+{
+  system = "aarch64-darwin";
+  username = "ex_j.kato";
+  homeDirectory = "/Users/ex_j.kato";
+}
