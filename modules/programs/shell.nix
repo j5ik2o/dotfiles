@@ -5,6 +5,15 @@
   ...
 }:
 
+let
+  promptProfileEnv = builtins.getEnv "PROMPT_PROFILE";
+  promptProfileRaw = lib.toLower (if promptProfileEnv == "" then "starship" else promptProfileEnv);
+  promptProfile =
+    if builtins.elem promptProfileRaw [ "p10k" "pure" "starship" ] then
+      promptProfileRaw
+    else
+      "p10k";
+in
 {
   # ============================================================
   # mise (言語ランタイム管理)
@@ -61,9 +70,17 @@
     github = "romkatv/zsh-defer"
     proto = "https"
 
-    # Powerlevel10k (高速プロンプト) - Starship を使う場合はコメントアウト
-    # [plugins.powerlevel10k]
-    # github = "romkatv/powerlevel10k"
+    # Powerlevel10k (高速プロンプト)
+    [plugins.powerlevel10k]
+    github = "romkatv/powerlevel10k"
+    use = ["powerlevel10k.zsh-theme"]
+    profiles = ["p10k"]
+
+    # Pure (シンプルで非同期なプロンプト)
+    [plugins.pure]
+    github = "sindresorhus/pure"
+    use = ["async.zsh", "pure.zsh"]
+    profiles = ["pure"]
 
     # ============================================================
     # Completions
@@ -269,6 +286,7 @@
 
     # Starship プロンプト (最後に初期化) - キャッシュ版
     [plugins.starship]
+    profiles = ["starship"]
     inline = """
     _starship_cache="$HOME/.cache/zsh/starship.zsh"
     _starship_toml="$HOME/.config/starship.toml"
@@ -277,6 +295,7 @@
     fi
     source "$_starship_cache"
     """
+
   '';
 
   # ============================================================
@@ -297,6 +316,12 @@
 
       if [[ -f "$HOME/.config/claude-code/env" ]]; then
         source "$HOME/.config/claude-code/env"
+      fi
+
+      # 起動時間計測: できるだけ早く開始時刻を記録
+      if [[ "''${ZSH_PROFILE:-0}" == "1" ]]; then
+        zmodload zsh/datetime 2>/dev/null || true
+        export _ZSH_START_EPOCHREALTIME="$EPOCHREALTIME"
       fi
 
       # Ghostty: SSH接続時の元のTERMを保存
@@ -330,17 +355,80 @@
       _zsh_cache_dir="$HOME/.cache/zsh"
       [[ -d "$_zsh_cache_dir" ]] || mkdir -p "$_zsh_cache_dir"
 
-      # compinit 最適化 (1日1回だけ dump 再構築) - sheldon より先に実行
+      # ============================================================
+      # 起動時間計測 (zprof)
+      # ============================================================
+      _zsh_profile_enabled=0
+      if [[ "''${ZSH_PROFILE:-0}" == "1" ]]; then
+        _zsh_profile_enabled=1
+        zmodload zsh/zprof 2>/dev/null || true
+        zmodload zsh/datetime 2>/dev/null || true
+      fi
+      if (( _zsh_profile_enabled )) && [[ -z "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+        _ZSH_START_EPOCHREALTIME="$EPOCHREALTIME"
+      fi
+
+      # 起動計測: 初回プロンプト表示(入力可能)までの時間を記録
+      if (( _zsh_profile_enabled )) && [[ -t 0 ]]; then
+        _zsh_profile_prompt_ready() {
+          if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+            local _zsh_now _zsh_elapsed _zsh_profile_log
+            _zsh_now="$EPOCHREALTIME"
+            _zsh_elapsed=$(printf "%.3f" "$((_zsh_now - _ZSH_START_EPOCHREALTIME))")
+            _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
+            {
+              print -r -- "prompt_ready=''${_zsh_elapsed}s"
+            } >>| "$_zsh_profile_log" 2>&1
+          fi
+          precmd_functions=(''${precmd_functions:#_zsh_profile_prompt_ready})
+          unset -f _zsh_profile_prompt_ready
+          unset _ZSH_START_EPOCHREALTIME
+        }
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd _zsh_profile_prompt_ready
+      fi
+
+      # compinit 最適化 (デフォルトは高速モード) - sheldon より先に実行
+      zmodload zsh/stat 2>/dev/null || true
+      zmodload zsh/datetime 2>/dev/null || true
       autoload -Uz compinit
       _comp_dump="$_zsh_cache_dir/.zcompdump"
-      if [[ -n "$_comp_dump"(#qN.mh+24) ]]; then
-        compinit -d "$_comp_dump"
+      _comp_dump_age_hours=99999
+      if zstat -A _comp_stat +mtime -- "$_comp_dump" 2>/dev/null; then
+        _comp_dump_age_hours=$(( (EPOCHSECONDS - _comp_stat[1]) / 3600 ))
+      fi
+      _zsh_compinit_secure="''${ZSH_COMPINIT_SECURE:-0}"
+      if [[ "$_zsh_compinit_secure" == "1" ]]; then
+        # セキュアモード: 1日1回だけ compaudit を実行
+        if (( _comp_dump_age_hours >= 24 )); then
+          compinit -d "$_comp_dump"
+        else
+          compinit -C -d "$_comp_dump"
+        fi
       else
+        # 高速モード: compaudit をスキップして compdump を再生成
+        if (( _comp_dump_age_hours >= 24 )); then
+          rm -f "$_comp_dump" "$_comp_dump.zwc"
+        fi
         compinit -C -d "$_comp_dump"
+      fi
+      unset _zsh_compinit_secure _comp_stat _comp_dump_age_hours
+
+      # ============================================================
+      # プロンプト選択 (ビルド時に決定)
+      # ============================================================
+      _zsh_prompt_profile="${promptProfile}"
+      export ZSH_PROMPT_PROFILE="${promptProfile}"
+      export SHELDON_PROFILE="${promptProfile}"
+      if [[ "$_zsh_prompt_profile" == "p10k" ]]; then
+        if [[ -f "$HOME/.config/zsh/p10k.zsh" ]]; then
+          export POWERLEVEL9K_CONFIG_FILE="$HOME/.config/zsh/p10k.zsh"
+        fi
+        export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
       fi
 
       # Sheldon キャッシュ (設定変更時のみ再生成)
-      _sheldon_cache="$_zsh_cache_dir/sheldon.zsh"
+      _sheldon_cache="$_zsh_cache_dir/sheldon.${promptProfile}.zsh"
       _sheldon_toml="$HOME/.config/sheldon/plugins.toml"
       _sheldon_toml_target="$(readlink "$_sheldon_toml" 2>/dev/null || echo "$_sheldon_toml")"
       _sheldon_toml_target_cache="$_zsh_cache_dir/sheldon.toml.target"
@@ -351,11 +439,16 @@
         _sheldon_rebuild=1
       fi
       if (( _sheldon_rebuild )); then
-        sheldon source > "$_sheldon_cache"
+        SHELDON_PROFILE="${promptProfile}" sheldon source > "$_sheldon_cache"
         printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
       fi
       source "$_sheldon_cache"
       unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
+
+      if [[ "$_zsh_prompt_profile" == "pure" ]]; then
+        # pure.zsh が読み込まれた時点でプロンプトを設定する
+        :
+      fi
 
       # ============================================================
       # JetBrains IDE ターミナル対策
@@ -453,7 +546,30 @@
       }
       alias g='ghq-fzf'
 
-      # zoxide, starship は sheldon で初期化
+      # zoxide, プロンプトは sheldon で初期化
+
+      # ============================================================
+      # プロファイリング結果出力
+      # ============================================================
+      if (( _zsh_profile_enabled )); then
+        _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
+        {
+          print -r -- "---- zsh startup $(date '+%Y-%m-%d %H:%M:%S') pid=$$ ----"
+          if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+            _zsh_end="$EPOCHREALTIME"
+            _zsh_elapsed=$(printf "%.3f" "$((_zsh_end - _ZSH_START_EPOCHREALTIME))")
+            print -r -- "elapsed=''${_zsh_elapsed}s"
+          fi
+          if whence -w zprof >/dev/null 2>&1; then
+            zprof
+          else
+            print -r -- "zprof not available"
+          fi
+          print -r -- ""
+        } >>| "$_zsh_profile_log" 2>&1
+        unset _zsh_profile_log _zsh_end _zsh_elapsed
+      fi
+      unset _zsh_profile_enabled
     '';
 
     # シェルエイリアス

@@ -43,6 +43,18 @@ NIX_EXPERIMENTAL_FEATURES ?= nix-command flakes
 NIX_CONFIG ?= experimental-features = $(NIX_EXPERIMENTAL_FEATURES)
 export NIX_CONFIG
 
+# プロンプト切替 (p10k / pure / starship)
+PROMPT_PROFILE ?=
+ifneq ($(strip $(PROMPT_PROFILE)),)
+  PROMPT_PROFILE_ENV = PROMPT_PROFILE=$(PROMPT_PROFILE)
+  PROMPT_PROFILE_IMPURE = --impure
+  DARWIN_REBUILD_ENV = env PROMPT_PROFILE=$(PROMPT_PROFILE)
+else
+  PROMPT_PROFILE_ENV =
+  PROMPT_PROFILE_IMPURE =
+  DARWIN_REBUILD_ENV =
+endif
+
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm
@@ -229,7 +241,7 @@ ifeq ($(HOST_CONFIG_FOUND),)
 endif
 endif
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
-	home-manager switch --flake '.#"$(HM_CONFIG)"'
+	$(PROMPT_PROFILE_ENV) home-manager switch --flake '.#"$(HM_CONFIG)"' $(PROMPT_PROFILE_IMPURE)
 	@if command -v sheldon >/dev/null 2>&1; then \
 		echo "Locking sheldon plugins..."; \
 		sheldon lock; \
@@ -253,7 +265,7 @@ ifeq ($(HOST_CONFIG_FOUND),)
 endif
 endif
 	@echo "Applying nix-darwin configuration: $(DARWIN_CONFIG)"
-	sudo darwin-rebuild switch --flake .#$(DARWIN_CONFIG)
+	sudo $(DARWIN_REBUILD_ENV) darwin-rebuild switch --flake .#$(DARWIN_CONFIG) $(PROMPT_PROFILE_IMPURE)
 	@if command -v sheldon >/dev/null 2>&1; then \
 		echo "Locking sheldon plugins..."; \
 		sheldon lock; \
@@ -355,6 +367,7 @@ nvim-clean:
 zsh-clean:
 	@echo "Cleaning zsh caches (sheldon, starship, zoxide, compinit)..."
 	rm -rf ~/.cache/zsh
+	rm -fr ~/.cache/p10k-instant-prompt-*.zsh
 
 gc:
 	@echo "Running garbage collection..."
