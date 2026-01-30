@@ -11,7 +11,7 @@ SAFE_USER := $(subst .,_,$(USER))
 # システム検出
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
-HOST ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
+HOST_RAW ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
   _hn=$$(scutil --get HostName 2>/dev/null); \
   if [ -n "$$_hn" ]; then \
     echo "$$_hn"; \
@@ -22,6 +22,7 @@ HOST ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
 else \
   hostname -s; \
 fi)
+HOST ?= $(subst .,_,$(HOST_RAW))
 HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
@@ -184,6 +185,7 @@ nvim-test:
 host-info:
 	@echo "UNAME: $(UNAME)"
 	@echo "ARCH: $(ARCH)"
+	@echo "HOST_RAW: $(HOST_RAW)"
 	@echo "HOST: $(HOST)"
 	@echo "HOST_FILE: $(HOST_FILE)"
 	@if [ -n "$(HOST_CONFIG_FOUND)" ]; then \

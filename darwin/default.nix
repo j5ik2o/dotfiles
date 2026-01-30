@@ -21,15 +21,17 @@
   # ============================================================
   system.activationScripts.preActivation.text = lib.optionalString (expectedHostName != null) ''
     echo "🔍 ホスト名チェック中..."
-    ACTUAL_HOST=$(scutil --get LocalHostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
-    EXPECTED_HOST="${expectedHostName}"
+    ACTUAL_HOST_RAW=$(scutil --get HostName 2>/dev/null || scutil --get LocalHostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
+    EXPECTED_HOST_RAW="${expectedHostName}"
+    ACTUAL_HOST=$(echo "$ACTUAL_HOST_RAW" | tr '.' '_')
+    EXPECTED_HOST=$(echo "$EXPECTED_HOST_RAW" | tr '.' '_')
 
     if [ "$ACTUAL_HOST" != "$EXPECTED_HOST" ]; then
       echo ""
       echo "❌ ホスト名が一致しません！"
       echo ""
-      echo "   期待されるホスト: $EXPECTED_HOST"
-      echo "   実際のホスト名:   $ACTUAL_HOST"
+      echo "   期待されるホスト: $EXPECTED_HOST (raw: $EXPECTED_HOST_RAW)"
+      echo "   実際のホスト名:   $ACTUAL_HOST (raw: $ACTUAL_HOST_RAW)"
       echo ""
       echo "このNix設定は '$EXPECTED_HOST' 用です。"
       echo "現在のホスト '$ACTUAL_HOST' では実行できません。"
