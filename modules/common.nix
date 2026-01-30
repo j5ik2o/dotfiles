@@ -25,6 +25,7 @@
   home.packages = with pkgs; [
     # 開発ツール
     git
+    git-secrets # シークレット漏洩防止
     gh
     ghq
     gwq # Git worktree マネージャ
