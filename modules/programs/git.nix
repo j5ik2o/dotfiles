@@ -301,4 +301,14 @@ in
       ];
     };
   };
+
+  # Git は ~/.gitconfig が存在するとそちらを優先するため、
+  # XDG 側の設定だけを使うように include に統一する。
+  home.file.".gitconfig" = {
+    text = ''
+      [include]
+        path = ${config.xdg.configHome}/git/config
+    '';
+    force = true;
+  };
 }
