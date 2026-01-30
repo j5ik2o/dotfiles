@@ -11,7 +11,17 @@ SAFE_USER := $(subst .,_,$(USER))
 # システム検出
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
-HOST ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then scutil --get LocalHostName 2>/dev/null || hostname -s; else hostname -s; fi)
+HOST ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
+  _hn=$$(scutil --get HostName 2>/dev/null); \
+  if [ -n "$$_hn" ]; then \
+    echo "$$_hn"; \
+  else \
+    _hn=$$(scutil --get LocalHostName 2>/dev/null); \
+    if [ -n "$$_hn" ]; then echo "$$_hn"; else hostname -s; fi; \
+  fi; \
+else \
+  hostname -s; \
+fi)
 HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
