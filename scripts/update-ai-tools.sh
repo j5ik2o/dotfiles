@@ -6,7 +6,7 @@ usage() {
 Usage: scripts/update-ai-tools.sh [options]
 
 Options:
-  --codex-version <x.y.z>     Pin codex to this version (default: latest tag)
+  --codex-version <x.y.z>     Pin codex to this version (default: latest GitHub release)
   --claude-version <x.y.z>    Pin claude-code to this version (default: latest npm)
   --skip-codex                Skip codex update
   --skip-claude               Skip claude-code update
@@ -25,10 +25,6 @@ require_cmd() {
 
 json_hash() {
   jq -r .hash
-}
-
-json_store_path() {
-  jq -r .storePath
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -67,12 +63,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-require_cmd git
 require_cmd jq
 require_cmd nix
 require_cmd npm
 require_cmd python3
-require_cmd tar
+require_cmd curl
 
 update_ai_tools_toml() {
   AI_TOOLS_FILE="${AI_TOOLS_FILE}" \
@@ -82,8 +77,10 @@ update_ai_tools_toml() {
   CODEX_HASH_AARCH64_LINUX="${CODEX_HASH_AARCH64_LINUX:-}" \
   CODEX_HASH_X86_64_LINUX="${CODEX_HASH_X86_64_LINUX:-}" \
   CLAUDE_VERSION="${CLAUDE_VERSION:-}" \
-  CLAUDE_HASH="${CLAUDE_HASH:-}" \
-  CLAUDE_NPM_HASH="${CLAUDE_NPM_HASH:-}" \
+  CLAUDE_HASH_AARCH64_DARWIN="${CLAUDE_HASH_AARCH64_DARWIN:-}" \
+  CLAUDE_HASH_X86_64_DARWIN="${CLAUDE_HASH_X86_64_DARWIN:-}" \
+  CLAUDE_HASH_AARCH64_LINUX="${CLAUDE_HASH_AARCH64_LINUX:-}" \
+  CLAUDE_HASH_X86_64_LINUX="${CLAUDE_HASH_X86_64_LINUX:-}" \
   python3 - <<'PY'
 import os
 from pathlib import Path
@@ -104,6 +101,7 @@ if path.exists():
 data.setdefault("codex", {})
 data["codex"].setdefault("hashes", {})
 data.setdefault("claude-code", {})
+data["claude-code"].setdefault("hashes", {})
 
 # codex updates
 if os.environ.get("CODEX_VERSION"):
@@ -121,10 +119,15 @@ for key, value in hash_map.items():
 # claude updates
 if os.environ.get("CLAUDE_VERSION"):
     data["claude-code"]["version"] = os.environ["CLAUDE_VERSION"]
-if os.environ.get("CLAUDE_HASH"):
-    data["claude-code"]["hash"] = os.environ["CLAUDE_HASH"]
-if os.environ.get("CLAUDE_NPM_HASH"):
-    data["claude-code"]["npmDepsHash"] = os.environ["CLAUDE_NPM_HASH"]
+claude_hash_map = {
+    "aarch64-darwin": os.environ.get("CLAUDE_HASH_AARCH64_DARWIN", ""),
+    "x86_64-darwin": os.environ.get("CLAUDE_HASH_X86_64_DARWIN", ""),
+    "aarch64-linux": os.environ.get("CLAUDE_HASH_AARCH64_LINUX", ""),
+    "x86_64-linux": os.environ.get("CLAUDE_HASH_X86_64_LINUX", ""),
+}
+for key, value in claude_hash_map.items():
+    if value:
+        data["claude-code"]["hashes"][key] = value
 
 missing = []
 codex = data.get("codex", {})
@@ -138,10 +141,10 @@ for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
 claude = data.get("claude-code", {})
 if not claude.get("version"):
     missing.append("claude-code.version")
-if not claude.get("hash"):
-    missing.append("claude-code.hash")
-if not claude.get("npmDepsHash"):
-    missing.append("claude-code.npmDepsHash")
+claude_hashes = claude.get("hashes", {})
+for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
+    if not claude_hashes.get(key):
+        missing.append(f"claude-code.hashes.{key}")
 
 if missing:
     raise SystemExit("missing required keys in ai-tools.toml: " + ", ".join(missing))
@@ -156,50 +159,94 @@ for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
 lines.append("")
 lines.append('["claude-code"]')
 lines.append(f'version = "{claude["version"]}"')
-lines.append(f'hash = "{claude["hash"]}"')
-lines.append(f'npmDepsHash = "{claude["npmDepsHash"]}"')
+lines.append("")
+lines.append('["claude-code".hashes]')
+for key in ["aarch64-darwin", "x86_64-darwin", "aarch64-linux", "x86_64-linux"]:
+    lines.append(f'"{key}" = "{claude_hashes[key]}"')
 lines.append("")
 
 path.write_text("\n".join(lines))
 PY
 }
 
-if [[ "$SKIP_CODEX" -eq 0 ]]; then
-  if [[ -z "$CODEX_VERSION" ]]; then
-    CODEX_TAG=$(
-      git ls-remote --tags --refs https://github.com/openai/codex 'rust-v*' \
-        | awk '{print $2}' \
-        | sed 's@refs/tags/@@' \
-        | python3 -c "$(
-          cat <<'PY'
+resolve_codex_release() {
+  local desired_version="${1:-}"
+  local api_url="https://api.github.com/repos/openai/codex/releases?per_page=100"
+  local auth_args=()
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    auth_args=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+
+  local releases_json
+  releases_json="$(curl -fsSL "${auth_args[@]}" "${api_url}")" \
+    || die "failed to fetch codex releases from GitHub"
+
+  local script
+  script="$(cat <<'PY'
+import json
+import os
 import re
 import sys
 
-tags = [line.strip() for line in sys.stdin if line.strip()]
-best = None
-best_tag = None
-for tag in tags:
-    m = re.match(r"^rust-v\.?(\d+)\.(\d+)\.(\d+)$", tag)
-    if not m:
+desired = os.environ.get("DESIRED_VERSION", "").strip()
+
+try:
+    releases = json.load(sys.stdin)
+except Exception as exc:
+    sys.exit(f"failed to parse GitHub releases JSON: {exc}")
+
+
+def version_from_tag(tag: str | None) -> str | None:
+    if not tag:
+        return None
+    match = re.search(r"(\d+\.\d+\.\d+)", tag)
+    return match.group(1) if match else None
+
+
+def has_codex_assets(rel: dict) -> bool:
+    for asset in rel.get("assets") or []:
+        name = asset.get("name", "")
+        if name.startswith("codex-") and name.endswith(".tar.gz"):
+            return True
+    return False
+
+
+candidates = []
+for rel in releases:
+    if rel.get("draft") or rel.get("prerelease"):
         continue
-    version = tuple(int(x) for x in m.groups())
-    has_dot = tag.startswith("rust-v.")
-    if (
-        best is None
-        or version > best
-        or (version == best and best_tag and best_tag.startswith("rust-v.") and not has_dot)
-    ):
-        best = version
-        best_tag = tag
-if not best_tag:
-    sys.exit("no rust-v tags found")
-print(best_tag)
+    if not has_codex_assets(rel):
+        continue
+    tag = rel.get("tag_name", "")
+    version = version_from_tag(tag)
+    if not version:
+        continue
+    candidates.append((tuple(int(x) for x in version.split(".")), tag, version))
+
+if desired:
+    for _, tag, version in candidates:
+        if desired == version or desired == tag:
+            print(f"{tag}\t{version}")
+            sys.exit(0)
+    sys.exit(f"codex release not found for {desired}")
+
+if not candidates:
+    sys.exit("no codex releases with assets found")
+
+best = max(candidates, key=lambda x: x[0])
+print(f"{best[1]}\t{best[2]}")
 PY
-        )"
-    )
-    CODEX_VERSION="${CODEX_TAG#rust-v}"
+)"
+
+  printf '%s' "${releases_json}" | DESIRED_VERSION="${desired_version}" python3 -c "${script}"
+}
+
+if [[ "$SKIP_CODEX" -eq 0 ]]; then
+  if [[ -z "$CODEX_VERSION" ]]; then
+    read -r CODEX_TAG CODEX_VERSION < <(resolve_codex_release "")
   else
-    CODEX_TAG="rust-v${CODEX_VERSION}"
+    read -r CODEX_TAG CODEX_VERSION < <(resolve_codex_release "${CODEX_VERSION}")
   fi
 
   echo "==> codex: ${CODEX_VERSION}"
@@ -214,7 +261,7 @@ PY
 
   for system in "${!CODEX_TARGETS[@]}"; do
     target="${CODEX_TARGETS[$system]}"
-    url="https://github.com/openai/codex/releases/download/rust-v${CODEX_VERSION}/codex-${target}.tar.gz"
+    url="https://github.com/openai/codex/releases/download/${CODEX_TAG}/codex-${target}.tar.gz"
     CODEX_HASHES["$system"]="$(nix store prefetch-file --json "${url}" | json_hash)"
   done
 
@@ -232,34 +279,27 @@ if [[ "$SKIP_CLAUDE" -eq 0 ]]; then
 
   echo "==> claude-code: ${CLAUDE_VERSION}"
 
-  CLAUDE_SRC_HASH=$(
-    nix store prefetch-file --json --unpack \
-      "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${CLAUDE_VERSION}.tgz" \
-      | json_hash
+  # Keep this base URL in sync with packages/claude-code.nix.
+  CLAUDE_BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+
+  declare -A CLAUDE_TARGETS=(
+    ["aarch64-darwin"]="darwin-arm64"
+    ["x86_64-darwin"]="darwin-x64"
+    ["aarch64-linux"]="linux-arm64"
+    ["x86_64-linux"]="linux-x64"
   )
+  declare -A CLAUDE_HASHES=()
 
-  CLAUDE_TGZ_PATH=$(
-    nix store prefetch-file --json \
-      "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${CLAUDE_VERSION}.tgz" \
-      | json_store_path
-  )
+  for system in "${!CLAUDE_TARGETS[@]}"; do
+    target="${CLAUDE_TARGETS[$system]}"
+    url="${CLAUDE_BASE_URL}/${CLAUDE_VERSION}/${target}/claude"
+    CLAUDE_HASHES["$system"]="$(nix store prefetch-file --json "${url}" | json_hash)"
+  done
 
-  TMPDIR="$(mktemp -d)"
-  trap 'rm -rf "${TMPDIR}"' EXIT
-
-  tar -xzf "${CLAUDE_TGZ_PATH}" -C "${TMPDIR}"
-  pushd "${TMPDIR}/package" >/dev/null
-  npm install --package-lock-only --ignore-scripts --silent
-  popd >/dev/null
-  cp "${TMPDIR}/package/package-lock.json" "${ROOT}/packages/claude-code-package-lock.json"
-
-  CLAUDE_NPM_HASH="$(nix run nixpkgs#prefetch-npm-deps -- "${ROOT}/packages/claude-code-package-lock.json")"
-  if [[ -z "${CLAUDE_NPM_HASH}" ]]; then
-    die "failed to compute claude-code npmDepsHash"
-  fi
-
-  CLAUDE_HASH="${CLAUDE_SRC_HASH}"
-  CLAUDE_NPM_HASH="${CLAUDE_NPM_HASH}"
+  CLAUDE_HASH_AARCH64_DARWIN="${CLAUDE_HASHES[aarch64-darwin]}"
+  CLAUDE_HASH_X86_64_DARWIN="${CLAUDE_HASHES[x86_64-darwin]}"
+  CLAUDE_HASH_AARCH64_LINUX="${CLAUDE_HASHES[aarch64-linux]}"
+  CLAUDE_HASH_X86_64_LINUX="${CLAUDE_HASHES[x86_64-linux]}"
   update_ai_tools_toml
 fi
 
