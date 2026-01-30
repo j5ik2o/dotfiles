@@ -24,6 +24,8 @@ in
     node = "22"
     python = "3.13.11"
     ruby = "3.3"
+    claude = "latest"
+    codex = "latest"
   '';
 
   # make apply 後に自動で不足ランタイムを導入

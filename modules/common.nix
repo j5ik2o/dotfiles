@@ -87,10 +87,9 @@
     nvd # Nix パッケージ差分表示
 
     # AI ツール
-    claude-code
+    # claude-code, codex は mise で管理
     claude-code-acp
     codex-acp
-    codex # OpenAI Codex CLI
     opencode
     gemini-cli # Google Gemini CLI
 
@@ -192,9 +191,7 @@
     source = "${self}/scripts/clean-commit-msg.py";
     executable = true;
   };
-  home.file.".local/bin/claude" = {
-    source = "${pkgs.claude-code}/bin/claude";
-  };
+  # claude は mise で管理（PATH に自動追加される）
   home.file.".local/bin/claude-code-acp" = {
     source = "${pkgs.claude-code-acp}/bin/claude-code-acp";
   };

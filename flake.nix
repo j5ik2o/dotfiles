@@ -57,10 +57,9 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
       # カスタムパッケージの overlay
+      # claude-code, codex は mise で管理
       customOverlay = final: prev: {
         gwq = final.callPackage ./packages/gwq.nix { };
-        codex = final.callPackage ./packages/codex.nix { };
-        claude-code = final.callPackage ./packages/claude-code.nix { };
         claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
       };
 
@@ -112,7 +111,6 @@
             config.allowUnfreePredicate =
               pkg:
               builtins.elem (nixpkgs.lib.getName pkg) [
-                "claude-code"
                 "1password-cli"
               ];
           };
