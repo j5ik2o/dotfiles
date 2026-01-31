@@ -264,6 +264,246 @@ in
     fi
     """
 
+    # mise 補完 (キャッシュ + 遅延読み込み)
+    [plugins.mise-completion]
+    inline = """
+    _mise_completion_defer() {
+      if command -v mise &> /dev/null; then
+        _mise_cache="$HOME/.cache/zsh/mise_completion.zsh"
+        if [[ ! -f "$_mise_cache" ]] || [[ $(command -v mise) -nt "$_mise_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          mise completion zsh > "$_mise_cache" 2>/dev/null
+        fi
+        [[ -f "$_mise_cache" ]] && source "$_mise_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _mise_completion_defer
+    else
+      _mise_completion_defer
+    fi
+    """
+
+    # rustup 補完 (キャッシュ + 遅延読み込み)
+    [plugins.rustup-completion]
+    inline = """
+    _rustup_completion_defer() {
+      if command -v rustup &> /dev/null; then
+        _rustup_cache="$HOME/.cache/zsh/rustup_completion.zsh"
+        if [[ ! -f "$_rustup_cache" ]] || [[ $(command -v rustup) -nt "$_rustup_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          rustup completions zsh > "$_rustup_cache" 2>/dev/null
+        fi
+        [[ -f "$_rustup_cache" ]] && source "$_rustup_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _rustup_completion_defer
+    else
+      _rustup_completion_defer
+    fi
+    """
+
+    # chezmoi 補完 (キャッシュ + 遅延読み込み)
+    [plugins.chezmoi-completion]
+    inline = """
+    _chezmoi_completion_defer() {
+      if command -v chezmoi &> /dev/null; then
+        _chezmoi_cache="$HOME/.cache/zsh/chezmoi_completion.zsh"
+        if [[ ! -f "$_chezmoi_cache" ]] || [[ $(command -v chezmoi) -nt "$_chezmoi_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          chezmoi completion zsh > "$_chezmoi_cache" 2>/dev/null
+        fi
+        [[ -f "$_chezmoi_cache" ]] && source "$_chezmoi_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _chezmoi_completion_defer
+    else
+      _chezmoi_completion_defer
+    fi
+    """
+
+    # bun 補完 (キャッシュ + 遅延読み込み)
+    [plugins.bun-completion]
+    inline = """
+    _bun_completion_defer() {
+      if command -v bun &> /dev/null; then
+        _bun_cache="$HOME/.cache/zsh/bun_completion.zsh"
+        if [[ ! -f "$_bun_cache" ]] || [[ $(command -v bun) -nt "$_bun_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          bun completions > "$_bun_cache" 2>/dev/null
+        fi
+        [[ -f "$_bun_cache" ]] && source "$_bun_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _bun_completion_defer
+    else
+      _bun_completion_defer
+    fi
+    """
+
+    # pnpm 補完 (キャッシュ + 遅延読み込み)
+    [plugins.pnpm-completion]
+    inline = """
+    _pnpm_completion_defer() {
+      if command -v pnpm &> /dev/null; then
+        _pnpm_cache="$HOME/.cache/zsh/pnpm_completion.zsh"
+        if [[ ! -f "$_pnpm_cache" ]] || [[ $(command -v pnpm) -nt "$_pnpm_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          pnpm completion zsh > "$_pnpm_cache" 2>/dev/null
+        fi
+        [[ -f "$_pnpm_cache" ]] && source "$_pnpm_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _pnpm_completion_defer
+    else
+      _pnpm_completion_defer
+    fi
+    """
+
+    # uv 補完 (キャッシュ + 遅延読み込み)
+    [plugins.uv-completion]
+    inline = """
+    _uv_completion_defer() {
+      if command -v uv &> /dev/null; then
+        _uv_cache="$HOME/.cache/zsh/uv_completion.zsh"
+        if [[ ! -f "$_uv_cache" ]] || [[ $(command -v uv) -nt "$_uv_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          uv generate-shell-completion zsh > "$_uv_cache" 2>/dev/null
+        fi
+        [[ -f "$_uv_cache" ]] && source "$_uv_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _uv_completion_defer
+    else
+      _uv_completion_defer
+    fi
+    """
+
+    # devbox 補完 (キャッシュ + 遅延読み込み)
+    [plugins.devbox-completion]
+    inline = """
+    _devbox_completion_defer() {
+      if command -v devbox &> /dev/null; then
+        _devbox_cache="$HOME/.cache/zsh/devbox_completion.zsh"
+        if [[ ! -f "$_devbox_cache" ]] || [[ $(command -v devbox) -nt "$_devbox_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          devbox completion zsh > "$_devbox_cache" 2>/dev/null
+        fi
+        [[ -f "$_devbox_cache" ]] && source "$_devbox_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _devbox_completion_defer
+    else
+      _devbox_completion_defer
+    fi
+    """
+
+    # procs 補完 (キャッシュ + 遅延読み込み)
+    [plugins.procs-completion]
+    inline = """
+    _procs_completion_defer() {
+      if command -v procs &> /dev/null; then
+        _procs_cache="$HOME/.cache/zsh/procs_completion.zsh"
+        if [[ ! -f "$_procs_cache" ]] || [[ $(command -v procs) -nt "$_procs_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          procs --gen-completion-out zsh > "$_procs_cache" 2>/dev/null
+        fi
+        [[ -f "$_procs_cache" ]] && source "$_procs_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _procs_completion_defer
+    else
+      _procs_completion_defer
+    fi
+    """
+
+    # ripgrep 補完 (キャッシュ + 遅延読み込み)
+    [plugins.rg-completion]
+    inline = """
+    _rg_completion_defer() {
+      if command -v rg &> /dev/null; then
+        _rg_cache="$HOME/.cache/zsh/rg_completion.zsh"
+        if [[ ! -f "$_rg_cache" ]] || [[ $(command -v rg) -nt "$_rg_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          rg --generate complete-zsh > "$_rg_cache" 2>/dev/null
+        fi
+        [[ -f "$_rg_cache" ]] && source "$_rg_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _rg_completion_defer
+    else
+      _rg_completion_defer
+    fi
+    """
+
+    # bat 補完 (キャッシュ + 遅延読み込み)
+    [plugins.bat-completion]
+    inline = """
+    _bat_completion_defer() {
+      if command -v bat &> /dev/null; then
+        _bat_cache="$HOME/.cache/zsh/bat_completion.zsh"
+        if [[ ! -f "$_bat_cache" ]] || [[ $(command -v bat) -nt "$_bat_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          bat --completion zsh > "$_bat_cache" 2>/dev/null
+        fi
+        [[ -f "$_bat_cache" ]] && source "$_bat_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _bat_completion_defer
+    else
+      _bat_completion_defer
+    fi
+    """
+
+    # starship 補完 (キャッシュ + 遅延読み込み)
+    [plugins.starship-completion]
+    inline = """
+    _starship_completion_defer() {
+      if command -v starship &> /dev/null; then
+        _starship_comp_cache="$HOME/.cache/zsh/starship_completion.zsh"
+        if [[ ! -f "$_starship_comp_cache" ]] || [[ $(command -v starship) -nt "$_starship_comp_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          starship completions zsh > "$_starship_comp_cache" 2>/dev/null
+        fi
+        [[ -f "$_starship_comp_cache" ]] && source "$_starship_comp_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _starship_completion_defer
+    else
+      _starship_completion_defer
+    fi
+    """
+
+    # elan 補完 (キャッシュ + 遅延読み込み)
+    [plugins.elan-completion]
+    inline = """
+    _elan_completion_defer() {
+      if command -v elan &> /dev/null; then
+        _elan_cache="$HOME/.cache/zsh/elan_completion.zsh"
+        if [[ ! -f "$_elan_cache" ]] || [[ $(command -v elan) -nt "$_elan_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          elan completions zsh > "$_elan_cache" 2>/dev/null
+        fi
+        [[ -f "$_elan_cache" ]] && source "$_elan_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _elan_completion_defer
+    else
+      _elan_completion_defer
+    fi
+    """
+
     # ============================================================
     # Prompt & Tools (最後に読み込み)
     # ============================================================
