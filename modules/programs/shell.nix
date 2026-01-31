@@ -244,6 +244,26 @@ in
     fi
     """
 
+    # jj (Jujutsu) 補完 (キャッシュ + 遅延読み込み)
+    [plugins.jj-completion]
+    inline = """
+    _jj_completion_defer() {
+      if command -v jj &> /dev/null; then
+        _jj_cache="$HOME/.cache/zsh/jj_completion.zsh"
+        if [[ ! -f "$_jj_cache" ]] || [[ $(command -v jj) -nt "$_jj_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          jj util completion zsh > "$_jj_cache" 2>/dev/null
+        fi
+        [[ -f "$_jj_cache" ]] && source "$_jj_cache"
+      fi
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _jj_completion_defer
+    else
+      _jj_completion_defer
+    fi
+    """
+
     # ============================================================
     # Prompt & Tools (最後に読み込み)
     # ============================================================
