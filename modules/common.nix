@@ -30,6 +30,7 @@
     ghq
     gwq # Git worktree マネージャ
     tig
+    jujutsu # Git 互換 VCS (jj コマンド)
     # lazygit は programs.lazygit で管理
 
     # シェルツール
@@ -142,6 +143,7 @@
   # ============================================================
   imports = [
     ./programs/git.nix
+    ./programs/jujutsu.nix
     ./programs/shell.nix
     ./programs/starship.nix
     ./programs/catppuccin.nix

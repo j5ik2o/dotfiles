@@ -9,6 +9,8 @@
 let
   # WSL 検出
   isWSL = builtins.pathExists /proc/sys/fs/binfmt_misc/WSLInterop;
+  # 共通ユーザー情報
+  userInfo = import ../user-info.nix;
 in
 {
   # ============================================================
@@ -21,8 +23,7 @@ in
     settings = {
       # ユーザー情報
       user = {
-        name = "Junichi Kato";
-        email = "j5ik2o@gmail.com"; # 必要に応じて変更
+        inherit (userInfo) name email;
       };
 
       # デフォルトブランチ
