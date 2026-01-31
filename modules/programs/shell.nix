@@ -775,8 +775,8 @@ in
       # 単語区切り文字
       WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
-      # 補完設定
-      zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+      # 補完設定 (大文字小文字を区別しない)
+      zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
       zstyle ':completion:*' menu select
       zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
 
@@ -795,6 +795,7 @@ in
           --layout=reverse
           --border
           --inline-info
+          -i
         '
       fi
 
@@ -1025,6 +1026,7 @@ in
       "--layout=reverse"
       "--border"
       "--inline-info"
+      "-i"  # case-insensitive
     ];
   };
 
