@@ -76,6 +76,8 @@ lazy.setup({
     -- import LazyVim extras
     { import = "lazyvim.plugins.extras.editor.neo-tree" },
     { import = "lazyvim.plugins.extras.editor.fzf" },
+    { import = "lazyvim.plugins.extras.editor.telescope" },
+    { import = "lazyvim.plugins.extras.coding.blink" },
     { import = "lazyvim.plugins.extras.ai.copilot" },
     { import = "lazyvim.plugins.extras.lang.java" },
     { import = "lazyvim.plugins.extras.lang.scala" },

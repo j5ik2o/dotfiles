@@ -14,6 +14,8 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 - LSP これだけ: `docs/lsp.md`
 - Tree-sitter これだけ: `docs/tree-sitter.md`
 - Neo-tree これだけ: `docs/neo-tree.md`
+- blink.cmp これだけ: `docs/blink-cmp.md`
+- Telescope これだけ: `docs/telescope.md`
 
 ## カスタム追加
 
