@@ -8,6 +8,7 @@ web_search = "live"
 rmcp_client = true
 skills = true
 unified_exec = true
+apps = true
 
 [mcp_servers.serena]
 command = "uvx"
