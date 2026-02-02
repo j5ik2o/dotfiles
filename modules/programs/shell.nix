@@ -25,7 +25,7 @@ in
     python = "3.13.11"
     ruby = "3.3"
     claude = "2.1.27"
-    codex = "0.93.0"
+    codex = "0.94.0"
   '';
 
   # make apply 後に自動で不足ランタイムを導入
