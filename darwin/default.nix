@@ -24,24 +24,22 @@
     # darwin-rebuild は LocalHostName を使用するため、同じ順序で取得
     ACTUAL_HOST_RAW=$(scutil --get LocalHostName 2>/dev/null || scutil --get HostName 2>/dev/null || scutil --get ComputerName 2>/dev/null || hostname)
     EXPECTED_HOST_RAW="${expectedHostName}"
-    ACTUAL_HOST=$(echo "$ACTUAL_HOST_RAW" | tr '.-' '_')
-    EXPECTED_HOST=$(echo "$EXPECTED_HOST_RAW" | tr '.-' '_')
 
-    if [ "$ACTUAL_HOST" != "$EXPECTED_HOST" ]; then
+    if [ "$ACTUAL_HOST_RAW" != "$EXPECTED_HOST_RAW" ]; then
       echo ""
       echo "❌ ホスト名が一致しません！"
       echo ""
-      echo "   期待されるホスト: $EXPECTED_HOST (raw: $EXPECTED_HOST_RAW)"
-      echo "   実際のホスト名:   $ACTUAL_HOST (raw: $ACTUAL_HOST_RAW)"
+      echo "   期待されるホスト: $EXPECTED_HOST_RAW"
+      echo "   実際のホスト名:   $ACTUAL_HOST_RAW"
       echo ""
-      echo "このNix設定は '$EXPECTED_HOST' 用です。"
-      echo "現在のホスト '$ACTUAL_HOST' では実行できません。"
+      echo "このNix設定は '$EXPECTED_HOST_RAW' 用です。"
+      echo "現在のホスト '$ACTUAL_HOST_RAW' では実行できません。"
       echo ""
-      echo "正しい設定を使用するか、hosts/$ACTUAL_HOST.nix を作成してください。"
+      echo "正しい設定を使用するか、hosts/$ACTUAL_HOST_RAW.nix を作成してください。"
       echo ""
       exit 1
     fi
-    echo "✅ ホスト名チェック完了: $ACTUAL_HOST"
+    echo "✅ ホスト名チェック完了: $ACTUAL_HOST_RAW"
   '';
 
   # ============================================================
