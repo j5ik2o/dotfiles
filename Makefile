@@ -29,7 +29,7 @@ HOST_FILE := $(CURDIR)/hosts/$(HOST_RAW).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
 ifneq ($(HOST_CONFIG_FOUND),)
-  HM_CONFIG := $(HOST)
+  HM_CONFIG := $(HOST_RAW)
   ifeq ($(UNAME),Darwin)
     # darwin-rebuild は正規化前の名前で設定を検索
     DARWIN_CONFIG := $(HOST_RAW)
