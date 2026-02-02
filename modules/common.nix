@@ -47,6 +47,8 @@
     yq
     direnv
     mise # 開発環境マネージャ
+    zellij # ターミナルマルチプレクサ
+    tmux # ターミナルマルチプレクサ（代替）
 
     # エディタ
     # neovim は programs.neovim で管理
@@ -86,6 +88,9 @@
     devbox # Nix ベース開発環境
     chezmoi # シークレット管理付き dotfiles
     nvd # Nix パッケージ差分表示
+    tdf # ターミナル PDF ビューア
+    chafa # ターミナル画像ビューア
+    poppler-utils # PDF ツール (pdftoppm 等)
 
     # AI ツール
     # claude-code, codex は mise で管理
@@ -152,6 +157,8 @@
     ./programs/direnv.nix
     ./programs/opencode.nix
     ./programs/clawdbot.nix
+    ./programs/zellij.nix
+    ./programs/tmux.nix
   ];
 
   # ============================================================
