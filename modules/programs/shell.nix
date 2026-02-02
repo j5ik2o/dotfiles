@@ -31,8 +31,8 @@ in
   # make apply 後に自動で不足ランタイムを導入
   home.activation.miseAutoInstall = lib.hm.dag.entryAfter [ "installPackages" ] ''
     _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
-    _mise_pkg_config_path="${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig"
-    _mise_ruby_configure_opts="--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib"
+    _mise_pkg_config_path="${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.zlib.dev}/lib/pkgconfig:${pkgs.libffi.dev}/lib/pkgconfig"
+    _mise_ruby_configure_opts="--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib --with-openssl-include=${pkgs.openssl.dev}/include --with-openssl-lib=${pkgs.openssl.out}/lib --with-zlib-include=${pkgs.zlib.dev}/include --with-zlib-lib=${pkgs.zlib}/lib --with-libffi-include=${pkgs.libffi.dev}/include --with-libffi-lib=${pkgs.libffi}/lib"
     if [ -x "${pkgs.mise}/bin/mise" ]; then
       if env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls --global --missing --no-header 2>/dev/null | grep -q '.'; then
         echo "home-manager: mise install (missing tools)" >&2
@@ -42,6 +42,83 @@ in
       fi
     fi
     unset _mise_path _mise_pkg_config_path _mise_ruby_configure_opts
+  '';
+
+  # mise 管理ランタイムが参照する /nix/store を GC から保護する
+  home.activation.misePinNixLibs = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
+    _uname="$(uname -s)"
+    if [ "$_uname" != "Linux" ] && [ "$_uname" != "Darwin" ]; then
+      # 未対応 OS は何もしない
+      _uname=""
+    fi
+    _nix_store="${pkgs.nix}/bin/nix-store"
+    if [ -z "$_uname" ] || [ ! -x "$_nix_store" ]; then
+      # nix が無い環境は何もしない
+      _uname=""
+    fi
+    _awk="${pkgs.gawk}/bin/awk"
+    _otool="${if pkgs.stdenv.isDarwin then "${pkgs.darwin.cctools}/bin/otool" else "/usr/bin/otool"}"
+    _ldd="${if pkgs.stdenv.isLinux then "${pkgs.glibc.bin}/bin/ldd" else "/usr/bin/ldd"}"
+    if [ "$_uname" = "Darwin" ] && [ ! -x "$_otool" ]; then
+      _otool="/usr/bin/otool"
+    fi
+    if [ "$_uname" = "Linux" ] && [ ! -x "$_ldd" ]; then
+      _ldd="/usr/bin/ldd"
+    fi
+    _mise_root="''${XDG_DATA_HOME:-$HOME/.local/share}/mise"
+    _installs="$_mise_root/installs"
+    _gcroot_dir="$_mise_root/gcroots"
+    if [ ! -d "$_installs" ]; then
+      _uname=""
+    fi
+    if [ "$_uname" = "Darwin" ] && [ ! -x "$_otool" ]; then
+      _uname=""
+    fi
+    if [ "$_uname" = "Linux" ] && [ ! -x "$_ldd" ]; then
+      _uname=""
+    fi
+    if [ -n "$_uname" ]; then
+      mkdir -p "$_gcroot_dir"
+      _tmp="$(mktemp)"
+      _tmp_bases="$(mktemp)"
+
+      find "$_installs" -type f \( -path "*/bin/*" -o -name "*.so" -o -name "*.so.*" -o -name "*.dylib" -o -name "*.bundle" \) -print0 2>/dev/null \
+        | while IFS= read -r -d "" f; do
+            if [ "$_uname" = "Linux" ]; then
+              "$_ldd" "$f" 2>/dev/null | "$_awk" '
+                $1 ~ /^\/nix\/store/ { print $1 }
+                $3 ~ /^\/nix\/store/ { print $3 }
+              ' || true
+            else
+              "$_otool" -L "$f" 2>/dev/null | "$_awk" '
+                $1 ~ /^\/nix\/store/ { print $1 }
+              ' || true
+            fi
+          done \
+        | sort -u > "$_tmp"
+
+      if [ -s "$_tmp" ]; then
+        "$_awk" -F/ '{print $NF}' "$_tmp" | sort -u > "$_tmp_bases"
+
+        while IFS= read -r p; do
+          [ -n "$p" ] || continue
+          root="$_gcroot_dir/$(basename "$p")"
+          if [ ! -e "$root" ]; then
+            "$_nix_store" --realise --add-root "$root" --indirect "$p" >/dev/null 2>&1 || true
+          fi
+        done < "$_tmp"
+
+        for root in "$_gcroot_dir"/*; do
+          [ -e "$root" ] || continue
+          base="$(basename "$root")"
+          if ! grep -qx "$base" "$_tmp_bases"; then
+            rm -f "$root"
+          fi
+        done
+      fi
+
+      rm -f "$_tmp" "$_tmp_bases"
+    fi
   '';
 
   # ============================================================

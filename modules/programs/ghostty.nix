@@ -23,6 +23,16 @@ in
           # +tic は内部で tic(ncurses) を使うため PATH に追加する
           _installed=0
           for _app_dir in "/Applications/Ghostty.app" "$HOME/Applications/Ghostty.app"; do
+            _terminfo_src="$_app_dir/Contents/Resources/terminfo"
+            if [ -d "$_terminfo_src" ]; then
+              if [ -d "$HOME/.terminfo" ]; then
+                chmod -R u+rwx "$HOME/.terminfo" 2>/dev/null || true
+                rm -rf "$HOME/.terminfo" 2>/dev/null || true
+              fi
+              cp -rL --no-preserve=all "$_terminfo_src" "$HOME/.terminfo"
+              _installed=1
+              break
+            fi
             _tic_cmd="$_app_dir/Contents/Resources/ghostty/+tic"
             if [ -x "$_tic_cmd" ]; then
               if PATH="${pkgs.ncurses}/bin:$PATH" "$_tic_cmd"; then
@@ -34,7 +44,7 @@ in
           if [ "$_installed" -eq 0 ]; then
             echo "WARNING: xterm-ghostty terminfo installation failed"
           fi
-          unset _installed _app_dir _tic_cmd
+          unset _installed _app_dir _tic_cmd _terminfo_src
         ''
       else
         ''

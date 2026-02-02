@@ -141,6 +141,12 @@
     pkg-config
     libyaml # Ruby psych extension
     libyaml.dev # Ruby psych headers / pkg-config
+    openssl.out # Ruby openssl extension (libs)
+    openssl.dev # Ruby openssl headers / pkg-config
+    zlib # Ruby zlib extension (libs)
+    zlib.dev # Ruby zlib headers / pkg-config
+    libffi # Ruby fiddle extension (libs)
+    libffi.dev # Ruby fiddle headers / pkg-config
   ];
 
   # ============================================================
@@ -172,9 +178,18 @@
     LC_ALL = "en_US.UTF-8";
     # 言語ランタイム (JAVA_HOME 等) は mise で管理
 
-    # mise での Ruby ビルド用 (libyaml, openssl)
-    PKG_CONFIG_PATH = "${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig";
-    RUBY_CONFIGURE_OPTS = "--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib";
+    # mise での Ruby ビルド用 (libyaml, openssl, zlib, libffi)
+    PKG_CONFIG_PATH = "${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.zlib.dev}/lib/pkgconfig:${pkgs.libffi.dev}/lib/pkgconfig";
+    RUBY_CONFIGURE_OPTS = lib.concatStringsSep " " [
+      "--with-libyaml-include=${pkgs.libyaml.dev}/include"
+      "--with-libyaml-lib=${pkgs.libyaml}/lib"
+      "--with-openssl-include=${pkgs.openssl.dev}/include"
+      "--with-openssl-lib=${pkgs.openssl.out}/lib"
+      "--with-zlib-include=${pkgs.zlib.dev}/include"
+      "--with-zlib-lib=${pkgs.zlib}/lib"
+      "--with-libffi-include=${pkgs.libffi.dev}/include"
+      "--with-libffi-lib=${pkgs.libffi}/lib"
+    ];
   };
 
   # ============================================================
