@@ -100,7 +100,7 @@ in
 
       # ghq 設定
       ghq = {
-        root = "/Users/${username}/Sources";
+        root = "${config.home.homeDirectory}/Sources";
       };
 
       # エイリアス
