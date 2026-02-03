@@ -22,6 +22,9 @@ in
     # 既存ファイルがあっても Home Manager の定義を優先する
     force = true;
     text = ''
+      [settings]
+      github.github_attestations = false
+
       [tools]
       java = "temurin-21"
       node = "22"
