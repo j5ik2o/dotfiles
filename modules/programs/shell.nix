@@ -18,15 +18,19 @@ in
   # ============================================================
   # mise (言語ランタイム管理)
   # ============================================================
-  xdg.configFile."mise/config.toml".text = ''
-    [tools]
-    java = "temurin-21"
-    node = "22"
-    python = "3.13.11"
-    ruby = "3.3"
-    claude = "2.1.27"
-    codex = "0.94.0"
-  '';
+  xdg.configFile."mise/config.toml" = {
+    # 既存ファイルがあっても Home Manager の定義を優先する
+    force = true;
+    text = ''
+      [tools]
+      java = "temurin-21"
+      node = "22"
+      python = "3.13.11"
+      ruby = "3.3"
+      claude = "2.1.27"
+      codex = "0.94.0"
+    '';
+  };
 
   # make apply 後に自動で不足ランタイムを導入
   home.activation.miseAutoInstall = lib.hm.dag.entryAfter [ "installPackages" ] ''
