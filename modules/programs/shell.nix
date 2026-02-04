@@ -13,6 +13,31 @@ let
       promptProfileRaw
     else
       "p10k";
+  misePkgConfigPath = lib.concatStringsSep ":" [
+    "${pkgs.libyaml.dev}/lib/pkgconfig"
+    "${pkgs.openssl.dev}/lib/pkgconfig"
+    "${pkgs.zlib.dev}/lib/pkgconfig"
+    "${pkgs.libffi.dev}/lib/pkgconfig"
+  ];
+  miseRubyConfigureOpts = lib.concatStringsSep " " [
+    "--with-libyaml-include=${pkgs.libyaml.dev}/include"
+    "--with-libyaml-lib=${pkgs.libyaml}/lib"
+    "--with-openssl-include=${pkgs.openssl.dev}/include"
+    "--with-openssl-lib=${pkgs.openssl.out}/lib"
+    "--with-zlib-include=${pkgs.zlib.dev}/include"
+    "--with-zlib-lib=${pkgs.zlib}/lib"
+    "--with-libffi-include=${pkgs.libffi.dev}/include"
+    "--with-libffi-lib=${pkgs.libffi}/lib"
+  ];
+  miseToolchain = {
+    cc = "${pkgs.stdenv.cc}/bin/cc";
+    cxx = "${pkgs.stdenv.cc}/bin/c++";
+    ar = "${pkgs.stdenv.cc.bintools}/bin/ar";
+    ranlib = "${pkgs.stdenv.cc.bintools}/bin/ranlib";
+    nm = "${pkgs.stdenv.cc.bintools}/bin/nm";
+    strip = "${pkgs.stdenv.cc.bintools}/bin/strip";
+    pkgConfig = "${pkgs."pkg-config"}/bin/pkg-config";
+  };
 in
 {
   # ============================================================
@@ -38,18 +63,62 @@ in
   # make apply 後に自動で不足ランタイムを導入
   home.activation.miseAutoInstall = lib.hm.dag.entryAfter [ "installPackages" ] ''
     _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
-    _mise_pkg_config_path="${pkgs.libyaml.dev}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.zlib.dev}/lib/pkgconfig:${pkgs.libffi.dev}/lib/pkgconfig"
-    _mise_ruby_configure_opts="--with-libyaml-include=${pkgs.libyaml.dev}/include --with-libyaml-lib=${pkgs.libyaml}/lib --with-openssl-include=${pkgs.openssl.dev}/include --with-openssl-lib=${pkgs.openssl.out}/lib --with-zlib-include=${pkgs.zlib.dev}/include --with-zlib-lib=${pkgs.zlib}/lib --with-libffi-include=${pkgs.libffi.dev}/include --with-libffi-lib=${pkgs.libffi}/lib"
+    _mise_pkg_config_path="${misePkgConfigPath}"
+    _mise_ruby_configure_opts="${miseRubyConfigureOpts}"
+    _mise_cc="${miseToolchain.cc}"
+    _mise_cxx="${miseToolchain.cxx}"
+    _mise_ar="${miseToolchain.ar}"
+    _mise_ranlib="${miseToolchain.ranlib}"
+    _mise_nm="${miseToolchain.nm}"
+    _mise_strip="${miseToolchain.strip}"
+    _mise_pkg_config="${miseToolchain.pkgConfig}"
     if [ -x "${pkgs.mise}/bin/mise" ]; then
       if env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls --global --missing --no-header 2>/dev/null | grep -q '.'; then
         echo "home-manager: mise install (missing tools)" >&2
-        if ! env PATH="$_mise_path:$PATH" PKG_CONFIG_PATH="$_mise_pkg_config_path" RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts" "${pkgs.mise}/bin/mise" install --yes; then
+        if ! env PATH="$_mise_path:$PATH" \
+          CC="$_mise_cc" CXX="$_mise_cxx" AR="$_mise_ar" RANLIB="$_mise_ranlib" NM="$_mise_nm" STRIP="$_mise_strip" \
+          PKG_CONFIG="$_mise_pkg_config" PKG_CONFIG_PATH="$_mise_pkg_config_path" \
+          RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts" \
+          "${pkgs.mise}/bin/mise" install --yes; then
           echo "home-manager: mise install failed. Run 'mise install' manually." >&2
         fi
       fi
     fi
     unset _mise_path _mise_pkg_config_path _mise_ruby_configure_opts
+    unset _mise_cc _mise_cxx _mise_ar _mise_ranlib _mise_nm _mise_strip _mise_pkg_config
   '';
+
+  home.file.".local/bin/mise" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      export CC="${miseToolchain.cc}"
+      export CXX="${miseToolchain.cxx}"
+      export AR="${miseToolchain.ar}"
+      export RANLIB="${miseToolchain.ranlib}"
+      export NM="${miseToolchain.nm}"
+      export STRIP="${miseToolchain.strip}"
+      export PKG_CONFIG="${miseToolchain.pkgConfig}"
+
+      _mise_pkg_config_path="${misePkgConfigPath}"
+      if [ -n "''${PKG_CONFIG_PATH:-}" ]; then
+        export PKG_CONFIG_PATH="$_mise_pkg_config_path:$PKG_CONFIG_PATH"
+      else
+        export PKG_CONFIG_PATH="$_mise_pkg_config_path"
+      fi
+
+      _mise_ruby_configure_opts="${miseRubyConfigureOpts}"
+      if [ -n "''${RUBY_CONFIGURE_OPTS:-}" ]; then
+        export RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts $RUBY_CONFIGURE_OPTS"
+      else
+        export RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts"
+      fi
+
+      exec "${pkgs.mise}/bin/mise" "$@"
+    '';
+  };
 
   # mise 管理ランタイムが参照する /nix/store を GC から保護する
   home.activation.misePinNixLibs = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
