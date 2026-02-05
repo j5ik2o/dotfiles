@@ -161,7 +161,7 @@
       time = {
         disabled = false;
         style = "fg:sapphire";
-        format = "[ 󱩍 $time ]($style)";
+        format = "[  $time ]($style)";
         time_format = "%T";
         utc_time_offset = "+9";
       };
