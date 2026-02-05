@@ -123,7 +123,7 @@
       };
 
       git_metrics = {
-        disabled = false;
+        disabled = true;
         format = "([+$added]($added_style))[]($added_style)";
         added_style = "fg:crust bg:yellow";
         deleted_style = "fg:red bg:yellow";

@@ -4,6 +4,8 @@ vim.opt.number = true
 vim.opt.relativenumber = false
 vim.g.colorscheme = "catppuccin"
 vim.opt.spell = false
+-- yank をシステムクリップボードへ
+vim.opt.clipboard = "unnamedplus"
 
 -- Diagnostics: keep code view clean; use Trouble/loclist instead
 vim.diagnostic.config({

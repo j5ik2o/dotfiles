@@ -286,6 +286,28 @@ in
     [plugins.fzf-tab]
     github = "Aloxaf/fzf-tab"
     proto = "https"
+    apply = ["defer"]
+
+    # fzf keybindings/completions (キャッシュ + 遅延読み込み)
+    [plugins.fzf]
+    inline = """
+    _fzf_init() {
+      if command -v fzf &> /dev/null; then
+        _fzf_cache="$HOME/.cache/zsh/fzf.zsh"
+        if [[ ! -f "$_fzf_cache" ]] || [[ $(command -v fzf) -nt "$_fzf_cache" ]]; then
+          mkdir -p "$HOME/.cache/zsh"
+          fzf --zsh > "$_fzf_cache" 2>/dev/null
+        fi
+        [[ -f "$_fzf_cache" ]] && source "$_fzf_cache"
+      fi
+      unset -f _fzf_init
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _fzf_init
+    else
+      _fzf_init
+    fi
+    """
 
     # ============================================================
     # Git enhancements
@@ -664,28 +686,58 @@ in
     # mise (言語ランタイム管理)
     [plugins.mise]
     inline = """
-    if command -v mise &> /dev/null; then
-      eval "$(mise activate zsh)"
+    _mise_init() {
+      if command -v mise &> /dev/null; then
+        # 初期プロンプト前に hook-env を走らせない
+        eval "$(mise activate zsh --no-hook-env)"
+        # precmd での hook-env 実行を外し、起動速度を優先
+        typeset -ag precmd_functions
+        precmd_functions=( ''${precmd_functions:#_mise_hook_precmd} )
+        # 初回のコマンド実行直前に一度だけ hook-env を実行
+        _mise_preexec_once() {
+          if (( $+functions[_mise_hook] )); then
+            _mise_hook
+          fi
+          preexec_functions=( ''${preexec_functions:#_mise_preexec_once} )
+          unset -f _mise_preexec_once
+        }
+        autoload -Uz add-zsh-hook
+        add-zsh-hook preexec _mise_preexec_once
+      fi
+      unset -f _mise_init
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _mise_init
+    else
+      _mise_init
     fi
     """
 
     # direnv (環境自動切り替え)
     [plugins.direnv]
     inline = """
-    if command -v direnv &> /dev/null; then
-      _direnv_hook() {
-        trap -- "" SIGINT
-        eval "$(command direnv export zsh)"
-        trap - SIGINT
-      }
-      typeset -ag precmd_functions
-      if (( ! ''${precmd_functions[(I)_direnv_hook]} )); then
-        precmd_functions=(_direnv_hook $precmd_functions)
+    _direnv_init() {
+      if command -v direnv &> /dev/null; then
+        _direnv_hook() {
+          trap -- "" SIGINT
+          eval "$(command direnv export zsh)"
+          trap - SIGINT
+        }
+        typeset -ag precmd_functions
+        if (( ! ''${precmd_functions[(I)_direnv_hook]} )); then
+          precmd_functions=(_direnv_hook $precmd_functions)
+        fi
+        typeset -ag chpwd_functions
+        if (( ! ''${chpwd_functions[(I)_direnv_hook]} )); then
+          chpwd_functions=(_direnv_hook $chpwd_functions)
+        fi
       fi
-      typeset -ag chpwd_functions
-      if (( ! ''${chpwd_functions[(I)_direnv_hook]} )); then
-        chpwd_functions=(_direnv_hook $chpwd_functions)
-      fi
+      unset -f _direnv_init
+    }
+    if (( $+functions[zsh-defer] )); then
+      zsh-defer _direnv_init
+    else
+      _direnv_init
     fi
     """
 
@@ -783,7 +835,7 @@ in
         _ZSH_START_EPOCHREALTIME="$EPOCHREALTIME"
       fi
 
-      # 起動計測: 初回プロンプト表示(入力可能)までの時間を記録
+      # 起動計測: 初回プロンプトで入力受付可能になった時点を記録
       if (( _zsh_profile_enabled )) && [[ -t 0 ]]; then
         _zsh_profile_prompt_ready() {
           if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
@@ -795,39 +847,76 @@ in
               print -r -- "prompt_ready=''${_zsh_elapsed}s"
             } >>| "$_zsh_profile_log" 2>&1
           fi
-          precmd_functions=(''${precmd_functions:#_zsh_profile_prompt_ready})
+          if (( $+functions[add-zle-hook-widget] )); then
+            add-zle-hook-widget -d zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
+          fi
           unset -f _zsh_profile_prompt_ready
           unset _ZSH_START_EPOCHREALTIME
         }
+        _zsh_profile_setup_prompt_ready() {
+          zmodload zsh/zle 2>/dev/null || true
+          autoload -Uz add-zle-hook-widget
+          add-zle-hook-widget -Uz zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
+          precmd_functions=(''${precmd_functions:#_zsh_profile_setup_prompt_ready})
+          unset -f _zsh_profile_setup_prompt_ready
+        }
         autoload -Uz add-zsh-hook
-        add-zsh-hook precmd _zsh_profile_prompt_ready
+        add-zsh-hook precmd _zsh_profile_setup_prompt_ready
       fi
 
-      # compinit 最適化 (デフォルトは高速モード) - sheldon より先に実行
-      zmodload zsh/stat 2>/dev/null || true
-      zmodload zsh/datetime 2>/dev/null || true
+      # compinit 遅延初期化 (初回補完/compdef で実行)
       autoload -Uz compinit
       _comp_dump="$_zsh_cache_dir/.zcompdump"
-      _comp_dump_age_hours=99999
-      if zstat -A _comp_stat +mtime -- "$_comp_dump" 2>/dev/null; then
-        _comp_dump_age_hours=$(( (EPOCHSECONDS - _comp_stat[1]) / 3600 ))
-      fi
-      _zsh_compinit_secure="''${ZSH_COMPINIT_SECURE:-0}"
-      if [[ "$_zsh_compinit_secure" == "1" ]]; then
-        # セキュアモード: 1日1回だけ compaudit を実行
-        if (( _comp_dump_age_hours >= 24 )); then
+      _zsh_compinit_state=0
+      _zsh_compdef_queue=()
+
+      _zsh_compinit_run() {
+        (( _zsh_compinit_state == 2 )) && return 0
+        (( _zsh_compinit_state == 1 )) && return 0
+        _zsh_compinit_state=1
+        if [[ "''${ZSH_COMPINIT_SECURE:-0}" == "1" ]]; then
           compinit -d "$_comp_dump"
         else
-          compinit -C -d "$_comp_dump"
+          if [[ -f "$_comp_dump" ]]; then
+            compinit -C -d "$_comp_dump"
+          else
+            compinit -d "$_comp_dump"
+          fi
         fi
+        _zsh_compinit_state=2
+        if (( ''${#_zsh_compdef_queue[@]} )); then
+          local _zsh_compdef_call
+          for _zsh_compdef_call in "''${_zsh_compdef_queue[@]}"; do
+            eval "compdef $_zsh_compdef_call"
+          done
+          _zsh_compdef_queue=()
+        fi
+      }
+
+      if [[ -o zle ]]; then
+        compdef() {
+          if (( _zsh_compinit_state == 2 )); then
+            compdef "$@"
+            return 0
+          fi
+          _zsh_compdef_queue+=("''${(q)@}")
+          return 0
+        }
+
+        _zsh_complete_or_init() {
+          _zsh_compinit_run
+          zle expand-or-complete
+        }
+        zle -N _zsh_complete_or_init
+        _zsh_bind_complete_or_init() {
+          bindkey -M emacs '^I' _zsh_complete_or_init
+          bindkey -M viins '^I' _zsh_complete_or_init
+          bindkey -M vicmd '^I' _zsh_complete_or_init
+        }
+        _zsh_bind_complete_or_init
       else
-        # 高速モード: compaudit をスキップして compdump を再生成
-        if (( _comp_dump_age_hours >= 24 )); then
-          rm -f "$_comp_dump" "$_comp_dump.zwc"
-        fi
-        compinit -C -d "$_comp_dump"
+        _zsh_compinit_run
       fi
-      unset _zsh_compinit_secure _comp_stat _comp_dump_age_hours
 
       # ============================================================
       # プロンプト選択 (ビルド時に決定)
@@ -1031,6 +1120,7 @@ in
       v = "command nvim";
       vi = "command nvim";
       vim = "command nvim";
+      view = "command nvim -R";
 
       # Git (追加)
       gs = "git status -sb";
@@ -1171,7 +1261,7 @@ in
   # ============================================================
   programs.fzf = {
     enable = true;
-    enableZshIntegration = true;
+    enableZshIntegration = false;
     enableFishIntegration = true;
     defaultCommand = "fd --type f --hidden --follow --exclude .git";
     defaultOptions = [
