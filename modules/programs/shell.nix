@@ -9,7 +9,13 @@ let
   promptProfileEnv = builtins.getEnv "PROMPT_PROFILE";
   promptProfileRaw = lib.toLower (if promptProfileEnv == "" then "starship" else promptProfileEnv);
   promptProfile =
-    if builtins.elem promptProfileRaw [ "p10k" "pure" "starship" ] then
+    if
+      builtins.elem promptProfileRaw [
+        "p10k"
+        "pure"
+        "starship"
+      ]
+    then
       promptProfileRaw
     else
       "p10k";
@@ -56,7 +62,7 @@ in
       python = "3.13.11"
       ruby = "3.3"
       claude = "2.1.27"
-      codex = "0.96.0"
+      codex = "0.97.0"
     '';
   };
 
@@ -772,7 +778,7 @@ in
     enable = true;
     # sheldon を使う場合、home-manager の組み込み機能は無効化
     autosuggestion.enable = false;
-    enableCompletion = false;  # カスタム最適化版を使用
+    enableCompletion = false; # カスタム最適化版を使用
     syntaxHighlighting.enable = false;
 
     # hm-session-vars が親プロセスからのフラグでスキップされる場合でも、
@@ -1269,7 +1275,7 @@ in
       "--layout=reverse"
       "--border"
       "--inline-info"
-      "-i"  # case-insensitive
+      "-i" # case-insensitive
     ];
   };
 
