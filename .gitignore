@@ -7,10 +7,10 @@ result
 /.codex/sessions/
 /.codex/tmp/
 /.codex/log
-/.codex/auth.json
-/.codex/history.jsonl
-/.codex/models_cache.json
-/.codex/version.json
+/.codex/*.json
+/.codex/*.jsonl
+/.codex/shell_snapshots/*.sh
+
 /.serena/cache/
 
 # API Keys and Tokens (security)
