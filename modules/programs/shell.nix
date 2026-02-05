@@ -694,8 +694,8 @@ in
     inline = """
     _mise_init() {
       if command -v mise &> /dev/null; then
-        # 初期プロンプト前に hook-env を走らせない
-        eval "$(mise activate zsh --no-hook-env)"
+        # mise を有効化（_mise_hook を定義させる）
+        eval "$(mise activate zsh)"
         # precmd での hook-env 実行を外し、起動速度を優先
         typeset -ag precmd_functions
         precmd_functions=( ''${precmd_functions:#_mise_hook_precmd} )
