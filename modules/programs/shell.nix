@@ -217,19 +217,14 @@ in
     [plugins]
 
     # ============================================================
-    # Deferred loading (遅延読み込み用テンプレート)
+    # Plugin loading template
     # ============================================================
     [templates]
-    defer = "{{ hooks?.pre | nl }}{% for file in files %}zsh-defer source \"{{ file }}\"\n{% endfor %}{{ hooks?.post | nl }}"
+    immediate = "{{ hooks?.pre | nl }}{% for file in files %}source \"{{ file }}\"\n{% endfor %}{{ hooks?.post | nl }}"
 
     # ============================================================
     # Core plugins
     # ============================================================
-
-    # zsh-defer (遅延読み込みの基盤)
-    [plugins.zsh-defer]
-    github = "romkatv/zsh-defer"
-    proto = "https"
 
     # Powerlevel10k (高速プロンプト)
     [plugins.powerlevel10k]
@@ -256,23 +251,23 @@ in
     proto = "https"
 
     # ============================================================
-    # Enhancements (defer で遅延読み込み)
+    # Enhancements
     # ============================================================
 
     [plugins.zsh-autosuggestions]
     github = "zsh-users/zsh-autosuggestions"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     [plugins.zsh-syntax-highlighting]
     github = "zsh-users/zsh-syntax-highlighting"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     [plugins.zsh-history-substring-search]
     github = "zsh-users/zsh-history-substring-search"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     # ============================================================
     # Productivity
@@ -281,36 +276,24 @@ in
     [plugins.zsh-autopair]
     github = "hlissner/zsh-autopair"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     [plugins.zsh-you-should-use]
     github = "MichaelAquilina/zsh-you-should-use"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
-    # fzf-tab (fzf で補完をリッチに)
+    # fzf-tab (複数候補時の補完UI)
     [plugins.fzf-tab]
     github = "Aloxaf/fzf-tab"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
-    # fzf keybindings/completions (キャッシュ + 遅延読み込み)
+    # fzf shell integration
+    # Tab 補完の安定性を優先し、fzf 側の ^I 上書きは行わない。
     [plugins.fzf]
     inline = """
-    _fzf_init() {
-      if command -v fzf &> /dev/null; then
-        _fzf_cache="$HOME/.cache/zsh/fzf.zsh"
-        if [[ ! -f "$_fzf_cache" ]] || [[ $(command -v fzf) -nt "$_fzf_cache" ]]; then
-          mkdir -p "$HOME/.cache/zsh"
-          fzf --zsh > "$_fzf_cache" 2>/dev/null
-        fi
-        [[ -f "$_fzf_cache" ]] && source "$_fzf_cache"
-      fi
-      unset -f _fzf_init
-    }
-    if [[ -o interactive ]] && [[ -o zle ]]; then
-      _fzf_init
-    fi
+    :
     """
 
     # ============================================================
@@ -320,7 +303,7 @@ in
     [plugins.forgit]
     github = "wfxr/forgit"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     # ============================================================
     # Directory navigation
@@ -329,7 +312,7 @@ in
     [plugins.enhancd]
     github = "b4b4r07/enhancd"
     proto = "https"
-    apply = ["defer"]
+    apply = ["immediate"]
 
     # ============================================================
     # Oh My Zsh plugins (個別インポート)
@@ -346,13 +329,13 @@ in
     proto = "https"
     dir = "plugins"
     use = ["{extract,sudo,docker,docker-compose,kubectl}/*.plugin.zsh"]
-    apply = ["defer"]
+    apply = ["immediate"]
 
     # ============================================================
     # CLI Tool Completions
     # ============================================================
 
-    # gh (GitHub CLI) 補完 (キャッシュ + 遅延読み込み)
+    # gh (GitHub CLI) 補完 (キャッシュ + 先行読み込み)
     [plugins.gh-completion]
     inline = """
     _gh_completion_defer() {
@@ -363,14 +346,10 @@ in
       fi
       [[ -f "$_gh_cache" ]] && source "$_gh_cache"
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _gh_completion_defer
-    else
-      _gh_completion_defer
-    fi
+    _gh_completion_defer
     """
 
-    # AWS CLI 補完 (遅延読み込み)
+    # AWS CLI 補完 (先行読み込み)
     [plugins.aws-completion]
     inline = """
     _aws_completion_defer() {
@@ -379,14 +358,10 @@ in
         complete -C aws_completer aws
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _aws_completion_defer
-    else
-      _aws_completion_defer
-    fi
+    _aws_completion_defer
     """
 
-    # Google Cloud SDK 補完 (遅延読み込み)
+    # Google Cloud SDK 補完 (先行読み込み)
     [plugins.gcloud-completion]
     inline = """
     _gcloud_completion_defer() {
@@ -396,14 +371,10 @@ in
         source "$HOME/google-cloud-sdk/completion.zsh.inc"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _gcloud_completion_defer
-    else
-      _gcloud_completion_defer
-    fi
+    _gcloud_completion_defer
     """
 
-    # Docker 補完 (キャッシュ + 遅延読み込み)
+    # Docker 補完 (キャッシュ + 先行読み込み)
     [plugins.docker-completion]
     inline = """
     _docker_completion_defer() {
@@ -416,14 +387,10 @@ in
         [[ -f "$_docker_cache" ]] && source "$_docker_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _docker_completion_defer
-    else
-      _docker_completion_defer
-    fi
+    _docker_completion_defer
     """
 
-    # jj (Jujutsu) 補完 (キャッシュ + 遅延読み込み)
+    # jj (Jujutsu) 補完 (キャッシュ + 先行読み込み)
     [plugins.jj-completion]
     inline = """
     _jj_completion_defer() {
@@ -436,14 +403,10 @@ in
         [[ -f "$_jj_cache" ]] && source "$_jj_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _jj_completion_defer
-    else
-      _jj_completion_defer
-    fi
+    _jj_completion_defer
     """
 
-    # mise 補完 (キャッシュ + 遅延読み込み)
+    # mise 補完 (キャッシュ + 先行読み込み)
     [plugins.mise-completion]
     inline = """
     _mise_completion_defer() {
@@ -456,14 +419,10 @@ in
         [[ -f "$_mise_cache" ]] && source "$_mise_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _mise_completion_defer
-    else
-      _mise_completion_defer
-    fi
+    _mise_completion_defer
     """
 
-    # rustup 補完 (キャッシュ + 遅延読み込み)
+    # rustup 補完 (キャッシュ + 先行読み込み)
     [plugins.rustup-completion]
     inline = """
     _rustup_completion_defer() {
@@ -476,14 +435,10 @@ in
         [[ -f "$_rustup_cache" ]] && source "$_rustup_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _rustup_completion_defer
-    else
-      _rustup_completion_defer
-    fi
+    _rustup_completion_defer
     """
 
-    # chezmoi 補完 (キャッシュ + 遅延読み込み)
+    # chezmoi 補完 (キャッシュ + 先行読み込み)
     [plugins.chezmoi-completion]
     inline = """
     _chezmoi_completion_defer() {
@@ -496,14 +451,10 @@ in
         [[ -f "$_chezmoi_cache" ]] && source "$_chezmoi_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _chezmoi_completion_defer
-    else
-      _chezmoi_completion_defer
-    fi
+    _chezmoi_completion_defer
     """
 
-    # bun 補完 (キャッシュ + 遅延読み込み)
+    # bun 補完 (キャッシュ + 先行読み込み)
     [plugins.bun-completion]
     inline = """
     _bun_completion_defer() {
@@ -516,14 +467,10 @@ in
         [[ -f "$_bun_cache" ]] && source "$_bun_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _bun_completion_defer
-    else
-      _bun_completion_defer
-    fi
+    _bun_completion_defer
     """
 
-    # pnpm 補完 (キャッシュ + 遅延読み込み)
+    # pnpm 補完 (キャッシュ + 先行読み込み)
     [plugins.pnpm-completion]
     inline = """
     _pnpm_completion_defer() {
@@ -536,14 +483,10 @@ in
         [[ -f "$_pnpm_cache" ]] && source "$_pnpm_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _pnpm_completion_defer
-    else
-      _pnpm_completion_defer
-    fi
+    _pnpm_completion_defer
     """
 
-    # uv 補完 (キャッシュ + 遅延読み込み)
+    # uv 補完 (キャッシュ + 先行読み込み)
     [plugins.uv-completion]
     inline = """
     _uv_completion_defer() {
@@ -556,14 +499,10 @@ in
         [[ -f "$_uv_cache" ]] && source "$_uv_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _uv_completion_defer
-    else
-      _uv_completion_defer
-    fi
+    _uv_completion_defer
     """
 
-    # devbox 補完 (キャッシュ + 遅延読み込み)
+    # devbox 補完 (キャッシュ + 先行読み込み)
     [plugins.devbox-completion]
     inline = """
     _devbox_completion_defer() {
@@ -576,14 +515,10 @@ in
         [[ -f "$_devbox_cache" ]] && source "$_devbox_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _devbox_completion_defer
-    else
-      _devbox_completion_defer
-    fi
+    _devbox_completion_defer
     """
 
-    # procs 補完 (キャッシュ + 遅延読み込み)
+    # procs 補完 (キャッシュ + 先行読み込み)
     [plugins.procs-completion]
     inline = """
     _procs_completion_defer() {
@@ -596,14 +531,10 @@ in
         [[ -f "$_procs_cache" ]] && source "$_procs_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _procs_completion_defer
-    else
-      _procs_completion_defer
-    fi
+    _procs_completion_defer
     """
 
-    # ripgrep 補完 (キャッシュ + 遅延読み込み)
+    # ripgrep 補完 (キャッシュ + 先行読み込み)
     [plugins.rg-completion]
     inline = """
     _rg_completion_defer() {
@@ -616,34 +547,18 @@ in
         [[ -f "$_rg_cache" ]] && source "$_rg_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _rg_completion_defer
-    else
-      _rg_completion_defer
-    fi
+    _rg_completion_defer
     """
 
-    # bat 補完 (キャッシュ + 遅延読み込み)
+    # bat 補完 (キャッシュ + 先行読み込み)
     [plugins.bat-completion]
     inline = """
-    _bat_completion_defer() {
-      if command -v bat &> /dev/null; then
-        _bat_cache="$HOME/.cache/zsh/bat_completion.zsh"
-        if [[ ! -f "$_bat_cache" ]] || [[ $(command -v bat) -nt "$_bat_cache" ]]; then
-          mkdir -p "$HOME/.cache/zsh"
-          bat --completion zsh > "$_bat_cache" 2>/dev/null
-        fi
-        [[ -f "$_bat_cache" ]] && source "$_bat_cache"
-      fi
-    }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _bat_completion_defer
-    else
-      _bat_completion_defer
-    fi
+    # bat の zsh completion 出力は source ではなく autoload 前提。
+    # Nix が提供する _bat を利用するため、ここでは何もしない。
+    :
     """
 
-    # starship 補完 (キャッシュ + 遅延読み込み)
+    # starship 補完 (キャッシュ + 先行読み込み)
     [plugins.starship-completion]
     inline = """
     _starship_completion_defer() {
@@ -656,31 +571,16 @@ in
         [[ -f "$_starship_comp_cache" ]] && source "$_starship_comp_cache"
       fi
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _starship_completion_defer
-    else
-      _starship_completion_defer
-    fi
+    _starship_completion_defer
     """
 
-    # elan 補完 (キャッシュ + 遅延読み込み)
+    # elan 補完
+    # `elan completions zsh` の出力末尾に `_elan "$@"` が含まれ、
+    # source 時に補完関数本体が実行されてしまうため無効化する。
+    # Nix 提供の `_elan` を利用する。
     [plugins.elan-completion]
     inline = """
-    _elan_completion_defer() {
-      if command -v elan &> /dev/null; then
-        _elan_cache="$HOME/.cache/zsh/elan_completion.zsh"
-        if [[ ! -f "$_elan_cache" ]] || [[ $(command -v elan) -nt "$_elan_cache" ]]; then
-          mkdir -p "$HOME/.cache/zsh"
-          elan completions zsh > "$_elan_cache" 2>/dev/null
-        fi
-        [[ -f "$_elan_cache" ]] && source "$_elan_cache"
-      fi
-    }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _elan_completion_defer
-    else
-      _elan_completion_defer
-    fi
+    :
     """
 
     # ============================================================
@@ -710,11 +610,7 @@ in
       fi
       unset -f _mise_init
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _mise_init
-    else
-      _mise_init
-    fi
+    _mise_init
     """
 
     # direnv (環境自動切り替え)
@@ -738,11 +634,7 @@ in
       fi
       unset -f _direnv_init
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _direnv_init
-    else
-      _direnv_init
-    fi
+    _direnv_init
     """
 
     # zoxide (スマート cd) - キャッシュ版
@@ -825,6 +717,8 @@ in
       # ============================================================
       _zsh_cache_dir="$HOME/.cache/zsh"
       [[ -d "$_zsh_cache_dir" ]] || mkdir -p "$_zsh_cache_dir"
+      export ZSH_CACHE_DIR="$_zsh_cache_dir/oh-my-zsh"
+      [[ -d "$ZSH_CACHE_DIR/completions" ]] || mkdir -p "$ZSH_CACHE_DIR/completions"
 
       # ============================================================
       # 起動時間計測 (zprof)
@@ -868,80 +762,33 @@ in
         add-zsh-hook precmd _zsh_profile_setup_prompt_ready
       fi
 
-      # compinit 遅延初期化 (初回補完/compdef で実行)
+      # ── compinit 先行初期化 ──
       autoload -Uz compinit
       _comp_dump="$_zsh_cache_dir/.zcompdump"
       _comp_dump_fpath="$_zsh_cache_dir/.zcompdump.fpath"
-      _zsh_compinit_state=0
-      _zsh_compdef_queue=()
+      _zsh_compinit_done=0
 
       _zsh_compinit_run() {
-        (( _zsh_compinit_state == 2 )) && return 0
-        (( _zsh_compinit_state == 1 )) && return 0
-        local _zsh_compinit_ok=0
-        _zsh_compinit_state=1
+        (( _zsh_compinit_done )) && return 0
+        local _ok=0
         if [[ "''${ZSH_COMPINIT_SECURE:-0}" == "1" ]]; then
-          if compinit -d "$_comp_dump"; then
-            _zsh_compinit_ok=1
-          fi
+          compinit -d "$_comp_dump" && _ok=1
         else
-          local _zsh_fpath_snapshot _zsh_rebuild_dump=1
-          _zsh_fpath_snapshot="''${(j:\n:)fpath}"
-          if [[ -f "$_comp_dump" ]] && [[ -f "$_comp_dump_fpath" ]] && [[ "$_zsh_fpath_snapshot" == "$(cat "$_comp_dump_fpath" 2>/dev/null)" ]]; then
-            _zsh_rebuild_dump=0
+          local _fpath_snap="''${(j:\n:)fpath}" _rebuild=1
+          if [[ -f "$_comp_dump" ]] && [[ -f "$_comp_dump_fpath" ]] \
+             && [[ "$_fpath_snap" == "$(<"$_comp_dump_fpath")" ]]; then
+            _rebuild=0
           fi
-          if (( _zsh_rebuild_dump )); then
-            if compinit -d "$_comp_dump"; then
-              _zsh_compinit_ok=1
-            fi
+          if (( _rebuild )); then
+            compinit -d "$_comp_dump" && _ok=1
           else
-            if compinit -C -d "$_comp_dump"; then
-              _zsh_compinit_ok=1
-            fi
+            compinit -C -d "$_comp_dump" && _ok=1
           fi
-          if (( _zsh_compinit_ok )); then
-            printf '%s' "$_zsh_fpath_snapshot" >| "$_comp_dump_fpath"
-          fi
+          (( _ok )) && printf '%s' "$_fpath_snap" >| "$_comp_dump_fpath"
         fi
-        if (( ! _zsh_compinit_ok )); then
-          _zsh_compinit_state=0
-          return 1
-        fi
-        _zsh_compinit_state=2
-        if (( ''${#_zsh_compdef_queue[@]} )); then
-          local _zsh_compdef_call
-          for _zsh_compdef_call in "''${_zsh_compdef_queue[@]}"; do
-            eval "compdef $_zsh_compdef_call"
-          done
-          _zsh_compdef_queue=()
-        fi
+        if (( ! _ok )); then return 1; fi
+        _zsh_compinit_done=1
       }
-
-      if [[ -o zle ]]; then
-        compdef() {
-          if (( _zsh_compinit_state == 2 )); then
-            unfunction compdef 2>/dev/null || true
-            autoload -Uz compdef
-            compdef "$@"
-            return $?
-          fi
-          _zsh_compdef_queue+=("''${(q)@}")
-          return 0
-        }
-
-        _zsh_complete_or_init() {
-          _zsh_compinit_run && zle expand-or-complete
-        }
-        zle -N _zsh_complete_or_init
-        _zsh_bind_complete_or_init() {
-          bindkey -M emacs '^I' _zsh_complete_or_init
-          bindkey -M viins '^I' _zsh_complete_or_init
-          bindkey -M vicmd '^I' _zsh_complete_or_init
-        }
-        _zsh_bind_complete_or_init
-      else
-        _zsh_compinit_run
-      fi
 
       # ============================================================
       # プロンプト選択 (ビルド時に決定)
@@ -971,9 +818,8 @@ in
         SHELDON_PROFILE="${promptProfile}" sheldon source > "$_sheldon_cache"
         printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
       fi
-      source "$_sheldon_cache"
-      # fzf などが Tab を再バインドしても補完が機能するよう、ここで compinit を確定させる
       _zsh_compinit_run
+      source "$_sheldon_cache"
       unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
 
       if [[ "$_zsh_prompt_profile" == "pure" ]]; then
@@ -991,6 +837,26 @@ in
 
       # キーバインド (Vi style)
       bindkey -v
+
+      _zsh_bind_tab_widget() {
+        if [[ -o zle ]]; then
+          if (( $+widgets[fzf-tab-complete] )); then
+            zstyle ':completion:*' menu no
+            bindkey -M main '^I' fzf-tab-complete
+            bindkey -M emacs '^I' fzf-tab-complete
+            bindkey -M viins '^I' fzf-tab-complete
+            bindkey -M vicmd '^I' fzf-tab-complete
+          else
+            zstyle ':completion:*' menu select
+            bindkey -M main '^I' expand-or-complete
+            bindkey -M emacs '^I' expand-or-complete
+            bindkey -M viins '^I' expand-or-complete
+            bindkey -M vicmd '^I' expand-or-complete
+          fi
+        fi
+      }
+      _zsh_bind_tab_widget
+      unset -f _zsh_bind_tab_widget
 
       # Ctrl+S/Cmd+S で端末が止まらないようにする
       if [[ -t 0 ]] && command -v stty &> /dev/null; then
@@ -1046,7 +912,6 @@ in
 
       # 補完設定 (大文字小文字を区別しない)
       zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-      zstyle ':completion:*' menu select
       zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
 
       # fzf-tab 設定
