@@ -35,7 +35,6 @@
 
     # シェルツール
     zsh
-    fish
     starship
     zoxide
     fzf
@@ -155,7 +154,7 @@
   imports = [
     ./programs/git.nix
     ./programs/jujutsu.nix
-    ./programs/shell.nix
+    ./programs/zsh.nix
     ./programs/starship.nix
     ./programs/catppuccin.nix
     ./programs/neovim.nix

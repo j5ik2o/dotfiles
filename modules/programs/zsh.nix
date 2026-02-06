@@ -1061,100 +1061,12 @@ in
   };
 
   # ============================================================
-  # Fish 設定
-  # ============================================================
-  programs.fish = {
-    enable = true;
-
-    # shellInit は interactiveShellInit より前に実行される
-    shellInit = ''
-      # Ghostty: SSH接続時の元のTERMを保存
-      if set -q SSH_CONNECTION; and not set -q _SSH_ORIGINAL_TERM
-        set -gx _SSH_ORIGINAL_TERM $TERM
-      end
-    '';
-
-    interactiveShellInit = ''
-      # 挨拶無効化
-      set -g fish_greeting
-
-      # Ctrl+S/Cmd+S で端末が止まらないようにする
-      if test -t 0
-        command -q stty; and stty -ixon
-      end
-
-      # Ghostty: SSH接続時のTERM復元/フォールバック
-      if set -q SSH_CONNECTION
-        set -l _ghostty_term (if set -q _SSH_ORIGINAL_TERM; echo $_SSH_ORIGINAL_TERM; else; echo $TERM; end)
-        if test "$_ghostty_term" = "xterm-ghostty"
-          if test -f "$HOME/.terminfo/x/xterm-ghostty"; or test -f "$HOME/.terminfo/78/xterm-ghostty"
-            set -gx TERM xterm-ghostty
-          else if command -q infocmp; and infocmp xterm-ghostty >/dev/null 2>&1
-            set -gx TERM xterm-ghostty
-          else
-            set -gx TERM xterm-256color
-          end
-        end
-        set -e _SSH_ORIGINAL_TERM
-      end
-
-      # カラー設定
-      set -g fish_color_command green
-      set -g fish_color_param cyan
-      set -g fish_color_error red --bold
-
-      # fzf 設定
-      set -gx FZF_DEFAULT_COMMAND 'fd --type f --hidden --follow --exclude .git'
-      set -gx FZF_CTRL_T_COMMAND "$FZF_DEFAULT_COMMAND"
-      set -gx FZF_ALT_C_COMMAND 'fd --type d --hidden --follow --exclude .git'
-
-      # mise 初期化 (言語ランタイム管理)
-      mise activate fish | source
-
-      # zoxide 初期化
-      zoxide init fish | source
-
-      # Starship 初期化
-      starship init fish | source
-    '';
-
-    shellAliases = {
-      # ls → eza
-      ls = "eza --icons";
-      ll = "eza -l --icons --git";
-      la = "eza -la --icons --git";
-      lt = "eza --tree --icons --git-ignore";
-
-      # その他のエイリアスは zsh と共通
-      cat = "bat";
-      grep = "rg";
-      nvim = "command nvim";
-      v = "command nvim";
-      vi = "command nvim";
-      vim = "command nvim";
-      lg = "lazygit";
-    };
-
-    # Fish プラグイン
-    plugins = [
-      {
-        name = "fzf-fish";
-        src = pkgs.fishPlugins.fzf-fish.src;
-      }
-      {
-        name = "done";
-        src = pkgs.fishPlugins.done.src;
-      }
-    ];
-  };
-
-  # ============================================================
   # fzf 設定
   # ============================================================
   programs.fzf = {
     enable = true;
     enableZshIntegration = false;
-    enableFishIntegration = true;
+    enableFishIntegration = false;
     defaultCommand = "fd --type f --hidden --follow --exclude .git";
     defaultOptions = [
       "--height 40%"
@@ -1172,7 +1084,7 @@ in
     enable = true;
     # Zsh は sheldon で初期化するため無効化
     enableZshIntegration = false;
-    enableFishIntegration = true;
+    enableFishIntegration = false;
   };
 
   # ============================================================
