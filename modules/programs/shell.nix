@@ -62,7 +62,7 @@ in
       python = "3.13.11"
       ruby = "3.3"
       claude = "2.1.27"
-      codex = "0.97.0"
+      codex = "0.98.0"
     '';
   };
 
