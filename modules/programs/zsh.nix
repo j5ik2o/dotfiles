@@ -61,7 +61,7 @@ in
       node = "22"
       python = "3.13.11"
       ruby = "3.3"
-      claude = "2.1.27"
+      claude = "2.1.33"
       codex = "0.98.0"
     '';
   };
