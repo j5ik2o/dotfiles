@@ -308,9 +308,7 @@ in
       fi
       unset -f _fzf_init
     }
-    if (( $+functions[zsh-defer] )); then
-      zsh-defer _fzf_init
-    else
+    if [[ -o interactive ]] && [[ -o zle ]]; then
       _fzf_init
     fi
     """
@@ -873,21 +871,41 @@ in
       # compinit 遅延初期化 (初回補完/compdef で実行)
       autoload -Uz compinit
       _comp_dump="$_zsh_cache_dir/.zcompdump"
+      _comp_dump_fpath="$_zsh_cache_dir/.zcompdump.fpath"
       _zsh_compinit_state=0
       _zsh_compdef_queue=()
 
       _zsh_compinit_run() {
         (( _zsh_compinit_state == 2 )) && return 0
         (( _zsh_compinit_state == 1 )) && return 0
+        local _zsh_compinit_ok=0
         _zsh_compinit_state=1
         if [[ "''${ZSH_COMPINIT_SECURE:-0}" == "1" ]]; then
-          compinit -d "$_comp_dump"
-        else
-          if [[ -f "$_comp_dump" ]]; then
-            compinit -C -d "$_comp_dump"
-          else
-            compinit -d "$_comp_dump"
+          if compinit -d "$_comp_dump"; then
+            _zsh_compinit_ok=1
           fi
+        else
+          local _zsh_fpath_snapshot _zsh_rebuild_dump=1
+          _zsh_fpath_snapshot="''${(j:\n:)fpath}"
+          if [[ -f "$_comp_dump" ]] && [[ -f "$_comp_dump_fpath" ]] && [[ "$_zsh_fpath_snapshot" == "$(cat "$_comp_dump_fpath" 2>/dev/null)" ]]; then
+            _zsh_rebuild_dump=0
+          fi
+          if (( _zsh_rebuild_dump )); then
+            if compinit -d "$_comp_dump"; then
+              _zsh_compinit_ok=1
+            fi
+          else
+            if compinit -C -d "$_comp_dump"; then
+              _zsh_compinit_ok=1
+            fi
+          fi
+          if (( _zsh_compinit_ok )); then
+            printf '%s' "$_zsh_fpath_snapshot" >| "$_comp_dump_fpath"
+          fi
+        fi
+        if (( ! _zsh_compinit_ok )); then
+          _zsh_compinit_state=0
+          return 1
         fi
         _zsh_compinit_state=2
         if (( ''${#_zsh_compdef_queue[@]} )); then
@@ -902,16 +920,17 @@ in
       if [[ -o zle ]]; then
         compdef() {
           if (( _zsh_compinit_state == 2 )); then
+            unfunction compdef 2>/dev/null || true
+            autoload -Uz compdef
             compdef "$@"
-            return 0
+            return $?
           fi
           _zsh_compdef_queue+=("''${(q)@}")
           return 0
         }
 
         _zsh_complete_or_init() {
-          _zsh_compinit_run
-          zle expand-or-complete
+          _zsh_compinit_run && zle expand-or-complete
         }
         zle -N _zsh_complete_or_init
         _zsh_bind_complete_or_init() {
@@ -953,6 +972,8 @@ in
         printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
       fi
       source "$_sheldon_cache"
+      # fzf などが Tab を再バインドしても補完が機能するよう、ここで compinit を確定させる
+      _zsh_compinit_run
       unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
 
       if [[ "$_zsh_prompt_profile" == "pure" ]]; then
