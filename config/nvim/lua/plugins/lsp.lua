@@ -34,10 +34,6 @@ return {
         -- Nix provides the binary; don't install via mason
         mason = false,
       },
-      rust_analyzer = {
-        -- Nix provides the binary; don't install via mason
-        mason = false,
-      },
       jdtls = {
         -- Nix provides the binary; don't install via mason
         mason = false,

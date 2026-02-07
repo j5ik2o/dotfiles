@@ -16,6 +16,7 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 - Neo-tree これだけ: `docs/neo-tree.md`
 - blink.cmp これだけ: `docs/blink-cmp.md`
 - Telescope これだけ: `docs/telescope.md`
+- Neotest これだけ: `docs/neotest.md`
 
 ## カスタム追加
 
@@ -31,6 +32,10 @@ LazyVim ベースの設定。標準キーマップは公式ドキュメントと
 
 メモ:
 - 直接コマンドなら `:2ToggleTerm` のように番号付きで開ける。
+
+### Neotest
+
+Neotest のキーマップや使い方は `docs/neotest.md` を参照。
 
 ### Diagnostics
 

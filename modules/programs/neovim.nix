@@ -171,6 +171,30 @@ let
       pkg = pkgs.vimPlugins.nvim-metals;
     }
     {
+      name = "neotest";
+      pkg = pkgs.vimPlugins.neotest;
+    }
+    {
+      name = "neotest-go";
+      pkg = pkgs.vimPlugins.neotest-go;
+    }
+    {
+      name = "neotest-java";
+      pkg = pkgs.vimPlugins.neotest-java;
+    }
+    {
+      name = "neotest-python";
+      pkg = pkgs.vimPlugins.neotest-python;
+    }
+    {
+      name = "neotest-scala";
+      pkg = pkgs.vimPlugins.neotest-scala;
+    }
+    {
+      name = "nvim-nio";
+      pkg = pkgs.vimPlugins.nvim-nio;
+    }
+    {
       name = "nvim-treesitter";
       pkg = treesitterWithGrammars;
     }
@@ -189,6 +213,10 @@ let
     {
       name = "plenary.nvim";
       pkg = pkgs.vimPlugins.plenary-nvim;
+    }
+    {
+      name = "rustaceanvim";
+      pkg = pkgs.vimPlugins.rustaceanvim;
     }
     {
       name = "telescope.nvim";
