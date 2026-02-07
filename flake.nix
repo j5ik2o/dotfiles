@@ -61,6 +61,7 @@
       customOverlay = final: prev: {
         gwq = final.callPackage ./packages/gwq.nix { };
         claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
+        multi-git-status = final.callPackage ./packages/multi-git-status.nix { };
       };
 
       # home-manager 設定のパス

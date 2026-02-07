@@ -29,6 +29,7 @@
     gh
     ghq
     gwq # Git worktree マネージャ
+    multi-git-status # 複数 Git リポジトリの状態表示 (mgitstatus)
     tig
     jujutsu # Git 互換 VCS (jj コマンド)
     # lazygit は programs.lazygit で管理
