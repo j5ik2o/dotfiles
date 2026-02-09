@@ -29,6 +29,7 @@
     gh
     ghq
     gwq # Git worktree マネージャ
+    takt # AI エージェントオーケストレーション
     tig
     jujutsu # Git 互換 VCS (jj コマンド)
     # lazygit は programs.lazygit で管理
