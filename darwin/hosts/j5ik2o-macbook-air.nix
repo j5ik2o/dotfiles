@@ -35,6 +35,7 @@
     "lm-studio"
     "chatgpt"
     "claude"
+    "aionui"
 
     # ユーティリティ
     "coteditor"
