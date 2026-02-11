@@ -1,0 +1,51 @@
+# Server host/interface to bind to. Use localhost-only for personal use.
+host: "127.0.0.1"
+
+# Server port
+port: 8317
+
+# Authentication directory
+auth-dir: "~/.cli-proxy-api"
+
+# Client API keys for accessing this proxy
+# NOTE: Replace with your own value.
+api-keys:
+  - "dummy-c3d4ee78f2909bc57fcc903fcb115e6fa23c8b6406b6492a8ce05bf78f48920e"
+
+# Keep remote management disabled by default for safety.
+remote-management:
+  allow-remote: false
+  secret-key: ""
+  disable-control-panel: true
+
+# Force reasoning settings per upstream model.
+payload:
+  override:
+    - models:
+        - name: "gpt-5.2"
+          protocol: "codex"
+        - name: "gpt-5.2-codex"
+          protocol: "codex"
+      params:
+        "reasoning.effort": "xhigh"
+    - models:
+        - name: "gpt-5.3"
+          protocol: "codex"
+        - name: "gpt-5.3-codex"
+          protocol: "codex"
+      params:
+        "reasoning.effort": "xhigh"
+    - models:
+        - name: "gemini-2.5-pro"
+          protocol: "gemini"
+        - name: "gemini-3-pro-preview"
+          protocol: "gemini"
+      params:
+        "generationConfig.thinkingConfig.thinkingBudget": 32768
+    - models:
+        - name: "gemini-2.5-flash"
+          protocol: "gemini"
+        - name: "gemini-3-flash-preview"
+          protocol: "gemini"
+      params:
+        "generationConfig.thinkingConfig.thinkingBudget": 8192

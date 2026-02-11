@@ -69,9 +69,19 @@ else
   DARWIN_REBUILD_ENV =
 endif
 
+# CLIProxyAPI
+CLIPROXYAPI_CONFIG ?= $(HOME)/.config/cliproxyapi/config.yaml
+CLIPROXYAPI_LOG ?= $(HOME)/.local/state/cliproxyapi.log
+CLIPROXYAPI_PID ?= $(HOME)/.local/state/cliproxyapi.pid
+CLIPROXYAPI_HOST ?= 127.0.0.1
+CLIPROXYAPI_PORT ?= 8317
+CLIPROXYAPI_API_KEY ?=
+
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
-        secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host
+        secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
+        cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
+        cliproxyapi-login-gemini cliproxyapi-login-codex cliproxyapi-login-claude
 
 # デフォルトターゲット
 help:
@@ -104,6 +114,16 @@ help:
 	@echo "  zsh-clean      Remove zsh cache (sheldon, starship, etc)"
 	@echo "  gc             Run nix garbage collection"
 	@echo "  sheldon-lock   Lock sheldon plugins"
+	@echo ""
+	@echo "CLIProxyAPI:"
+	@echo "  cliproxyapi-start         Start CLIProxyAPI in background"
+	@echo "  cliproxyapi-stop          Stop CLIProxyAPI background process"
+	@echo "  cliproxyapi-restart       Restart CLIProxyAPI background process"
+	@echo "  cliproxyapi-status        Show process and endpoint status"
+	@echo "  cliproxyapi-test          Test /v1/models with CLIPROXYAPI_API_KEY"
+	@echo "  cliproxyapi-login-gemini  OAuth login for Gemini"
+	@echo "  cliproxyapi-login-codex   OAuth login for Codex"
+	@echo "  cliproxyapi-login-claude  OAuth login for Claude"
 	@echo ""
 	@echo "Secrets (chezmoi + 1Password):"
 	@echo "  secrets-init   Initialize chezmoi"
@@ -447,6 +467,97 @@ secrets-apply: secrets-init
 	chezmoi apply --source=$(CURDIR)/chezmoi
 
 secrets: secrets-apply
+
+# ============================================================
+# CLIProxyAPI
+# ============================================================
+
+cliproxyapi-start:
+	@echo "Starting CLIProxyAPI..."
+	@mkdir -p "$$(dirname "$(CLIPROXYAPI_LOG)")" "$$(dirname "$(CLIPROXYAPI_PID)")"
+	@if [ ! -f "$(CLIPROXYAPI_CONFIG)" ]; then \
+		echo "Config not found: $(CLIPROXYAPI_CONFIG)"; \
+		echo "Run 'make apply' first."; \
+		exit 1; \
+	fi
+	@code=$$(curl -s -o /dev/null -w "%{http_code}" "http://$(CLIPROXYAPI_HOST):$(CLIPROXYAPI_PORT)/" || true); \
+	if [ "$$code" != "000" ]; then \
+		echo "CLIProxyAPI endpoint already reachable (status=$$code)."; \
+		echo "Skip start."; \
+		exit 0; \
+	fi; \
+	if [ -f "$(CLIPROXYAPI_PID)" ] && kill -0 "$$(cat "$(CLIPROXYAPI_PID)")" 2>/dev/null; then \
+		echo "CLIProxyAPI already running (pid=$$(cat "$(CLIPROXYAPI_PID)"))"; \
+		exit 0; \
+	fi
+	@nohup cliproxyapi -config "$(CLIPROXYAPI_CONFIG)" >"$(CLIPROXYAPI_LOG)" 2>&1 & echo $$! >"$(CLIPROXYAPI_PID)"
+	@sleep 1
+	@if kill -0 "$$(cat "$(CLIPROXYAPI_PID)")" 2>/dev/null; then \
+		echo "CLIProxyAPI started (pid=$$(cat "$(CLIPROXYAPI_PID)"))"; \
+		echo "Log: $(CLIPROXYAPI_LOG)"; \
+	else \
+		echo "Failed to start CLIProxyAPI. Recent log:"; \
+		tail -n 50 "$(CLIPROXYAPI_LOG)" || true; \
+		exit 1; \
+	fi
+
+cliproxyapi-stop:
+	@echo "Stopping CLIProxyAPI..."
+	@if [ -f "$(CLIPROXYAPI_PID)" ]; then \
+		pid="$$(cat "$(CLIPROXYAPI_PID)")"; \
+		if kill -0 "$$pid" 2>/dev/null; then \
+			kill "$$pid"; \
+			sleep 1; \
+			if kill -0 "$$pid" 2>/dev/null; then \
+				echo "Process still alive, sending SIGKILL..."; \
+				kill -9 "$$pid" 2>/dev/null || true; \
+			fi; \
+			echo "CLIProxyAPI stopped."; \
+		else \
+			echo "CLIProxyAPI process already gone."; \
+		fi; \
+		rm -f "$(CLIPROXYAPI_PID)"; \
+	else \
+		code=$$(curl -s -o /dev/null -w "%{http_code}" "http://$(CLIPROXYAPI_HOST):$(CLIPROXYAPI_PORT)/" || true); \
+		if [ "$$code" != "000" ]; then \
+			echo "Endpoint is reachable (status=$$code), but no pid file found."; \
+			echo "Stop it manually if this is an externally started process."; \
+		else \
+			echo "CLIProxyAPI is not running."; \
+		fi; \
+	fi
+
+cliproxyapi-restart: cliproxyapi-stop cliproxyapi-start
+
+cliproxyapi-status:
+	@echo "CLIProxyAPI config: $(CLIPROXYAPI_CONFIG)"
+	@if [ -f "$(CLIPROXYAPI_PID)" ] && kill -0 "$$(cat "$(CLIPROXYAPI_PID)")" 2>/dev/null; then \
+		echo "Process: running (pid=$$(cat "$(CLIPROXYAPI_PID)"))"; \
+	else \
+		echo "Process: stopped"; \
+	fi
+	@code=$$(curl -s -o /dev/null -w "%{http_code}" "http://$(CLIPROXYAPI_HOST):$(CLIPROXYAPI_PORT)/" || true); \
+	echo "Endpoint: http://$(CLIPROXYAPI_HOST):$(CLIPROXYAPI_PORT)/ (status=$$code)"
+
+cliproxyapi-test:
+	@if [ -z "$(CLIPROXYAPI_API_KEY)" ]; then \
+		echo "Set CLIPROXYAPI_API_KEY to test API auth."; \
+		echo "Example: CLIPROXYAPI_API_KEY=xxxx make cliproxyapi-test"; \
+		exit 1; \
+	fi
+	@code=$$(curl -s -o /dev/null -w "%{http_code}" \
+		-H "Authorization: Bearer $(CLIPROXYAPI_API_KEY)" \
+		"http://$(CLIPROXYAPI_HOST):$(CLIPROXYAPI_PORT)/v1/models" || true); \
+	echo "GET /v1/models => $$code"
+
+cliproxyapi-login-gemini:
+	cliproxyapi -login -config "$(CLIPROXYAPI_CONFIG)"
+
+cliproxyapi-login-codex:
+	cliproxyapi -codex-login -config "$(CLIPROXYAPI_CONFIG)"
+
+cliproxyapi-login-claude:
+	cliproxyapi -claude-login -config "$(CLIPROXYAPI_CONFIG)"
 
 # ============================================================
 # Debug / Info

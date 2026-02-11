@@ -162,6 +162,7 @@
     ./programs/neovim.nix
     ./programs/helix.nix
     ./programs/direnv.nix
+    ./programs/cliproxyapi.nix
     ./programs/opencode.nix
     ./programs/clawdbot.nix
     ./programs/zellij.nix
