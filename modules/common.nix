@@ -95,6 +95,7 @@
     # AI ツール
     # claude-code, codex は mise で管理
     claude-code-acp
+    cliproxyapi
     codex-acp
     opencode
     gemini-cli # Google Gemini CLI

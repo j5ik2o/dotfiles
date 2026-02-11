@@ -60,6 +60,7 @@
     (final: prev: {
       gwq = final.callPackage ../packages/gwq.nix { };
       takt = final.callPackage ../packages/takt.nix { };
+      cliproxyapi = final.callPackage ../packages/cliproxyapi.nix { };
       codex = final.callPackage ../packages/codex.nix { };
       claude-code = final.callPackage ../packages/claude-code.nix { };
       copilot-chat-nvim = final.callPackage ../packages/copilot-chat.nix { };
