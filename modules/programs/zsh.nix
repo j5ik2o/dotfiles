@@ -677,6 +677,10 @@ in
       unset __HM_SESS_VARS_SOURCED
       export NVIM_PLUGIN_DIR="${config.xdg.dataHome}/nvim-plugins"
 
+      # CLIProxyAPI: ローカルプロキシ用のダミーAPIキーとベースURL
+      export CLI_PROXY_API_KEY="dummy-c3d4ee78f2909bc57fcc903fcb115e6fa23c8b6406b6492a8ce05bf78f48920e"
+      export CLI_PROXY_API_BASE_URL="http://127.0.0.1:8317"
+
       if [[ -f "$HOME/.config/claude-code/env" ]]; then
         source "$HOME/.config/claude-code/env"
       fi
