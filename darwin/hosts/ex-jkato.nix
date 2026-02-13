@@ -30,6 +30,7 @@
     "lm-studio"
     "chatgpt"
     "claude"
+    "codex-app"
 
     # ユーティリティ
     "coteditor"
