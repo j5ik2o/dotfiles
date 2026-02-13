@@ -94,6 +94,38 @@ in
     unset _mise_cc _mise_cxx _mise_ar _mise_ranlib _mise_nm _mise_strip _mise_pkg_config
   '';
 
+  # make apply 後に claude/codex は最新 + ひとつ前のみ残す
+  home.activation.miseTrimOldToolVersions = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
+    _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
+    _mise_sort="${pkgs.coreutils}/bin/sort"
+    _mise_awk="${pkgs.gawk}/bin/awk"
+    if [ -x "${pkgs.mise}/bin/mise" ]; then
+      for _mise_tool in claude codex; do
+        _mise_versions="$(
+          env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls "$_mise_tool" --installed --no-header 2>/dev/null \
+            | "$_mise_awk" '{ print $2 }' \
+            | "$_mise_sort" -u -V
+        )"
+        _mise_remove="$(
+          printf '%s\n' "$_mise_versions" \
+            | "$_mise_awk" 'NF { versions[++count] = $0 } END { limit = count - 2; for (i = 1; i <= limit; i++) print versions[i] }'
+        )"
+        if [ -n "$_mise_remove" ]; then
+          echo "home-manager: removing old mise versions for $_mise_tool" >&2
+          while IFS= read -r _mise_version; do
+            [ -n "$_mise_version" ] || continue
+            if ! env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" uninstall --yes "''${_mise_tool}@''${_mise_version}" >/dev/null 2>&1; then
+              echo "home-manager: failed to remove $_mise_tool@$_mise_version" >&2
+            fi
+          done <<EOF
+$_mise_remove
+EOF
+        fi
+      done
+    fi
+    unset _mise_path _mise_sort _mise_awk _mise_tool _mise_versions _mise_remove _mise_version
+  '';
+
   home.file.".local/bin/mise" = {
     executable = true;
     text = ''
@@ -127,7 +159,7 @@ in
   };
 
   # mise 管理ランタイムが参照する /nix/store を GC から保護する
-  home.activation.misePinNixLibs = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
+  home.activation.misePinNixLibs = lib.hm.dag.entryAfter [ "miseTrimOldToolVersions" ] ''
     _uname="$(uname -s)"
     if [ "$_uname" != "Linux" ] && [ "$_uname" != "Darwin" ]; then
       # 未対応 OS は何もしない
