@@ -36,6 +36,7 @@
     "chatgpt"
     "claude"
     "aionui"
+    "codex-app"
 
     # ユーティリティ
     "coteditor"
