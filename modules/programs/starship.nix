@@ -93,7 +93,7 @@
       # ホスト名（常に表示）
       hostname = {
         ssh_only = false;
-        ssh_symbol = "🌐";
+        ssh_symbol = " ";
         style = "fg:crust bg:green";
         format = "[$hostname ]($style)";
       };
@@ -115,7 +115,7 @@
         diverged = "⇕";
         up_to_date = "✓";
         untracked = "?";
-        stashed = "📦";
+        stashed = "≡";
         modified = "!\${count}";
         staged = "+";
         renamed = "»";
@@ -140,7 +140,7 @@
       # Devbox シェル検出 (direnv経由の場合はDEVBOX_PROJECT_ROOTを使用)
       env_var = {
         DEVBOX_PROJECT_ROOT = {
-          symbol = "📦 ";
+          symbol = " ";
           style = "bg:yellow fg:crust";
           format = "[](fg:yellow)[$symbol devbox ]($style)[](fg:yellow)";
         };
