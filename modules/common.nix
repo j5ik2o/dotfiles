@@ -91,6 +91,7 @@
     tdf # ターミナル PDF ビューア
     chafa # ターミナル画像ビューア
     poppler-utils # PDF ツール (pdftoppm 等)
+    marp-cli # Marp スライド変換 CLI
 
     # AI ツール
     # claude-code, codex は mise で管理
