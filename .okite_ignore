@@ -14,3 +14,5 @@ skills/breach-encapsulation-naming
 skills/custom-linter-creator
 skills/refactoring-packages
 skills/repository-placement
+skills/law-of-demeter
+skills/intent-based-debup
