@@ -62,7 +62,6 @@
         gwq = final.callPackage ./packages/gwq.nix { };
         claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
         cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
-        takt = final.callPackage ./packages/takt.nix { };
       };
 
       # home-manager 設定のパス
