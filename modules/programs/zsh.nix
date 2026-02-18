@@ -63,7 +63,7 @@ in
       ruby = "3.3"
       claude = "2.1.39"
       codex = "0.101.0"
-      "npm:takt" = "0.18.0"
+      "npm:takt" = "0.18.2"
     '';
   };
 
