@@ -61,9 +61,9 @@ in
       node = "22"
       python = "3.13.11"
       ruby = "3.3"
-      claude = "2.1.39"
-      codex = "0.101.0"
-      "npm:takt" = "0.18.2"
+      claude = "2.1.47"
+      codex = "0.104.0"
+      "npm:takt" = "0.19.0"
     '';
   };
 
