@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["mise"],
+  "commitMessagePrefix": "chore(deps):",
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "matchManagers": ["mise"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    }
+  ],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 5
+}
