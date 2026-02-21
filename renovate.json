@@ -3,6 +3,9 @@
   "extends": ["config:recommended"],
   "labels": ["renovate"],
   "enabledManagers": ["mise"],
+  "mise": {
+    "fileMatch": ["(^|/)config/mise/mise\\.toml$"]
+  },
   "commitMessagePrefix": "chore(deps):",
   "platformAutomerge": true,
   "packageRules": [
