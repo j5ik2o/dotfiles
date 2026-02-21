@@ -1,0 +1,11 @@
+[settings]
+github.github_attestations = false
+
+[tools]
+java = "temurin-21"
+node = "22"
+python = "3.13.11"
+ruby = "3.3"
+claude = "2.1.49"
+codex = "0.104.0"
+"npm:takt" = "0.21.0"

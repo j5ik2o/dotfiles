@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  self,
   ...
 }:
 
@@ -52,19 +53,7 @@ in
   xdg.configFile."mise/config.toml" = {
     # 既存ファイルがあっても Home Manager の定義を優先する
     force = true;
-    text = ''
-      [settings]
-      github.github_attestations = false
-
-      [tools]
-      java = "temurin-21"
-      node = "22"
-      python = "3.13.11"
-      ruby = "3.3"
-      claude = "2.1.49"
-      codex = "0.104.0"
-      "npm:takt" = "0.21.0"
-    '';
+    source = "${self}/config/mise/mise.toml";
   };
 
   # make apply 後に自動で不足ランタイムを導入
