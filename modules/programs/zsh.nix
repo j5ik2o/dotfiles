@@ -45,6 +45,10 @@ let
     strip = "${pkgs.stdenv.cc.bintools}/bin/strip";
     pkgConfig = "${pkgs."pkg-config"}/bin/pkg-config";
   };
+  miseTools = builtins.attrNames (
+    (builtins.fromTOML (builtins.readFile "${self}/config/mise/mise.toml")).tools or { }
+  );
+  miseToolsArgs = lib.concatStringsSep " " (map lib.escapeShellArg miseTools);
 in
 {
   # ============================================================
@@ -84,13 +88,13 @@ in
     unset _mise_cc _mise_cxx _mise_ar _mise_ranlib _mise_nm _mise_strip _mise_pkg_config
   '';
 
-  # make apply 後に claude/codex は最新 + ひとつ前のみ残す
+  # make apply 後に mise.toml の tools は最新 + ひとつ前のみ残す
   home.activation.miseTrimOldToolVersions = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
         _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
         _mise_sort="${pkgs.coreutils}/bin/sort"
         _mise_awk="${pkgs.gawk}/bin/awk"
         if [ -x "${pkgs.mise}/bin/mise" ]; then
-          for _mise_tool in claude codex; do
+          for _mise_tool in ${miseToolsArgs}; do
             _mise_versions="$(
               env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls "$_mise_tool" --installed --no-header 2>/dev/null \
                 | "$_mise_awk" '{ print $2 }' \
