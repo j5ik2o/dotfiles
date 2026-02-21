@@ -63,7 +63,7 @@ in
       ruby = "3.3"
       claude = "2.1.49"
       codex = "0.104.0"
-      "npm:takt" = "0.20.0"
+      "npm:takt" = "0.21.0"
     '';
   };
 
@@ -716,6 +716,10 @@ in
 
       if [[ -f "$HOME/.config/claude-code/env" ]]; then
         source "$HOME/.config/claude-code/env"
+      fi
+
+      if [[ -f "$HOME/.config/glm/env" ]]; then
+        source "$HOME/.config/glm/env"
       fi
 
       # 起動時間計測: できるだけ早く開始時刻を記録
