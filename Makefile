@@ -144,8 +144,10 @@ endif
 # Check
 # ============================================================
 
+NIX_FLAKE_CHECK_FLAGS ?= --no-build --all-systems
+
 check:
-	nix flake check --no-build
+	nix flake check $(NIX_FLAKE_CHECK_FLAGS)
 
 check-update:
 	@tmpdir="$(CURDIR)/.tmp"; \
