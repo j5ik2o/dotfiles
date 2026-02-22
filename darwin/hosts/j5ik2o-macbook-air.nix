@@ -68,6 +68,11 @@
     "spotify"
   ];
 
+  # Mac App Store アプリ
+  homebrew.masApps = {
+    "LINE" = 539883307;
+  };
+
   # Homebrew クリーンアップ戦略
   homebrew.onActivation.cleanup = "zap";
 
