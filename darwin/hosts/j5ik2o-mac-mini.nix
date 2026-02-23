@@ -25,6 +25,7 @@
     "warp"
     "wezterm"
     "ghostty"
+    "cmux"
 
     "docker-desktop"
     "github"

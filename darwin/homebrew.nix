@@ -17,6 +17,7 @@
 
     # Homebrew taps
     taps = [
+      "manaflow-ai/cmux"
     ];
 
     # CLI ツール (Nix にないもの)
