@@ -1,0 +1,260 @@
+name: review-only
+description: Review-only piece - reviews code without making edits
+piece_config:
+  provider_options:
+    codex:
+      network_access: true
+    opencode:
+      network_access: true
+max_movements: 10
+initial_movement: plan
+movements:
+  - name: plan
+    edit: false
+    persona: planner
+    allowed_tools:
+      - Read
+      - Glob
+      - Grep
+      - WebSearch
+      - WebFetch
+    rules:
+      - condition: Review scope is clear
+        next: reviewers
+      - condition: User is asking a question (not a review task)
+        next: COMPLETE
+      - condition: Requirements unclear, insufficient info
+        next: ABORT
+        appendix: |
+          Clarifications needed:
+          - {Question 1}
+          - {Question 2}
+    instruction_template: |
+      ## Previous Response (when returned from supervise)
+      {previous_response}
+
+      Analyze the review request and create a review plan.
+
+      **This is a review-only piece.** No code edits will be made.
+      Focus on:
+      1. Identify which files/modules to review
+      2. Determine review focus areas (architecture, security, AI patterns, etc.)
+      3. Note any specific concerns mentioned in the request
+
+      **If a PR number is mentioned** (e.g., "PR #42"), include it in your plan
+      so reviewers can focus on the PR's changed files.
+  - name: reviewers
+    parallel:
+      - name: arch-review
+        edit: false
+        persona: architecture-reviewer
+        policy: review
+        knowledge: architecture
+        allowed_tools:
+          - Read
+          - Glob
+          - Grep
+          - WebSearch
+          - WebFetch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        instruction: review-arch
+        output_contracts:
+          report:
+            - name: 01-architect-review.md
+              format: architecture-review
+      - name: security-review
+        edit: false
+        persona: security-reviewer
+        policy: review
+        knowledge: security
+        allowed_tools:
+          - Read
+          - Glob
+          - Grep
+          - WebSearch
+          - WebFetch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        instruction: review-security
+        output_contracts:
+          report:
+            - name: 02-security-review.md
+              format: security-review
+      - name: ai-review
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        allowed_tools:
+          - Read
+          - Glob
+          - Grep
+          - WebSearch
+          - WebFetch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        instruction: review-ai
+        output_contracts:
+          report:
+            - name: 03-ai-review.md
+              format: ai-review
+    rules:
+      - condition: all("approved")
+        next: supervise
+      - condition: any("needs_fix")
+        next: supervise
+  - name: supervise
+    edit: false
+    persona: supervisor
+    policy: review
+    allowed_tools:
+      - Read
+      - Glob
+      - Grep
+      - WebSearch
+      - WebFetch
+    pass_previous_response: false
+    rules:
+      - condition: approved, PR comment requested
+        next: pr-comment
+      - condition: approved
+        next: COMPLETE
+      - condition: rejected
+        next: ABORT
+    instruction_template: |
+      ## Review Results
+      {previous_response}
+
+      **This is a review-only piece.** Do NOT run tests or builds.
+      Your role is to synthesize the review results and produce a final summary.
+
+      **Tasks:**
+      1. Read all review reports in the Report Directory
+      2. Synthesize findings from architecture, security, and AI reviews
+      3. Produce a consolidated review summary with overall verdict
+      4. Determine routing:
+         - If the task mentions posting to a PR (e.g., "post comments to PR", "comment on PR"),
+           route to `pr-comment` movement (condition: "approved, PR comment requested")
+         - If local review only, route to COMPLETE (condition: "approved")
+         - If critical issues found, route to ABORT (condition: "rejected")
+
+      **Review Summary output contract:**
+      ```markdown
+      # Review Summary
+
+      ## Overall Verdict: APPROVE / REJECT
+
+      ## Summary
+      {2-3 sentences consolidating all review results}
+
+      ## Review Results
+      | Review | Result | Key Findings |
+      |--------|--------|--------------|
+      | Architecture | APPROVE/REJECT | {Brief finding} |
+      | Security | APPROVE/REJECT | {Brief finding} |
+      | AI Antipattern | APPROVE/REJECT | {Brief finding} |
+
+      ## Issues Requiring Attention
+      | # | Severity | Source | Location | Issue |
+      |---|----------|--------|----------|-------|
+      | 1 | High | Security | `file:line` | Description |
+
+      ## Improvement Suggestions
+      - {Consolidated suggestions from all reviews}
+      ```
+    output_contracts:
+      report:
+        - name: review-summary.md
+          format: |
+            ```markdown
+            # Review Summary
+
+            ## Overall Verdict: APPROVE / REJECT
+
+            ## Summary
+            {Integrate all review results in 2-3 sentences}
+
+            ## Review Results
+            | Review | Result | Key Findings |
+            |--------|--------|-------------|
+            | Architecture | APPROVE/REJECT | {Overview} |
+            | Security | APPROVE/REJECT | {Overview} |
+            | AI Anti-pattern | APPROVE/REJECT | {Overview} |
+
+            ## Current Iteration Findings (new)
+            | # | finding_id | Severity | Source | Location | Issue | Fix Suggestion |
+            |---|------------|----------|--------|----------|-------|----------------|
+            | 1 | SUM-NEW-src-file-L42 | High | Security | `file:line` | Description | Suggestion |
+
+            ## Carry-over Findings (persists)
+            | # | finding_id | Source | Previous Evidence | Current Evidence | Issue |
+            |---|------------|--------|-------------------|------------------|-------|
+            | 1 | SUM-PERSIST-src-file-L77 | Architecture | `file:line` | `file:line` | Description |
+
+            ## Resolved Findings (resolved)
+            | finding_id | Source | Resolution Evidence |
+            |------------|--------|---------------------|
+            | SUM-RESOLVED-src-file-L10 | QA | `file:line` |
+
+            ## Improvement Suggestions
+            - {Consolidated suggestions from all reviews}
+
+            ## Rejection Gate
+            - REJECT is valid only when at least one finding exists in `new` or `persists`
+            - Findings without `finding_id` are invalid
+            ```
+  - name: pr-comment
+    edit: false
+    persona: pr-commenter
+    allowed_tools:
+      - Read
+      - Glob
+      - Grep
+      - Bash
+    rules:
+      - condition: Comments posted
+        next: COMPLETE
+      - condition: Failed to post comments
+        next: COMPLETE
+    instruction_template: |
+      ## Review Summary
+      {previous_response}
+
+      Post the review results to the PR as comments.
+
+      **Procedure:**
+      1. Extract the PR number from the task description
+      2. Read all review reports in the Report Directory:
+         - `01-architect-review.md` (Architecture review)
+         - `02-security-review.md` (Security review)
+         - `03-ai-review.md` (AI antipattern review)
+         - `review-summary.md` (Consolidated summary)
+      3. Filter findings by severity and post inline comments for Critical/High/Medium
+      4. Post a summary comment with the following format:
+
+      ```
+      ## Automated Review Summary
+
+      {Overall verdict and summary from review-summary.md}
+
+      ### Review Results
+      | Review | Result |
+      |--------|--------|
+      | Architecture | {result} |
+      | Security | {result} |
+      | AI Antipattern | {result} |
+
+      ### Key Findings
+      {Bulleted list of important findings}
+
+      ### Improvement Suggestions
+      {Consolidated suggestions}
+
+      ---
+      *Generated by [takt](https://github.com/toruticas/takt) review-only piece*
+      ```
