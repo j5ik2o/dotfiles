@@ -2,11 +2,11 @@
 github.github_attestations = false
 
 [tools]
-java = "temurin-21"
-node = "22"
-python = "3.13.11"
-ruby = "3.3"
-claude = "2.1.56"
+java = "temurin-25"
+node = "25"
+python = "3.14.3"
+ruby = "4.0"
+claude = "2.1.58"
 codex = "0.105.0"
 "npm:takt" = "0.25.0"
-"npm:npm-check-updates" = "16.14.20"
+"npm:npm-check-updates" = "19.5.0"
