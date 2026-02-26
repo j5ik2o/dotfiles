@@ -1,0 +1,30 @@
+name: mise-upgrade
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mise-upgrade
+  cancel-in-progress: true
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Trust mise config
+        run: mise trust --yes config/mise/mise.toml
+
+      - name: Upgrade tools with bump
+        run: mise upgrade --yes --bump --cd config/mise
