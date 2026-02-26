@@ -91,6 +91,7 @@
     chafa # ターミナル画像ビューア
     poppler-utils # PDF ツール (pdftoppm 等)
     marp-cli # Marp スライド変換 CLI
+    graphviz # PlantUML の dot レンダラー
 
     # AI ツール
     # claude-code, codex は mise で管理
