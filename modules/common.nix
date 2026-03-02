@@ -223,6 +223,11 @@
   home.file.".local/bin/claude-code-acp" = {
     source = "${pkgs.claude-code-acp}/bin/claude-code-acp";
   };
+  # Claude Code ステータスライン（identity 表示用）
+  home.file.".claude/statusline.sh" = {
+    source = "${self}/config/claude-code/statusline.sh";
+    executable = true;
+  };
 
   # ============================================================
   # lazygit 設定
