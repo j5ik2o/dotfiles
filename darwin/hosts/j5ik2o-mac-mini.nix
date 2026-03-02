@@ -76,12 +76,4 @@
 
   # Homebrew クリーンアップ戦略
   homebrew.onActivation.cleanup = "zap";
-
-  # /etc/hosts 追記
-  system.activationScripts.hostsEntry.text = ''
-    set -euo pipefail
-    if ! /usr/bin/grep -qE '^10\.0\.1\.160[[:space:]]+j5ik2o-desktop$' /etc/hosts; then
-      echo "10.0.1.160 j5ik2o-desktop" >> /etc/hosts
-    fi
-  '';
 }
