@@ -89,7 +89,6 @@ in
       docker-client
       docker-compose
       docker-buildx
-      lazydocker
     ];
   # 注: dropbox/dropbox-cli は unfree パッケージのため削除
 
