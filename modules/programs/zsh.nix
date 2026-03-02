@@ -863,10 +863,11 @@ in
 
       # ============================================================
       # JetBrains IDE ターミナル対策
+      # JediTerm は ghostty 固有のエスケープシーケンスを解釈できないため
+      # 汎用の xterm-256color を使う
       # ============================================================
       if [[ "$TERMINAL_EMULATOR" == JetBrains* ]]; then
-        export TERMINFO_DIRS="/Applications/Ghostty.app/Contents/Resources/terminfo:''${TERMINFO_DIRS:-}"
-        export TERM=xterm-ghostty
+        export TERM=xterm-256color
       fi
 
       # キーバインド (Vi style)
