@@ -3,15 +3,17 @@ result
 
 .tmp/
 
-/.claude/settings.local.json
-/.codex/sessions/
-/.codex/tmp/
-/.codex/log
-/.codex/*.json
-/.codex/*.jsonl
-/.codex/shell_snapshots/*.sh
+/.agents/
+/.claude/
+/.codex*/
+/.cursor/
+/.gemini/
+/.opencode/
 
 /.serena/cache/
+
+/.kiro/
+/openspec/
 
 # API Keys and Tokens (security)
 *_api_key.sh
