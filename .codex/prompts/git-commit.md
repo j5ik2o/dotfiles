@@ -1,1 +1,1 @@
-../../.agent/commands/git-commit.md
+../../references/okite-ai/.agents/commands/git-commit.md

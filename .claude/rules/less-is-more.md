@@ -1,1 +1,1 @@
-../../.agent/rules/less-is-more.md
+../../references/okite-ai/.agents/rules/less-is-more.md

@@ -1,1 +1,1 @@
-../../.agent/rules/explain-skill-selection.md
+../../references/okite-ai/.agents/rules/explain-skill-selection.md

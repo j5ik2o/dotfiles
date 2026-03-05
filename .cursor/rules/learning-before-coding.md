@@ -1,1 +1,1 @@
-../../.agent/rules/learning-before-coding.md
+../../references/okite-ai/.agents/rules/learning-before-coding.md
