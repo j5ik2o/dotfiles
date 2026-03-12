@@ -79,19 +79,19 @@
       # 共通の home-manager モジュール
       commonHomeModules = [
         catppuccin.homeModules.catppuccin
-        "${hmConfigPath}/overrides/clawdbot.nix"
-        "${hmConfigPath}/dotfiles.nix"
-        "${hmConfigPath}/common.nix"
+        (hmConfigPath + "/overrides/clawdbot.nix")
+        (hmConfigPath + "/dotfiles.nix")
+        (hmConfigPath + "/common.nix")
       ];
 
       # macOS 用 home-manager 設定
       darwinHomeModules = commonHomeModules ++ [
-        "${hmConfigPath}/darwin.nix"
+        (hmConfigPath + "/darwin.nix")
       ];
 
       # Linux 用 home-manager 設定
       linuxHomeModules = commonHomeModules ++ [
-        "${hmConfigPath}/linux.nix"
+        (hmConfigPath + "/linux.nix")
       ];
 
       # home-manager 設定を生成する関数
