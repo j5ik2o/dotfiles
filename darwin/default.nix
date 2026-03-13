@@ -64,6 +64,10 @@
       cliproxyapi = final.callPackage ../packages/cliproxyapi.nix { };
       coderabbit = final.callPackage ../packages/coderabbit.nix { };
       copilot-chat-nvim = final.callPackage ../packages/copilot-chat.nix { };
+      # macOS で test_scan_invalid_rule_id が "Illegal byte sequence (os error 92)" で失敗するためテストをスキップ
+      ast-grep = prev.ast-grep.overrideAttrs (_: {
+        doCheck = false;
+      });
     })
   ];
 
