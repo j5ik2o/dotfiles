@@ -1,5 +1,6 @@
 [settings]
 github.github_attestations = false
+ruby.compile = false
 
 [tools]
 java = "temurin-25"
