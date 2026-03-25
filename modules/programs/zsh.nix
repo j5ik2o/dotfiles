@@ -715,6 +715,9 @@ in
         source "$HOME/.config/glm/env"
       fi
 
+      # Obsidian CLI
+      export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"
+
       # 起動時間計測: できるだけ早く開始時刻を記録
       if [[ "''${ZSH_PROFILE:-0}" == "1" ]]; then
         zmodload zsh/datetime 2>/dev/null || true

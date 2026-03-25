@@ -35,6 +35,7 @@
     # macOS 固有ツール
     m-cli # macOS コマンドラインツール
     mas # Mac App Store CLI
+    macpm # Apple Silicon パフォーマンスモニタ (旧 asitop)
   ];
 
   # ============================================================
