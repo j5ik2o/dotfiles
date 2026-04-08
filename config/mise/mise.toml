@@ -5,7 +5,7 @@ ruby.compile = false
 [tools]
 java = "temurin-26.0.0"
 node = "25"
-python = "3.14.3"
+python = "3.14.4"
 ruby = "4.0"
 claude = "2.1.96"
 codex = "0.118.0"
