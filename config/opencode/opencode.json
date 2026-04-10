@@ -2,9 +2,23 @@
   "$schema": "https://opencode.ai/config.json",
   "enabled_providers": [
     "cliproxyapi",
-    "zai-coding-plan"
+    "zai-coding-plan",
+    "lmstudio"
   ],
   "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio",
+      "options": {
+        "baseURL": "http://localhost:1234/v1"
+      },
+      "models": {
+        "qwen/qwen3.5-35b-a3b": {
+          "name": "Qwen 3.5 35B A3B",
+          "tools": true
+        }
+      }
+    },
     "cliproxyapi": {
       "api": "openai",
       "name": "CLIProxyAPI",

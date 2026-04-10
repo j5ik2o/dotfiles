@@ -76,6 +76,9 @@
     unzip
     zip
 
+    # セキュリティ
+    gnupg
+
     # その他ユーティリティ
     tree
     htop
