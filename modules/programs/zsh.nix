@@ -715,6 +715,9 @@ in
         source "$HOME/.config/glm/env"
       fi
 
+      # mise shims
+      export PATH="$HOME/.local/share/mise/shims:$PATH"
+
       # Obsidian CLI
       export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"
 
