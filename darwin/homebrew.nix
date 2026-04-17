@@ -23,6 +23,7 @@
 
     # CLI ツール (Nix にないもの)
     brews = [
+      "rtk"
     ];
 
     # Mac App Store アプリ

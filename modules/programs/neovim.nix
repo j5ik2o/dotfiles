@@ -77,6 +77,7 @@ let
     {
       name = "catppuccin";
       pkg = pkgs.vimPlugins.catppuccin-nvim;
+      type = "lua";
     }
     {
       name = "copilot.lua";
@@ -250,7 +251,18 @@ in
     viAlias = true;
     vimAlias = true;
     vimdiffAlias = true;
-    plugins = map (plugin: plugin.pkg) nvimPlugins;
+    withRuby = false;
+    withPython3 = false;
+    plugins = map (
+      plugin:
+      if plugin ? type then
+        {
+          plugin = plugin.pkg;
+          type = plugin.type;
+        }
+      else
+        plugin.pkg
+    ) nvimPlugins;
 
     # 外部ツール（LSP、フォーマッター等）- Nix で管理
     extraPackages =
@@ -259,8 +271,8 @@ in
         # LSP サーバー
         nil # Nix
         lua-language-server # Lua
-        nodePackages.typescript-language-server # TypeScript/JavaScript
-        nodePackages.vscode-langservers-extracted # HTML/CSS/JSON
+        typescript-language-server # TypeScript/JavaScript
+        vscode-langservers-extracted # HTML/CSS/JSON
         rust-analyzer # Rust
         gopls # Go
         pyright # Python
@@ -282,7 +294,7 @@ in
         # フォーマッター
         nixfmt
         stylua
-        nodePackages.prettier
+        prettier
         rustfmt
         gofumpt
         black
