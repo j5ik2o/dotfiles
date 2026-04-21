@@ -52,6 +52,7 @@
     "cleanshot"
     "angry-ip-scanner"
     "tailscale-app"
+    "geekbench"
 
     # コミュニケーション
     "slack"

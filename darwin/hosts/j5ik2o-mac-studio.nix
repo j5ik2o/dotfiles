@@ -30,8 +30,6 @@
     "docker-desktop"
     "github"
 
-    "parallels"
-
     # AI / ML
     "lm-studio"
     "chatgpt"
@@ -52,6 +50,7 @@
     "cleanshot"
     "angry-ip-scanner"
     "tailscale-app"
+    "geekbench"
 
     # コミュニケーション
     "slack"
@@ -75,5 +74,7 @@
   };
 
   # Homebrew クリーンアップ戦略
+  # cmux 手動インストール運用中のため zap を一時停止（default の "none" にフォールバック）。
+  # cmux を casks に戻したら "zap" に復帰させる。
   homebrew.onActivation.cleanup = "zap";
 }
