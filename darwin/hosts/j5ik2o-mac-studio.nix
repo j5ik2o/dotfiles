@@ -55,6 +55,7 @@
     # コミュニケーション
     "slack"
     "discord"
+    "gather"
     "zoom"
 
     # クラウドストレージ
@@ -70,6 +71,7 @@
 
   # Mac App Store アプリ
   homebrew.masApps = {
+    "Amazon Kindle" = 302584613;
     "LINE" = 539883307;
   };
 
