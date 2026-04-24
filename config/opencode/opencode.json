@@ -13,8 +13,16 @@
         "baseURL": "http://localhost:1234/v1"
       },
       "models": {
-        "qwen/qwen3.5-35b-a3b": {
-          "name": "Qwen 3.5 35B A3B",
+        "qwen/qwen3.6-35b-a3b": {
+          "name": "Qwen3.6 35B A3B",
+          "tools": true
+        },
+        "qwen/qwen3.6-27b": {
+          "name": "Qwen3.6 27B",
+          "tools": true
+        },
+        "google/gemma-4-e4b": {
+          "name": "Gemma4 E4B",
           "tools": true
         }
       }
