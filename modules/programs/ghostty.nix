@@ -72,7 +72,9 @@ in
     package = if isDarwin then null else pkgs.ghostty;
 
     # シェル統合
-    enableZshIntegration = true;
+    # zsh は手動でファイル存在確認付きスニペットを追加 (cmux が GHOSTTY_RESOURCES_DIR をセットするが
+    # ghostty-integration ファイルが存在しない場合にエラーになるため)
+    enableZshIntegration = false;
     enableFishIntegration = true;
     enableBashIntegration = true;
 

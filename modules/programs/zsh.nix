@@ -1008,6 +1008,11 @@ in
         unset _zsh_profile_log _zsh_end _zsh_elapsed
       fi
       unset _zsh_profile_enabled
+
+      # Ghostty shell integration (ファイルが存在する場合のみ source)
+      if [[ -n $GHOSTTY_RESOURCES_DIR && -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
+        source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+      fi
     '';
 
     # シェルエイリアス
