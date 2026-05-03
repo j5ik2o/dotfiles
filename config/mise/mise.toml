@@ -1,6 +1,10 @@
 [settings]
 github.github_attestations = false
 ruby.compile = false
+# rust は手動 rustup で管理する。mise が rust-toolchain.toml を自動検出して
+# 既定 toolchain (stable) の bin を PATH に注入し、rustup proxy をバイパスする
+# 不具合があるため、rust プラグイン自体を無効化する
+disable_tools = ["rust"]
 
 [tools]
 java = "temurin-26.0.0"
