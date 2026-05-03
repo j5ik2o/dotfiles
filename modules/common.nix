@@ -101,7 +101,7 @@
     claude-code-acp
     cliproxyapi
     coderabbit # AI コードレビュー CLI
-    codex-acp
+    # codex-acp # nixpkgs 側でビルド失敗中 (codex-core の include_str! 相対パスが壊れている)
     opencode
     gemini-cli # Google Gemini CLI
 
@@ -208,6 +208,7 @@
   # ============================================================
   home.sessionPath = [
     "$HOME/.local/bin"
+    "$HOME/.cargo/bin" # 手動インストール rustup の proxy (cargo, rustc, rustup) を解決
   ];
 
   # ============================================================
