@@ -69,6 +69,11 @@
       ast-grep = prev.ast-grep.overrideAttrs (_: {
         doCheck = false;
       });
+      # macOS の Nix sandbox で test/direnv-test.zsh がハングするためテストをスキップ
+      direnv = prev.direnv.overrideAttrs (_: {
+        doCheck = false;
+        doInstallCheck = false;
+      });
     })
   ];
 
