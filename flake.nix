@@ -63,6 +63,11 @@
         claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
         cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
         coderabbit = final.callPackage ./packages/coderabbit.nix { };
+        # macOS の Nix sandbox で test/direnv-test.zsh がハングするためテストをスキップ
+        direnv = prev.direnv.overrideAttrs (_: {
+          doCheck = false;
+          doInstallCheck = false;
+        });
       };
 
       # home-manager 設定のパス

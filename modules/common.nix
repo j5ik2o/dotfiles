@@ -126,8 +126,7 @@
     # Python パッケージマネージャ
     uv
 
-    # Rust (rustup で toolchain 管理)
-    rustup
+    # Rust: rustup は手動インストール (~/.cargo/bin) で管理する
 
     # Zig
     zig
