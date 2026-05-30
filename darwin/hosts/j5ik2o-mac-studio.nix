@@ -67,6 +67,8 @@
     "obsidian"
     "mactex"
     "spotify"
+
+    "aionui"
   ];
 
   # Mac App Store アプリ
