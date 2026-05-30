@@ -148,7 +148,7 @@ in
         export RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts"
       fi
 
-      exec "${pkgs.mise}/bin/mise" "$@"
+      exec -a "$0" "${pkgs.mise}/bin/mise" "$@"
     '';
   };
 
