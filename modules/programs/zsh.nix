@@ -63,6 +63,8 @@ in
   # make apply 後に自動で不足ランタイムを導入
   home.activation.miseAutoInstall = lib.hm.dag.entryAfter [ "installPackages" ] ''
     _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
+    _mise_home="${config.home.homeDirectory}"
+    _mise_xdg_config_home="${config.xdg.configHome}"
     _mise_pkg_config_path="${misePkgConfigPath}"
     _mise_ruby_configure_opts="${miseRubyConfigureOpts}"
     _mise_cc="${miseToolchain.cc}"
@@ -73,9 +75,10 @@ in
     _mise_strip="${miseToolchain.strip}"
     _mise_pkg_config="${miseToolchain.pkgConfig}"
     if [ -x "${pkgs.mise}/bin/mise" ]; then
-      if env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls --global --missing --no-header 2>/dev/null | grep -q '.'; then
+      if env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
+        "${pkgs.mise}/bin/mise" ls --global --missing --no-header 2>/dev/null | grep -q '.'; then
         echo "home-manager: mise install (missing tools)" >&2
-        if ! env PATH="$_mise_path:$PATH" \
+        if ! env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
           CC="$_mise_cc" CXX="$_mise_cxx" AR="$_mise_ar" RANLIB="$_mise_ranlib" NM="$_mise_nm" STRIP="$_mise_strip" \
           PKG_CONFIG="$_mise_pkg_config" PKG_CONFIG_PATH="$_mise_pkg_config_path" \
           RUBY_CONFIGURE_OPTS="$_mise_ruby_configure_opts" \
@@ -84,19 +87,22 @@ in
         fi
       fi
     fi
-    unset _mise_path _mise_pkg_config_path _mise_ruby_configure_opts
+    unset _mise_path _mise_home _mise_xdg_config_home _mise_pkg_config_path _mise_ruby_configure_opts
     unset _mise_cc _mise_cxx _mise_ar _mise_ranlib _mise_nm _mise_strip _mise_pkg_config
   '';
 
   # make apply 後に mise.toml の tools は最新 + ひとつ前のみ残す
   home.activation.miseTrimOldToolVersions = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
         _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
+        _mise_home="${config.home.homeDirectory}"
+        _mise_xdg_config_home="${config.xdg.configHome}"
         _mise_sort="${pkgs.coreutils}/bin/sort"
         _mise_awk="${pkgs.gawk}/bin/awk"
         if [ -x "${pkgs.mise}/bin/mise" ]; then
           for _mise_tool in ${miseToolsArgs}; do
             _mise_versions="$(
-              env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" ls "$_mise_tool" --installed --no-header 2>/dev/null \
+              env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
+                "${pkgs.mise}/bin/mise" ls "$_mise_tool" --installed --no-header 2>/dev/null \
                 | "$_mise_awk" '{ print $2 }' \
                 | "$_mise_sort" -u -V
             )"
@@ -108,7 +114,8 @@ in
               echo "home-manager: removing old mise versions for $_mise_tool" >&2
               while IFS= read -r _mise_version; do
                 [ -n "$_mise_version" ] || continue
-                if ! env PATH="$_mise_path:$PATH" "${pkgs.mise}/bin/mise" uninstall --yes "''${_mise_tool}@''${_mise_version}" >/dev/null 2>&1; then
+                if ! env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
+                  "${pkgs.mise}/bin/mise" uninstall --yes "''${_mise_tool}@''${_mise_version}" >/dev/null 2>&1; then
                   echo "home-manager: failed to remove $_mise_tool@$_mise_version" >&2
                 fi
               done <<EOF
@@ -117,7 +124,7 @@ in
             fi
           done
         fi
-        unset _mise_path _mise_sort _mise_awk _mise_tool _mise_versions _mise_remove _mise_version
+        unset _mise_path _mise_home _mise_xdg_config_home _mise_sort _mise_awk _mise_tool _mise_versions _mise_remove _mise_version
   '';
 
   home.file.".local/bin/mise" = {
