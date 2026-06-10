@@ -1,4 +1,5 @@
 [settings]
+activate_aggressive = true
 ruby.compile = false
 # rust は手動 rustup で管理する。mise が rust-toolchain.toml を自動検出して
 # 既定 toolchain (stable) の bin を PATH に注入し、rustup proxy をバイパスする
