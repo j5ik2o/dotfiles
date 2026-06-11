@@ -31,7 +31,7 @@ jobs:
         run: mise trust --yes config/mise/mise.toml
 
       - name: Upgrade tools with bump
-        run: mise upgrade --yes --bump --cd config/mise
+        run: mise upgrade --yes --bump --minimum-release-age 0s --cd config/mise
 
       - name: Detect changes
         id: changes
