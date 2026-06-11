@@ -98,10 +98,6 @@ in
   home.sessionVariables = {
     # XDG 設定
     XDG_RUNTIME_DIR = "/run/user/$(id -u)";
-
-    # SSH Agent (systemd user)
-    # systemd ユニットの -a と合わせる
-    SSH_AUTH_SOCK = "$XDG_RUNTIME_DIR/ssh-agent";
   };
 
   # ============================================================
@@ -199,12 +195,10 @@ in
   # Linux 固有のサービス設定
   # ============================================================
 
-  # SSH Agent (systemd user service)
-  services.ssh-agent.enable = true;
-
   # GPG Agent
   services.gpg-agent = {
     enable = true;
+    # SSH_AUTH_SOCK は gpg-agent 初期化に一元化して ssh-agent と衝突させない。
     enableSshSupport = true;
     pinentry.package = pkgs.pinentry-curses;
   };
