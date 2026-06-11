@@ -1,6 +1,10 @@
 [settings]
 activate_aggressive = true
 ruby.compile = false
+# python はプリコンパイル版のみ使う。CPython リリース直後はプリコンパイル版が
+# 未公開のことがあり、ソースビルドへのフォールバックは macOS (Nix 環境) で
+# 失敗する。false にするとバンプ対象もプリコンパイル版の一覧に限定される。
+python.compile = false
 # rust は手動 rustup で管理する。mise が rust-toolchain.toml を自動検出して
 # 既定 toolchain (stable) の bin を PATH に注入し、rustup proxy をバイパスする
 # 不具合があるため、rust プラグイン自体を無効化する
@@ -14,7 +18,7 @@ credential_command = "gh auth token"
 [tools]
 java = "temurin-26.0.1"
 node = "26"
-python = "3.14.6"
+python = "3.14.5"
 ruby = "4.0"
 claude = "2.1.173"
 codex = "0.138.0"
