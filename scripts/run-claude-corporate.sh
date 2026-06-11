@@ -4,4 +4,4 @@ export CLAUDE_IDENTITY="corporate"
 export CLAUDE_CONFIG_DIR="${HOME}/.claude"
 unset CLAUDE_CODE_OAUTH_TOKEN
 
-exec "$(mise which claude)" --dangerously-skip-permissions "$@"
+exec mise exec claude -- claude --dangerously-skip-permissions "$@"
