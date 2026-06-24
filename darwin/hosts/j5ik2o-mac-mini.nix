@@ -20,6 +20,8 @@
     "cursor"
     "windsurf"
     "antigravity"
+    "kiro"
+    "kiro-cli"
 
     "iterm2"
     "warp"

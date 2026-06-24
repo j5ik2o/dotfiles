@@ -758,269 +758,279 @@ in
     };
 
     # 追加の initContent (initExtra から移行)
-    initContent = ''
-      # ============================================================
-      # 高速キャッシュ初期化
-      # ============================================================
-      _zsh_cache_dir="$HOME/.cache/zsh"
-      [[ -d "$_zsh_cache_dir" ]] || mkdir -p "$_zsh_cache_dir"
-      export ZSH_CACHE_DIR="$_zsh_cache_dir/oh-my-zsh"
-      [[ -d "$ZSH_CACHE_DIR/completions" ]] || mkdir -p "$ZSH_CACHE_DIR/completions"
+    initContent = lib.mkMerge [
+      (lib.mkOrder 100 ''
+        # Kiro CLI pre block. Keep at the top of this file.
+        [[ -f "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.pre.zsh"
+      '')
+      (lib.mkOrder 1000 ''
+        # ============================================================
+        # 高速キャッシュ初期化
+        # ============================================================
+        _zsh_cache_dir="$HOME/.cache/zsh"
+        [[ -d "$_zsh_cache_dir" ]] || mkdir -p "$_zsh_cache_dir"
+        export ZSH_CACHE_DIR="$_zsh_cache_dir/oh-my-zsh"
+        [[ -d "$ZSH_CACHE_DIR/completions" ]] || mkdir -p "$ZSH_CACHE_DIR/completions"
 
-      # ============================================================
-      # 起動時間計測 (zprof)
-      # ============================================================
-      _zsh_profile_enabled=0
-      if [[ "''${ZSH_PROFILE:-0}" == "1" ]]; then
-        _zsh_profile_enabled=1
-        zmodload zsh/zprof 2>/dev/null || true
-        zmodload zsh/datetime 2>/dev/null || true
-      fi
-      if (( _zsh_profile_enabled )) && [[ -z "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
-        _ZSH_START_EPOCHREALTIME="$EPOCHREALTIME"
-      fi
+        # ============================================================
+        # 起動時間計測 (zprof)
+        # ============================================================
+        _zsh_profile_enabled=0
+        if [[ "''${ZSH_PROFILE:-0}" == "1" ]]; then
+          _zsh_profile_enabled=1
+          zmodload zsh/zprof 2>/dev/null || true
+          zmodload zsh/datetime 2>/dev/null || true
+        fi
+        if (( _zsh_profile_enabled )) && [[ -z "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+          _ZSH_START_EPOCHREALTIME="$EPOCHREALTIME"
+        fi
 
-      # 起動計測: 初回プロンプトで入力受付可能になった時点を記録
-      if (( _zsh_profile_enabled )) && [[ -t 0 ]]; then
-        _zsh_profile_prompt_ready() {
-          if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
-            local _zsh_now _zsh_elapsed _zsh_profile_log
-            _zsh_now="$EPOCHREALTIME"
-            _zsh_elapsed=$(printf "%.3f" "$((_zsh_now - _ZSH_START_EPOCHREALTIME))")
-            _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
-            {
-              print -r -- "prompt_ready=''${_zsh_elapsed}s"
-            } >>| "$_zsh_profile_log" 2>&1
-          fi
-          if (( $+functions[add-zle-hook-widget] )); then
-            add-zle-hook-widget -d zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
-          fi
-          unset -f _zsh_profile_prompt_ready
-          unset _ZSH_START_EPOCHREALTIME
-        }
-        _zsh_profile_setup_prompt_ready() {
-          zmodload zsh/zle 2>/dev/null || true
-          autoload -Uz add-zle-hook-widget
-          add-zle-hook-widget -Uz zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
-          precmd_functions=(''${precmd_functions:#_zsh_profile_setup_prompt_ready})
-          unset -f _zsh_profile_setup_prompt_ready
-        }
-        autoload -Uz add-zsh-hook
-        add-zsh-hook precmd _zsh_profile_setup_prompt_ready
-      fi
+        # 起動計測: 初回プロンプトで入力受付可能になった時点を記録
+        if (( _zsh_profile_enabled )) && [[ -t 0 ]]; then
+          _zsh_profile_prompt_ready() {
+            if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+              local _zsh_now _zsh_elapsed _zsh_profile_log
+              _zsh_now="$EPOCHREALTIME"
+              _zsh_elapsed=$(printf "%.3f" "$((_zsh_now - _ZSH_START_EPOCHREALTIME))")
+              _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
+              {
+                print -r -- "prompt_ready=''${_zsh_elapsed}s"
+              } >>| "$_zsh_profile_log" 2>&1
+            fi
+            if (( $+functions[add-zle-hook-widget] )); then
+              add-zle-hook-widget -d zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
+            fi
+            unset -f _zsh_profile_prompt_ready
+            unset _ZSH_START_EPOCHREALTIME
+          }
+          _zsh_profile_setup_prompt_ready() {
+            zmodload zsh/zle 2>/dev/null || true
+            autoload -Uz add-zle-hook-widget
+            add-zle-hook-widget -Uz zle-line-init _zsh_profile_prompt_ready 2>/dev/null || true
+            precmd_functions=(''${precmd_functions:#_zsh_profile_setup_prompt_ready})
+            unset -f _zsh_profile_setup_prompt_ready
+          }
+          autoload -Uz add-zsh-hook
+          add-zsh-hook precmd _zsh_profile_setup_prompt_ready
+        fi
 
-      # ── compinit 先行初期化 ──
-      autoload -Uz compinit
-      _comp_dump="$_zsh_cache_dir/.zcompdump"
-      _comp_dump_fpath="$_zsh_cache_dir/.zcompdump.fpath"
-      _zsh_compinit_done=0
+        # ── compinit 先行初期化 ──
+        autoload -Uz compinit
+        _comp_dump="$_zsh_cache_dir/.zcompdump"
+        _comp_dump_fpath="$_zsh_cache_dir/.zcompdump.fpath"
+        _zsh_compinit_done=0
 
-      _zsh_compinit_run() {
-        (( _zsh_compinit_done )) && return 0
-        local _ok=0
-        if [[ "''${ZSH_COMPINIT_SECURE:-0}" == "1" ]]; then
-          compinit -d "$_comp_dump" && _ok=1
-        else
-          local _fpath_snap="''${(j:\n:)fpath}" _rebuild=1
-          if [[ -f "$_comp_dump" ]] && [[ -f "$_comp_dump_fpath" ]] \
-             && [[ "$_fpath_snap" == "$(<"$_comp_dump_fpath")" ]]; then
-            _rebuild=0
-          fi
-          if (( _rebuild )); then
+        _zsh_compinit_run() {
+          (( _zsh_compinit_done )) && return 0
+          local _ok=0
+          if [[ "''${ZSH_COMPINIT_SECURE:-0}" == "1" ]]; then
             compinit -d "$_comp_dump" && _ok=1
           else
-            compinit -C -d "$_comp_dump" && _ok=1
+            local _fpath_snap="''${(j:\n:)fpath}" _rebuild=1
+            if [[ -f "$_comp_dump" ]] && [[ -f "$_comp_dump_fpath" ]] \
+               && [[ "$_fpath_snap" == "$(<"$_comp_dump_fpath")" ]]; then
+              _rebuild=0
+            fi
+            if (( _rebuild )); then
+              compinit -d "$_comp_dump" && _ok=1
+            else
+              compinit -C -d "$_comp_dump" && _ok=1
+            fi
+            (( _ok )) && printf '%s' "$_fpath_snap" >| "$_comp_dump_fpath"
           fi
-          (( _ok )) && printf '%s' "$_fpath_snap" >| "$_comp_dump_fpath"
+          if (( ! _ok )); then return 1; fi
+          _zsh_compinit_done=1
+        }
+
+        # ============================================================
+        # プロンプト選択 (ビルド時に決定)
+        # ============================================================
+        _zsh_prompt_profile="${promptProfile}"
+        export ZSH_PROMPT_PROFILE="${promptProfile}"
+        export SHELDON_PROFILE="${promptProfile}"
+        if [[ "$_zsh_prompt_profile" == "p10k" ]]; then
+          if [[ -f "$HOME/.config/zsh/p10k.zsh" ]]; then
+            export POWERLEVEL9K_CONFIG_FILE="$HOME/.config/zsh/p10k.zsh"
+          fi
+          export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
         fi
-        if (( ! _ok )); then return 1; fi
-        _zsh_compinit_done=1
-      }
 
-      # ============================================================
-      # プロンプト選択 (ビルド時に決定)
-      # ============================================================
-      _zsh_prompt_profile="${promptProfile}"
-      export ZSH_PROMPT_PROFILE="${promptProfile}"
-      export SHELDON_PROFILE="${promptProfile}"
-      if [[ "$_zsh_prompt_profile" == "p10k" ]]; then
-        if [[ -f "$HOME/.config/zsh/p10k.zsh" ]]; then
-          export POWERLEVEL9K_CONFIG_FILE="$HOME/.config/zsh/p10k.zsh"
+        # Sheldon キャッシュ (設定変更時のみ再生成)
+        _sheldon_cache="$_zsh_cache_dir/sheldon.${promptProfile}.zsh"
+        _sheldon_toml="$HOME/.config/sheldon/plugins.toml"
+        _sheldon_toml_target="$(readlink "$_sheldon_toml" 2>/dev/null || echo "$_sheldon_toml")"
+        _sheldon_toml_target_cache="$_zsh_cache_dir/sheldon.toml.target"
+        _sheldon_rebuild=0
+        if [[ ! -f "$_sheldon_cache" ]] || [[ "$_sheldon_toml" -nt "$_sheldon_cache" ]]; then
+          _sheldon_rebuild=1
+        elif [[ ! -f "$_sheldon_toml_target_cache" ]] || [[ "$_sheldon_toml_target" != "$(cat "$_sheldon_toml_target_cache" 2>/dev/null)" ]]; then
+          _sheldon_rebuild=1
         fi
-        export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
-      fi
+        if (( _sheldon_rebuild )); then
+          SHELDON_PROFILE="${promptProfile}" sheldon source > "$_sheldon_cache"
+          printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
+        fi
+        _zsh_compinit_run
+        source "$_sheldon_cache"
+        unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
 
-      # Sheldon キャッシュ (設定変更時のみ再生成)
-      _sheldon_cache="$_zsh_cache_dir/sheldon.${promptProfile}.zsh"
-      _sheldon_toml="$HOME/.config/sheldon/plugins.toml"
-      _sheldon_toml_target="$(readlink "$_sheldon_toml" 2>/dev/null || echo "$_sheldon_toml")"
-      _sheldon_toml_target_cache="$_zsh_cache_dir/sheldon.toml.target"
-      _sheldon_rebuild=0
-      if [[ ! -f "$_sheldon_cache" ]] || [[ "$_sheldon_toml" -nt "$_sheldon_cache" ]]; then
-        _sheldon_rebuild=1
-      elif [[ ! -f "$_sheldon_toml_target_cache" ]] || [[ "$_sheldon_toml_target" != "$(cat "$_sheldon_toml_target_cache" 2>/dev/null)" ]]; then
-        _sheldon_rebuild=1
-      fi
-      if (( _sheldon_rebuild )); then
-        SHELDON_PROFILE="${promptProfile}" sheldon source > "$_sheldon_cache"
-        printf '%s' "$_sheldon_toml_target" > "$_sheldon_toml_target_cache"
-      fi
-      _zsh_compinit_run
-      source "$_sheldon_cache"
-      unset _sheldon_rebuild _sheldon_toml_target _sheldon_toml_target_cache
+        if [[ "$_zsh_prompt_profile" == "pure" ]]; then
+          # pure.zsh が読み込まれた時点でプロンプトを設定する
+          :
+        fi
 
-      if [[ "$_zsh_prompt_profile" == "pure" ]]; then
-        # pure.zsh が読み込まれた時点でプロンプトを設定する
-        :
-      fi
+        # ============================================================
+        # JetBrains IDE ターミナル対策
+        # JediTerm は ghostty 固有のエスケープシーケンスを解釈できないため
+        # 汎用の xterm-256color を使う
+        # ============================================================
+        if [[ "$TERMINAL_EMULATOR" == JetBrains* ]]; then
+          export TERM=xterm-256color
+        fi
 
-      # ============================================================
-      # JetBrains IDE ターミナル対策
-      # JediTerm は ghostty 固有のエスケープシーケンスを解釈できないため
-      # 汎用の xterm-256color を使う
-      # ============================================================
-      if [[ "$TERMINAL_EMULATOR" == JetBrains* ]]; then
-        export TERM=xterm-256color
-      fi
+        # キーバインド (Vi style)
+        bindkey -v
 
-      # キーバインド (Vi style)
-      bindkey -v
+        _zsh_bind_tab_widget() {
+          if [[ -o zle ]]; then
+            if (( $+widgets[fzf-tab-complete] )); then
+              zstyle ':completion:*' menu no
+              bindkey -M main '^I' fzf-tab-complete
+              bindkey -M emacs '^I' fzf-tab-complete
+              bindkey -M viins '^I' fzf-tab-complete
+              bindkey -M vicmd '^I' fzf-tab-complete
+            else
+              zstyle ':completion:*' menu select
+              bindkey -M main '^I' expand-or-complete
+              bindkey -M emacs '^I' expand-or-complete
+              bindkey -M viins '^I' expand-or-complete
+              bindkey -M vicmd '^I' expand-or-complete
+            fi
+          fi
+        }
+        _zsh_bind_tab_widget
+        unset -f _zsh_bind_tab_widget
 
-      _zsh_bind_tab_widget() {
-        if [[ -o zle ]]; then
-          if (( $+widgets[fzf-tab-complete] )); then
-            zstyle ':completion:*' menu no
-            bindkey -M main '^I' fzf-tab-complete
-            bindkey -M emacs '^I' fzf-tab-complete
-            bindkey -M viins '^I' fzf-tab-complete
-            bindkey -M vicmd '^I' fzf-tab-complete
+        # Ctrl+S/Cmd+S で端末が止まらないようにする
+        if [[ -t 0 ]] && command -v stty &> /dev/null; then
+          stty -ixon
+        fi
+
+        # Ghostty: SSH接続時のTERM復元/フォールバック
+        # ~/.zshenv で保存した _SSH_ORIGINAL_TERM を使い、
+        # /etc/profile 等に上書きされた TERM を復元する
+        if [[ -n "$SSH_CONNECTION" ]]; then
+          _ghostty_term="''${_SSH_ORIGINAL_TERM:-$TERM}"
+          if [[ "$_ghostty_term" == "xterm-ghostty" ]]; then
+            if [[ -f "$HOME/.terminfo/x/xterm-ghostty" || -f "$HOME/.terminfo/78/xterm-ghostty" ]] ||
+               { command -v infocmp &> /dev/null && infocmp xterm-ghostty &> /dev/null; }; then
+              export TERM="xterm-ghostty"
+            else
+              export TERM="xterm-256color"
+            fi
+          fi
+          unset _SSH_ORIGINAL_TERM _ghostty_term
+        fi
+
+        # Vi モードでのカーソル形状変更
+        function zle-keymap-select {
+          if [[ $KEYMAP == vicmd ]]; then
+            printf '\e[2 q'  # Block cursor for normal mode
           else
-            zstyle ':completion:*' menu select
-            bindkey -M main '^I' expand-or-complete
-            bindkey -M emacs '^I' expand-or-complete
-            bindkey -M viins '^I' expand-or-complete
-            bindkey -M vicmd '^I' expand-or-complete
+            printf '\e[6 q'  # Beam cursor for insert mode
           fi
+        }
+        zle -N zle-keymap-select
+
+        # 起動時は insert mode
+        printf '\e[6 q'
+
+        # Ghostty tab title: user@host:cwd
+        autoload -Uz add-zsh-hook
+        _ghostty_tab_title() {
+          [[ -z "$GHOSTTY_RESOURCES_DIR" ]] && return
+          print -Pn "\e]2;%n@%m:%~\a"
+        }
+        add-zsh-hook precmd _ghostty_tab_title
+        add-zsh-hook preexec _ghostty_tab_title
+
+        # history-substring-search のキーバインド
+        bindkey '^[[A' history-substring-search-up
+        bindkey '^[[B' history-substring-search-down
+        bindkey '^P' history-substring-search-up
+        bindkey '^N' history-substring-search-down
+
+        # 単語区切り文字
+        WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
+
+        # 補完設定 (大文字小文字を区別しない)
+        zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+        zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
+
+        # fzf-tab 設定
+        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+        zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath'
+        zstyle ':fzf-tab:*' switch-group ',' '.'
+
+        # fzf 設定
+        if command -v fzf &> /dev/null; then
+          export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+          export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+          export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+          export FZF_DEFAULT_OPTS='
+            --height 40%
+            --layout=reverse
+            --border
+            --inline-info
+            -i
+          '
         fi
-      }
-      _zsh_bind_tab_widget
-      unset -f _zsh_bind_tab_widget
 
-      # Ctrl+S/Cmd+S で端末が止まらないようにする
-      if [[ -t 0 ]] && command -v stty &> /dev/null; then
-        stty -ixon
-      fi
-
-      # Ghostty: SSH接続時のTERM復元/フォールバック
-      # ~/.zshenv で保存した _SSH_ORIGINAL_TERM を使い、
-      # /etc/profile 等に上書きされた TERM を復元する
-      if [[ -n "$SSH_CONNECTION" ]]; then
-        _ghostty_term="''${_SSH_ORIGINAL_TERM:-$TERM}"
-        if [[ "$_ghostty_term" == "xterm-ghostty" ]]; then
-          if [[ -f "$HOME/.terminfo/x/xterm-ghostty" || -f "$HOME/.terminfo/78/xterm-ghostty" ]] ||
-             { command -v infocmp &> /dev/null && infocmp xterm-ghostty &> /dev/null; }; then
-            export TERM="xterm-ghostty"
-          else
-            export TERM="xterm-256color"
+        # ghq + fzf
+        function ghq-fzf() {
+          local selected
+          selected=$(ghq list -p | fzf --preview "bat --color=always --style=header,grid {}/README.md 2>/dev/null || ls -la {}")
+          if [ -n "$selected" ]; then
+            cd "$selected"
           fi
+        }
+        alias g='ghq-fzf'
+
+        # zoxide, プロンプトは sheldon で初期化
+
+        # ============================================================
+        # プロファイリング結果出力
+        # ============================================================
+        if (( _zsh_profile_enabled )); then
+          _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
+          {
+            print -r -- "---- zsh startup $(date '+%Y-%m-%d %H:%M:%S') pid=$$ ----"
+            if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
+              _zsh_end="$EPOCHREALTIME"
+              _zsh_elapsed=$(printf "%.3f" "$((_zsh_end - _ZSH_START_EPOCHREALTIME))")
+              print -r -- "elapsed=''${_zsh_elapsed}s"
+            fi
+            if whence -w zprof >/dev/null 2>&1; then
+              zprof
+            else
+              print -r -- "zprof not available"
+            fi
+            print -r -- ""
+          } >>| "$_zsh_profile_log" 2>&1
+          unset _zsh_profile_log _zsh_end _zsh_elapsed
         fi
-        unset _SSH_ORIGINAL_TERM _ghostty_term
-      fi
+        unset _zsh_profile_enabled
 
-      # Vi モードでのカーソル形状変更
-      function zle-keymap-select {
-        if [[ $KEYMAP == vicmd ]]; then
-          printf '\e[2 q'  # Block cursor for normal mode
-        else
-          printf '\e[6 q'  # Beam cursor for insert mode
+        # Ghostty shell integration (ファイルが存在する場合のみ source)
+        if [[ -n $GHOSTTY_RESOURCES_DIR && -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
+          source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
         fi
-      }
-      zle -N zle-keymap-select
-
-      # 起動時は insert mode
-      printf '\e[6 q'
-
-      # Ghostty tab title: user@host:cwd
-      autoload -Uz add-zsh-hook
-      _ghostty_tab_title() {
-        [[ -z "$GHOSTTY_RESOURCES_DIR" ]] && return
-        print -Pn "\e]2;%n@%m:%~\a"
-      }
-      add-zsh-hook precmd _ghostty_tab_title
-      add-zsh-hook preexec _ghostty_tab_title
-
-      # history-substring-search のキーバインド
-      bindkey '^[[A' history-substring-search-up
-      bindkey '^[[B' history-substring-search-down
-      bindkey '^P' history-substring-search-up
-      bindkey '^N' history-substring-search-down
-
-      # 単語区切り文字
-      WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
-
-      # 補完設定 (大文字小文字を区別しない)
-      zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-      zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
-
-      # fzf-tab 設定
-      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
-      zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath'
-      zstyle ':fzf-tab:*' switch-group ',' '.'
-
-      # fzf 設定
-      if command -v fzf &> /dev/null; then
-        export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
-        export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-        export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
-        export FZF_DEFAULT_OPTS='
-          --height 40%
-          --layout=reverse
-          --border
-          --inline-info
-          -i
-        '
-      fi
-
-      # ghq + fzf
-      function ghq-fzf() {
-        local selected
-        selected=$(ghq list -p | fzf --preview "bat --color=always --style=header,grid {}/README.md 2>/dev/null || ls -la {}")
-        if [ -n "$selected" ]; then
-          cd "$selected"
-        fi
-      }
-      alias g='ghq-fzf'
-
-      # zoxide, プロンプトは sheldon で初期化
-
-      # ============================================================
-      # プロファイリング結果出力
-      # ============================================================
-      if (( _zsh_profile_enabled )); then
-        _zsh_profile_log="''${ZSH_PROFILE_LOG:-$_zsh_cache_dir/zsh-startup.log}"
-        {
-          print -r -- "---- zsh startup $(date '+%Y-%m-%d %H:%M:%S') pid=$$ ----"
-          if [[ -n "''${_ZSH_START_EPOCHREALTIME:-}" ]]; then
-            _zsh_end="$EPOCHREALTIME"
-            _zsh_elapsed=$(printf "%.3f" "$((_zsh_end - _ZSH_START_EPOCHREALTIME))")
-            print -r -- "elapsed=''${_zsh_elapsed}s"
-          fi
-          if whence -w zprof >/dev/null 2>&1; then
-            zprof
-          else
-            print -r -- "zprof not available"
-          fi
-          print -r -- ""
-        } >>| "$_zsh_profile_log" 2>&1
-        unset _zsh_profile_log _zsh_end _zsh_elapsed
-      fi
-      unset _zsh_profile_enabled
-
-      # Ghostty shell integration (ファイルが存在する場合のみ source)
-      if [[ -n $GHOSTTY_RESOURCES_DIR && -f "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
-        source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
-      fi
-    '';
+      '')
+      (lib.mkOrder 1500 ''
+        # Kiro CLI post block. Keep at the bottom of this file.
+        [[ -f "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
+      '')
+    ];
 
     # シェルエイリアス
     shellAliases = {
@@ -1112,6 +1122,17 @@ in
     # プラグインは sheldon で管理するため、ここでは定義しない
     # plugins = [];
   };
+
+  home.file.".config/zsh/.zprofile".text = lib.mkMerge [
+    (lib.mkBefore ''
+      # Kiro CLI pre block. Keep at the top of this file.
+      [[ -f "''${HOME}/Library/Application Support/kiro-cli/shell/zprofile.pre.zsh" ]] && builtin source "''${HOME}/Library/Application Support/kiro-cli/shell/zprofile.pre.zsh"
+    '')
+    (lib.mkAfter ''
+      # Kiro CLI post block. Keep at the bottom of this file.
+      [[ -f "''${HOME}/Library/Application Support/kiro-cli/shell/zprofile.post.zsh" ]] && builtin source "''${HOME}/Library/Application Support/kiro-cli/shell/zprofile.post.zsh"
+    '')
+  ];
 
   # ============================================================
   # fzf 設定

@@ -3,13 +3,6 @@ result
 
 .tmp/
 
-/.agents/
-/.claude/
-/.codex*/
-/.cursor/
-/.gemini/
-/.opencode/
-
 /.serena/cache/
 
 /.kiro/
