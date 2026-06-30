@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ lib, ... }:
 
 {
   # ============================================================
@@ -12,16 +12,9 @@
       # "zap" は Brewfile に無いパッケージを全削除するため危険
       # "none" = 何もしない, "uninstall" = formulae のみ削除, "zap" = 全削除
       cleanup = lib.mkDefault "none";
-      upgrade = true;
-      extraFlags =
-        # Homebrew Bundle 4.6+ では --cleanup に --force-cleanup が必須。
-        lib.optional (
-          builtins.elem config.homebrew.onActivation.cleanup [
-            "uninstall"
-            "zap"
-          ]
-        ) "--force-cleanup"
-        ++ [ "--verbose" ];
+      # GUI cask の更新は .app の置き換えで macOS 権限状態が揺れやすいため、make apply では行わない。
+      upgrade = false;
+      extraFlags = [ "--verbose" ];
     };
 
     # Homebrew taps
