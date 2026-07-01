@@ -74,6 +74,10 @@
         doCheck = false;
         doInstallCheck = false;
       });
+      # macOS の Nix sandbox で OCI layer の特殊権限ビット保持テストが失敗するためテストをスキップ
+      mise = prev.mise.overrideAttrs (_: {
+        doCheck = false;
+      });
     })
   ];
 
