@@ -104,6 +104,7 @@
     # codex-acp # nixpkgs 側でビルド失敗中 (codex-core の include_str! 相対パスが壊れている)
     opencode
     gemini-cli # Google Gemini CLI
+    herdr # ターミナル内のエージェントマルチプレクサ
 
     # ============================================================
     # 言語ランタイム (mise で管理)
