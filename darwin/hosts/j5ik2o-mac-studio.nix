@@ -73,6 +73,15 @@
     "aionui"
   ];
 
+  # Moshi の agent hook daemon
+  # pairing と agent hook の設定は秘密情報を扱うため、初回のみ手動で実行する。
+  homebrew.brews = [
+    {
+      name = "rjyo/moshi/moshi-hook";
+      restart_service = "changed";
+    }
+  ];
+
   # Mac App Store アプリ
   homebrew.masApps = {
     "Amazon Kindle" = 302584613;

@@ -57,6 +57,7 @@
     curl
     wget
     httpie
+    mosh
 
     # クラウド CLI
     awscli2
