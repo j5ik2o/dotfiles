@@ -1026,6 +1026,14 @@ in
           source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
         fi
       '')
+      (lib.mkOrder 1200 ''
+        # agmsg の monitor mode を経由して Codex を起動する
+        if [[ -x "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" ]]; then
+          codex() {
+            "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" "$@"
+          }
+        fi
+      '')
       (lib.mkOrder 1500 ''
         # Kiro CLI post block. Keep at the bottom of this file.
         [[ -f "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "''${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
