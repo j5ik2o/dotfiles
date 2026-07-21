@@ -1030,7 +1030,11 @@ in
         # agmsg の monitor mode を経由して Codex を起動する
         if [[ -x "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" ]]; then
           codex() {
-            "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" "$@"
+            local real_codex
+            real_codex="$(mise which codex)" || return
+
+            AGMSG_REAL_CODEX="$real_codex" \
+              "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" "$@"
           }
         fi
       '')
