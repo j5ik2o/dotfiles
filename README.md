@@ -195,3 +195,4 @@ LazyVim (Nix-managed, default): `nvim` (also via `vi`, `vim`)
 
 - `homebrew.onActivation.cleanup = "zap"` が設定されているため、`casks` リストにないアプリは削除されます
 - 初回実行後、一部の設定は再ログインまたは再起動が必要です
+# amadeus-dlc.github.io
