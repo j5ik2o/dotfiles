@@ -30,8 +30,19 @@ jobs:
       - name: Trust mise config
         run: mise trust --yes config/mise/mise.toml
 
+      # mise.toml の書き換え自体は成功しても、一部ツールの実インストールが
+      # CI の非対話環境で中断されてジョブが落ち、バンプが commit されないため
+      # 失敗を許容する。反映されたかどうかは後段の Detect changes で判断する。
       - name: Upgrade tools with bump
+        continue-on-error: true
         run: mise upgrade --yes --bump --minimum-release-age 0s --cd config/mise
+
+      # claude / codex は mise のレジストリが上流より遅れることがあるため、
+      # CHANGELOG.md と GitHub Releases を一次情報として上書きする。
+      - name: Sync claude/codex to upstream sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/sync-upstream-versions.sh
 
       - name: Detect changes
         id: changes
