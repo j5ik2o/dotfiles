@@ -76,8 +76,11 @@
         doInstallCheck = false;
       });
       # macOS の Nix sandbox で OCI layer の特殊権限ビット保持テストが失敗するためテストをスキップ
-      mise = prev.mise.overrideAttrs (_: {
+      # あわせて libz-ng-sys のビルドに必要な cmake を補う (nixpkgs 側の nativeBuildInputs から欠落)
+      mise = prev.mise.overrideAttrs (old: {
         doCheck = false;
+        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.cmake ];
+        dontUseCmakeConfigure = true;
       });
     })
   ];
