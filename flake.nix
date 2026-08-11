@@ -58,25 +58,29 @@
 
       # カスタムパッケージの overlay
       # claude-code, codex は mise で管理
-      customOverlay = final: prev: {
-        gwq = final.callPackage ./packages/gwq.nix { };
-        claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
-        cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
-        coderabbit = final.callPackage ./packages/coderabbit.nix { };
-        herdr = final.callPackage ./packages/herdr.nix { };
-        # macOS の Nix sandbox で test/direnv-test.zsh がハングするためテストをスキップ
-        direnv = prev.direnv.overrideAttrs (_: {
-          doCheck = false;
-          doInstallCheck = false;
-        });
-        # macOS の Nix sandbox で OCI layer の特殊権限ビット保持テストが失敗するためテストをスキップ
-        # あわせて libz-ng-sys のビルドに必要な cmake を補う (nixpkgs 側の nativeBuildInputs から欠落)
-        mise = prev.mise.overrideAttrs (old: {
-          doCheck = false;
-          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.cmake ];
-          dontUseCmakeConfigure = true;
-        });
-      };
+      customOverlay =
+        final: prev:
+        {
+          gwq = final.callPackage ./packages/gwq.nix { };
+          claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
+          cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
+          coderabbit = final.callPackage ./packages/coderabbit.nix { };
+          herdr = final.callPackage ./packages/herdr.nix { };
+        }
+        // nixpkgs.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+          # macOS の Nix sandbox で test/direnv-test.zsh がハングするためテストをスキップ
+          direnv = prev.direnv.overrideAttrs (_: {
+            doCheck = false;
+            doInstallCheck = false;
+          });
+          # macOS の Nix sandbox で OCI layer の特殊権限ビット保持テストが失敗するためテストをスキップ
+          # あわせて libz-ng-sys のビルドに必要な cmake を補う (nixpkgs 側の nativeBuildInputs から欠落)
+          mise = prev.mise.overrideAttrs (old: {
+            doCheck = false;
+            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.cmake ];
+            dontUseCmakeConfigure = true;
+          });
+        };
 
       # home-manager 設定のパス
       hmConfigPath = ./modules;
