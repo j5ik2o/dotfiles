@@ -128,6 +128,7 @@
               builtins.elem (nixpkgs.lib.getName pkg) [
                 "1password-cli"
                 "coderabbit"
+                "copilot-language-server"
               ];
           };
           modules = modules ++ [
