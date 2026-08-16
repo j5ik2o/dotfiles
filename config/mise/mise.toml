@@ -36,7 +36,7 @@ claude = "2.1.233"
 "npm:@moonshot-ai/kimi-code" = "0.36.1"
 # takt: pin ではない。フレッシュインストール時の依存解決が pi と同じ provenance 欠落
 # バージョンに当たるため、検証済みの除外だけ共有する(2026-08-16 17:24 UTC 以降は不要)
-"npm:takt" = { version = "0.58.0", trust_policy_excludes = [
+"npm:takt" = { version = "0.59.1", trust_policy_excludes = [
   "@smithy/core@3.33.0",
   "@smithy/node-http-handler@4.11.0",
 ] }
