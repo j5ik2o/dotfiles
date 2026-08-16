@@ -13,6 +13,7 @@
     ./packages.nix # CLI tools from nixpkgs
     ./homebrew.nix # Homebrew 共通設定
     ./system-settings.nix # macOS system settings
+    ./remote-login.nix # sshd (Remote Login) 有効化
   ];
 
   # ============================================================
