@@ -104,7 +104,7 @@
     coderabbit # AI コードレビュー CLI
     # codex-acp # nixpkgs 側でビルド失敗中 (codex-core の include_str! 相対パスが壊れている)
     opencode
-    gemini-cli # Google Gemini CLI
+    antigravity-cli # Google Antigravity CLI (gemini-cli の後継)
     herdr # ターミナル内のエージェントマルチプレクサ
 
     # ============================================================
