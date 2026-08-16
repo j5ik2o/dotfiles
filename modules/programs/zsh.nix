@@ -91,7 +91,7 @@ in
     unset _mise_cc _mise_cxx _mise_ar _mise_ranlib _mise_nm _mise_strip _mise_pkg_config
   '';
 
-  # make apply 後に mise.toml の tools は最新 + ひとつ前のみ残す
+  # make apply 後に mise.toml の tools は現在版と新しい 2 バージョンのみ残す
   home.activation.miseTrimOldToolVersions = lib.hm.dag.entryAfter [ "miseAutoInstall" ] ''
         _mise_path="${config.home.profileDirectory}/bin:/usr/bin:/bin"
         _mise_home="${config.home.homeDirectory}"
@@ -100,6 +100,13 @@ in
         _mise_awk="${pkgs.gawk}/bin/awk"
         if [ -x "${pkgs.mise}/bin/mise" ]; then
           for _mise_tool in ${miseToolsArgs}; do
+            if ! _mise_current="$(
+              env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
+                "${pkgs.mise}/bin/mise" current "$_mise_tool" 2>/dev/null
+            )"; then
+              echo "home-manager: failed to determine current mise version for $_mise_tool; skipping cleanup" >&2
+              continue
+            fi
             _mise_versions="$(
               env HOME="$_mise_home" XDG_CONFIG_HOME="$_mise_xdg_config_home" PATH="$_mise_path:$PATH" \
                 "${pkgs.mise}/bin/mise" ls "$_mise_tool" --installed --no-header 2>/dev/null \
@@ -108,7 +115,8 @@ in
             )"
             _mise_remove="$(
               printf '%s\n' "$_mise_versions" \
-                | "$_mise_awk" 'NF { versions[++count] = $0 } END { limit = count - 2; for (i = 1; i <= limit; i++) print versions[i] }'
+                | "$_mise_awk" -v current="$_mise_current" \
+                  'NF { versions[++count] = $0 } END { limit = count - 2; for (i = 1; i <= limit; i++) if (versions[i] != current) print versions[i] }'
             )"
             if [ -n "$_mise_remove" ]; then
               echo "home-manager: removing old mise versions for $_mise_tool" >&2
@@ -124,7 +132,7 @@ in
             fi
           done
         fi
-        unset _mise_path _mise_home _mise_xdg_config_home _mise_sort _mise_awk _mise_tool _mise_versions _mise_remove _mise_version
+        unset _mise_path _mise_home _mise_xdg_config_home _mise_sort _mise_awk _mise_tool _mise_current _mise_versions _mise_remove _mise_version
   '';
 
   home.file.".local/bin/mise" = {
