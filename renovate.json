@@ -11,6 +11,11 @@
   "packageRules": [
     {
       "matchManagers": ["mise"],
+      "matchPackageNames": ["node"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["mise"],
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
     }
