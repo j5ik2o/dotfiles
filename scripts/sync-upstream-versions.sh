@@ -26,6 +26,13 @@ update_tool() {
   local key="$1" version="$2"
   local prefix="${key} = \""
   local tmp
+
+  # 行末に「# pin」マーカーが付いたツールは上書きしない (mise-upgrade.yml と同じ規約)
+  if awk -v prefix="${prefix}" 'index($0, prefix) == 1 && / # *pin( |$)/ { found = 1 } END { exit !found }' "${mise_toml}"; then
+    echo "${key}: pinned, skip (upstream: ${version})"
+    return 0
+  fi
+
   tmp="$(mktemp)"
 
   awk -v prefix="${prefix}" -v line="${key} = \"${version}\"" '
