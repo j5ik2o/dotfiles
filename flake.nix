@@ -131,6 +131,7 @@
               pkg:
               builtins.elem (nixpkgs.lib.getName pkg) [
                 "1password-cli"
+                "antigravity-cli"
                 "coderabbit"
                 "copilot-language-server"
               ];

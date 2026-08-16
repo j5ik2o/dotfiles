@@ -52,6 +52,7 @@
   nixpkgs.config.allowUnfreePredicate =
     pkg:
     builtins.elem (lib.getName pkg) [
+      "antigravity-cli"
       "claude-code"
       "coderabbit"
       "copilot-language-server"
