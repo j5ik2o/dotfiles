@@ -21,8 +21,18 @@ node = "24"
 python = "3.14.7"
 ruby = "4.0"
 claude = "2.1.233"
-"npm:@earendil-works/pi-coding-agent" = "0.84.2"
-"npm:@openai/codex" = "0.147.0"
+# 行末の「# pin」マーカーが付いたツールは CI (mise-upgrade.yml) の自動バンプ対象外。
+# 固定を解除するときはマーカーを外す。
+#
+# pi: 2026-08-14 の AWS 公開パイプライン障害で @smithy の一部バージョンに provenance が
+# 欠落しているため、tarball 検証済みのバージョンのみ trust policy から除外。
+# 0.84.3 以降(2026-08-15 17:24 UTC の修正バッチ以降の公開)にバンプしたら除外は削除してよい
+"npm:@earendil-works/pi-coding-agent" = { version = "0.84.2", trust_policy_excludes = [ # pin
+  "@smithy/core@3.33.0",
+  "@smithy/node-http-handler@4.11.0",
+] }
+# codex: 0.147.0 に不具合があるため 0.146.0 に固定
+"npm:@openai/codex" = "0.146.0" # pin
 "npm:@moonshot-ai/kimi-code" = "0.36.1"
 "npm:takt" = "0.58.0"
 "npm:takt-sdd" = "2.3.0"
