@@ -54,6 +54,7 @@
     builtins.elem (lib.getName pkg) [
       "claude-code"
       "coderabbit"
+      "copilot-language-server"
     ];
 
   # カスタムパッケージの overlay
