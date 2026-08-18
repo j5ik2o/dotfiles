@@ -22,32 +22,11 @@ remote-management:
 payload:
   override:
     - models:
-        - name: "gpt-5.2"
+        - name: "gpt-5.6-sol"
           protocol: "codex"
-        - name: "gpt-5.2-codex"
+        - name: "gpt-5.6-terra"
           protocol: "codex"
-      params:
-        "reasoning.effort": "xhigh"
-    - models:
-        - name: "gpt-5.3"
-          protocol: "codex"
-        - name: "gpt-5.3-codex"
-          protocol: "codex"
-        - name: "gpt-5.3-codex-spark"
+        - name: "gpt-5.6-luna"
           protocol: "codex"
       params:
         "reasoning.effort": "xhigh"
-    - models:
-        - name: "gemini-2.5-pro"
-          protocol: "gemini"
-        - name: "gemini-3-pro-preview"
-          protocol: "gemini"
-      params:
-        "generationConfig.thinkingConfig.thinkingBudget": 32768
-    - models:
-        - name: "gemini-2.5-flash"
-          protocol: "gemini"
-        - name: "gemini-3-flash-preview"
-          protocol: "gemini"
-      params:
-        "generationConfig.thinkingConfig.thinkingBudget": 8192

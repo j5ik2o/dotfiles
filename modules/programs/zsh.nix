@@ -1034,6 +1034,32 @@ in
           source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
         fi
       '')
+      (lib.mkOrder 1100 ''
+        # Claude Code を CLIProxyAPI 経由の GPT-5.6 で起動する
+        claude-gpt() {
+          if (( $# == 0 )); then
+            print -u2 -- "usage: claude-gpt <model> [claude options]"
+            return 2
+          fi
+          if [[ -z "$CLI_PROXY_API_BASE_URL" || -z "$CLI_PROXY_API_KEY" ]]; then
+            print -u2 -- "CLI_PROXY_API_BASE_URL and CLI_PROXY_API_KEY must be set"
+            return 1
+          fi
+
+          local model="$1"
+          shift
+          env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY \
+            ANTHROPIC_BASE_URL="$CLI_PROXY_API_BASE_URL" \
+            ANTHROPIC_AUTH_TOKEN="$CLI_PROXY_API_KEY" \
+            CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 \
+            CLAUDE_CODE_MAX_CONTEXT_TOKENS=1050000 \
+            claude --model "$model" "$@"
+        }
+
+        alias claude-sol='claude-gpt gpt-5.6-sol'
+        alias claude-terra='claude-gpt gpt-5.6-terra'
+        alias claude-luna='claude-gpt gpt-5.6-luna'
+      '')
       (lib.mkOrder 1200 ''
         # agmsg の monitor mode を経由して Codex を起動する
         if [[ -x "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" ]]; then
