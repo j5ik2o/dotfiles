@@ -1,0 +1,23 @@
+diff --git a/claudecodex b/claudecodex
+index 697651e..1829298 100755
+--- a/claudecodex
++++ b/claudecodex
+@@ -95,8 +95,8 @@ fi
+ export ANTHROPIC_BASE_URL="http://localhost:${PROXY_PORT}"
+ export ANTHROPIC_AUTH_TOKEN="claudecodex-local"
+-# Both models are always exported so both appear in the /model picker: the big
+-# one as the main model, the small one as the Haiku/fast slot. The active model
+-# for this launch is chosen via the --model flag below (default = big).
+-export ANTHROPIC_MODEL="$BIG_MODEL"
++# Let Claude Code discover every Standard/Fast model exposed by the gateway.
++# Do not set ANTHROPIC_MODEL here: the user can select a model with /model, and
++# the launcher flags below remain available for an explicit per-launch choice.
++export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
+ export ANTHROPIC_SMALL_FAST_MODEL="$SMALL_MODEL"
+ export ANTHROPIC_DEFAULT_HAIKU_MODEL="$SMALL_MODEL"
+@@ -117,5 +117,4 @@ export ANTHROPIC_DEFAULT_HAIKU_MODEL="$SMALL_MODEL"
+ # won't overflow past the effective window into "exceeds context window" errors.
+ export CLAUDE_CODE_MAX_CONTEXT_TOKENS="${CLAUDECODEX_CONTEXT:-372000}"
+ export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${CLAUDECODEX_CONTEXT:-372000}"
+-export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+ export CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK=1

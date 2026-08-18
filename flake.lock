@@ -20,6 +20,44 @@
         "type": "github"
       }
     },
+    "claude-code-proxy": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786562982,
+        "narHash": "sha256-vdZRZN2c9TIkJvr+e6Jje37xBznT5z+YnCIEZAfW8aA=",
+        "owner": "raine",
+        "repo": "claude-code-proxy",
+        "rev": "cf2a3d55aa5fe2e1d4ca1104fed7359660f99ec3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "raine",
+        "ref": "v0.1.34",
+        "repo": "claude-code-proxy",
+        "type": "github"
+      }
+    },
+    "claudecodex-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784121901,
+        "narHash": "sha256-2N9uVknyGo9YDqEtYbWyjPjdO4af7sBx7c04WxiP6eM=",
+        "owner": "karem505",
+        "repo": "claudecodex",
+        "rev": "1bd7ee03c407bbe6d4449981b6402205487ac754",
+        "type": "github"
+      },
+      "original": {
+        "owner": "karem505",
+        "repo": "claudecodex",
+        "rev": "1bd7ee03c407bbe6d4449981b6402205487ac754",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -202,6 +240,8 @@
     "root": {
       "inputs": {
         "catppuccin": "catppuccin",
+        "claude-code-proxy": "claude-code-proxy",
+        "claudecodex-src": "claudecodex-src",
         "home-manager": "home-manager",
         "nix-clawdbot": "nix-clawdbot",
         "nix-darwin": "nix-darwin",

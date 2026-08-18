@@ -1,0 +1,62 @@
+diff --git a/src/providers/codex/translate/model_allowlist.rs b/src/providers/codex/translate/model_allowlist.rs
+index be9a01d..4bc812f 100644
+--- a/src/providers/codex/translate/model_allowlist.rs
++++ b/src/providers/codex/translate/model_allowlist.rs
+@@ -19,4 +19,10 @@ pub const ALLOWED_MODELS: &[&str] = &[
+ pub const MODEL_ALIASES: &[(&str, &str)] = &[
++    ("claude-gpt-5.6-luna", "gpt-5.6-luna"),
++    ("claude-gpt-5.6-luna-fast", "gpt-5.6-luna-fast"),
++    ("claude-gpt-5.6-sol", "gpt-5.6-sol"),
++    ("claude-gpt-5.6-sol-fast", "gpt-5.6-sol-fast"),
++    ("claude-gpt-5.6-terra", "gpt-5.6-terra"),
++    ("claude-gpt-5.6-terra-fast", "gpt-5.6-terra-fast"),
+     ("haiku", "gpt-5.6-luna"),
+     ("claude-haiku-4-5", "gpt-5.6-luna"),
+     ("claude-haiku-4-5-20251001", "gpt-5.6-luna"),
+diff --git a/src/registry.rs b/src/registry.rs
+index 9f68e53..fb39946 100644
+--- a/src/registry.rs
++++ b/src/registry.rs
+@@ -12,4 +12,10 @@ use std::sync::Arc;
+ pub const ANTHROPIC_STYLE_ALIASES: &[&str] = &[
++    "claude-gpt-5.6-luna",
++    "claude-gpt-5.6-luna-fast",
++    "claude-gpt-5.6-sol",
++    "claude-gpt-5.6-sol-fast",
++    "claude-gpt-5.6-terra",
++    "claude-gpt-5.6-terra-fast",
+     "haiku",
+     "claude-haiku-4-5",
+     "claude-haiku-4-5-20251001",
+diff --git a/src/server.rs b/src/server.rs
+index d5f2836..38ef3b1 100644
+--- a/src/server.rs
++++ b/src/server.rs
+@@ -309,6 +309,17 @@ struct ModelsQuery {
+     limit: Option<usize>,
+ }
+-
++fn gateway_model_display_name(model: &str, provider: &str) -> String {
++    match model {
++        "claude-gpt-5.6-luna" => "GPT-5.6 Luna".to_string(),
++        "claude-gpt-5.6-luna-fast" => "GPT-5.6 Luna (Fast)".to_string(),
++        "claude-gpt-5.6-sol" => "GPT-5.6 Sol".to_string(),
++        "claude-gpt-5.6-sol-fast" => "GPT-5.6 Sol (Fast)".to_string(),
++        "claude-gpt-5.6-terra" => "GPT-5.6 Terra".to_string(),
++        "claude-gpt-5.6-terra-fast" => "GPT-5.6 Terra (Fast)".to_string(),
++        _ => format!("{model} ({provider})"),
++    }
++}
++
+ /// Anthropic-shaped model listing so Claude Code's gateway model discovery
+ /// (`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`) finds the proxy's models.
+ /// Claude Code only adds entries whose id starts with `claude` or `anthropic`,
+@@ -323,7 +336,7 @@ async fn handler_models(
+                 "type": "model",
+                 "object": "model",
+                 "id": model,
+-                "display_name": format!("{model} ({provider})"),
++                "display_name": gateway_model_display_name(&model, &provider),
+             })
+         })
+         .collect();

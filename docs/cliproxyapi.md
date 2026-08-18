@@ -54,22 +54,10 @@ make cliproxyapi-login-claude
 
 ### Claude Code
 
-通常の `claude` は Anthropic へ直接接続する。GPT-5.6 を使うときだけ、専用コマンドで CLIProxyAPI を経由する。
+GPT-5.6 を使う場合は、Standard／Fastを `/model` から選べる `claudecodex` を使う。詳細は [claudecodex カンペ](./claudecodex.md) を参照する。
 
 ```bash
-claude-sol
-claude-terra
-claude-luna
-```
-
-- `claude-sol`: 複雑な推論・大規模なコーディング向け
-- `claude-terra`: 品質とコストのバランスを取る標準用途向け
-- `claude-luna`: 高頻度・コスト重視の軽量タスク向け
-
-各コマンドは `ANTHROPIC_BASE_URL` と `ANTHROPIC_AUTH_TOKEN` を CLIProxyAPI 向けに設定し、Claude Code を対応するモデル ID で起動する。GPT-5.6 のコンテキスト上限である 1,050,000 トークンも Claude Code へ明示する。追加の Claude Code オプションもそのまま渡せる。
-
-```bash
-claude-terra --continue
+claudecodex
 ```
 
 ### Codex CLI
@@ -149,9 +137,7 @@ curl -sS \
 Claude Code:
 
 ```bash
-claude-sol
-claude-terra
-claude-luna
+claudecodex
 ```
 
 Codex CLI (`~/.codex/config.toml`):
