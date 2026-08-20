@@ -1034,6 +1034,27 @@ in
           source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
         fi
       '')
+      (lib.mkOrder 1100 ''
+        # identity ごとに独立した設定で Claude Code を起動する
+        run-claude() {
+          local identity="''${CLAUDE_IDENTITY:-}"
+          local config_dir="$HOME/.claude"
+
+          if [[ "$identity" == *[!A-Za-z0-9._-]* ]]; then
+            print -u2 "run-claude: invalid identity: $identity"
+            return 2
+          fi
+
+          if [[ -n "$identity" ]]; then
+            config_dir="$HOME/.claude-$identity"
+          fi
+
+          command env -u CLAUDE_CODE_OAUTH_TOKEN \
+            CLAUDE_IDENTITY="$identity" \
+            CLAUDE_CONFIG_DIR="$config_dir" \
+            mise exec -- claude --dangerously-skip-permissions "$@"
+        }
+      '')
       (lib.mkOrder 1200 ''
         # agmsg の monitor mode を経由して Codex を起動する
         if [[ -x "$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" ]]; then
