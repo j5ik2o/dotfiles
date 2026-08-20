@@ -1054,6 +1054,32 @@ in
             CLAUDE_CONFIG_DIR="$config_dir" \
             mise exec -- claude --dangerously-skip-permissions "$@"
         }
+
+        # identity ごとに独立した設定で Codex を起動する
+        run-codex() {
+          local identity="''${CODEX_IDENTITY:-}"
+          local codex_home="$HOME/.codex"
+
+          if [[ "$identity" == *[!A-Za-z0-9._-]* ]]; then
+            print -u2 "run-codex: invalid identity: $identity"
+            return 2
+          fi
+
+          if [[ -n "$identity" ]]; then
+            codex_home="$HOME/.codex-$identity"
+          fi
+
+          if ! command mkdir -p "$codex_home"; then
+            print -u2 "run-codex: failed to create CODEX_HOME: $codex_home"
+            return 1
+          fi
+
+          (
+            export CODEX_IDENTITY="$identity"
+            export CODEX_HOME="$codex_home"
+            codex --dangerously-bypass-approvals-and-sandbox "$@"
+          )
+        }
       '')
       (lib.mkOrder 1200 ''
         # agmsg の monitor mode を経由して Codex を起動する
