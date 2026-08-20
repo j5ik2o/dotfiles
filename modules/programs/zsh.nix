@@ -1040,7 +1040,7 @@ in
           local identity="''${CLAUDE_IDENTITY:-}"
           local config_dir="$HOME/.claude"
 
-          if [[ "$identity" == *[!A-Za-z0-9._-]* ]]; then
+          if [[ "$identity" == *[!A-Za-z0-9._@-]* ]]; then
             print -u2 "run-claude: invalid identity: $identity"
             return 2
           fi
@@ -1060,7 +1060,7 @@ in
           local identity="''${CODEX_IDENTITY:-}"
           local codex_home="$HOME/.codex"
 
-          if [[ "$identity" == *[!A-Za-z0-9._-]* ]]; then
+          if [[ "$identity" == *[!A-Za-z0-9._@-]* ]]; then
             print -u2 "run-codex: invalid identity: $identity"
             return 2
           fi
