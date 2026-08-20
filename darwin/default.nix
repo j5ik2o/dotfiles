@@ -65,6 +65,14 @@
     (final: prev: {
       gwq = final.callPackage ../packages/gwq.nix { };
       claude-code-acp = final.callPackage ../packages/claude-code-acp.nix { };
+      claude-code-proxy =
+        inputs.claude-code-proxy.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
+          (old: {
+            patches = (old.patches or [ ]) ++ [ ../packages/claude-code-proxy-gpt-5-6-aliases.patch ];
+          });
+      claudecodex = final.callPackage ../packages/claudecodex.nix {
+        claudecodexSrc = inputs.claudecodex-src;
+      };
       cliproxyapi = final.callPackage ../packages/cliproxyapi.nix { };
       coderabbit = final.callPackage ../packages/coderabbit.nix { };
       herdr = final.callPackage ../packages/herdr.nix { };
