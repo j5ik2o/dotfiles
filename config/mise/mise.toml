@@ -31,7 +31,7 @@ claude = "2.1.241"
   "@smithy/core@3.33.0",
   "@smithy/node-http-handler@4.11.0",
 ] }
-"npm:@openai/codex" = "0.149.0"
+"npm:@openai/codex" = "0.149.1"
 "npm:@moonshot-ai/kimi-code" = "0.38.0"
 # takt: pin ではない。フレッシュインストール時の依存解決が pi と同じ provenance 欠落
 # バージョンに当たるため、検証済みの除外だけ共有する(2026-08-16 17:24 UTC 以降は不要)
