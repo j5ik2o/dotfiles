@@ -20,7 +20,7 @@ java = "temurin-26.0.2"
 node = "24"
 python = "3.14.7"
 ruby = "4.0"
-claude = "2.1.245"
+claude = "2.1.246"
 # 行末の「# pin」マーカーが付いたツールは CI (mise-upgrade.yml) の自動バンプ対象外。
 # 固定を解除するときはマーカーを外す。
 #
