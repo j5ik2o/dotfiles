@@ -280,7 +280,7 @@ in
         jdt-language-server # Java
         metals # Scala
       ]
-      ++ lib.optionals (!pkgs.stdenv.isDarwin) [
+      ++ lib.optionals (!pkgs.stdenv.hostPlatform.isDarwin) [
         marksman # Markdown (Darwin は swift ビルドクラッシュ回避のため除外)
       ]
       ++ [

@@ -75,7 +75,7 @@ in
       # 認証設定
       credential = {
         helper =
-          if pkgs.stdenv.isDarwin then
+          if pkgs.stdenv.hostPlatform.isDarwin then
             "osxkeychain"
           else if isWSL then
             "/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe"
