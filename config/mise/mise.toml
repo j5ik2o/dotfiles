@@ -20,7 +20,7 @@ java = "temurin-26.0.2"
 node = "24"
 python = "3.14.7"
 ruby = "4.0"
-claude = "2.1.259"
+claude = "2.1.260"
 # 行末の「# pin」マーカーが付いたツールは CI (mise-upgrade.yml) の自動バンプ対象外。
 # 固定を解除するときはマーカーを外す。
 #
@@ -31,7 +31,7 @@ claude = "2.1.259"
   "@smithy/core@3.33.0",
   "@smithy/node-http-handler@4.11.0",
 ] }
-"npm:@openai/codex" = "0.153.1"
+"npm:@openai/codex" = "0.153.2"
 "npm:@moonshot-ai/kimi-code" = "0.38.0"
 # takt: pin ではない。フレッシュインストール時の依存解決が pi と同じ provenance 欠落
 # バージョンに当たるため、検証済みの除外だけ共有する(2026-08-16 17:24 UTC 以降は不要)
