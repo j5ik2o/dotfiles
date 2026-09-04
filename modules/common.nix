@@ -108,6 +108,7 @@
     opencode
     antigravity-cli # Google Antigravity CLI (gemini-cli の後継)
     herdr # ターミナル内のエージェントマルチプレクサ
+    llama-cpp # ローカル LLM 推論 (llama-cli / llama-server, Apple Silicon では Metal 有効)
 
     # ============================================================
     # 言語ランタイム (mise で管理)
