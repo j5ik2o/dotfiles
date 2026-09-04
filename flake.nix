@@ -55,15 +55,16 @@
       # デフォルトユーザー (nix-darwin用)
       defaultUser = "j5ik2o";
 
-      # 開発シェルの対象 (nixpkgs 26.11 で x86_64-darwin のサポート終了)
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ];
+      # 対応プラットフォームと Home Manager 構成名のサフィックス
+      # nixpkgs 26.11 で x86_64-darwin のサポート終了
+      platforms = {
+        x86_64-linux = "linux-x86_64";
+        aarch64-linux = "linux-aarch64";
+        aarch64-darwin = "darwin-aarch64";
+      };
 
       # 各システム用の関数を生成
-      forAllSystems = nixpkgs.lib.genAttrs systems;
+      forAllSystems = nixpkgs.lib.genAttrs (builtins.attrNames platforms);
 
       # カスタムパッケージの overlay
       # claude-code, codex は mise で管理
@@ -177,32 +178,18 @@
       mkAllHomeConfigurations = nixpkgs.lib.foldl' (
         acc: user:
         acc
-        // {
-          "${user}@darwin-aarch64" = mkHomeConfiguration {
-            system = "aarch64-darwin";
-            modules = darwinHomeModules;
+        // nixpkgs.lib.mapAttrs' (system: suffix: {
+          name = "${user}@${suffix}";
+          value = mkHomeConfiguration {
+            inherit system;
+            modules = if isDarwinSystem system then darwinHomeModules else linuxHomeModules;
             username = user;
-            homeDirectory = "/Users/${user}";
+            homeDirectory = defaultHomeDirectory {
+              inherit system;
+              username = user;
+            };
           };
-          "${user}@darwin-x86_64" = mkHomeConfiguration {
-            system = "x86_64-darwin";
-            modules = darwinHomeModules;
-            username = user;
-            homeDirectory = "/Users/${user}";
-          };
-          "${user}@linux-x86_64" = mkHomeConfiguration {
-            system = "x86_64-linux";
-            modules = linuxHomeModules;
-            username = user;
-            homeDirectory = "/home/${user}";
-          };
-          "${user}@linux-aarch64" = mkHomeConfiguration {
-            system = "aarch64-linux";
-            modules = linuxHomeModules;
-            username = user;
-            homeDirectory = "/home/${user}";
-          };
-        }
+        }) platforms
       ) { } users;
 
       # nix-darwin 設定を生成する関数
@@ -262,16 +249,12 @@
           safeName = sanitizeUsername user;
         in
         acc
-        // {
-          "${safeName}-darwin" = mkDarwinConfiguration {
-            system = "aarch64-darwin";
-            inherit user;
+        // nixpkgs.lib.mapAttrs' (system: _: {
+          name = "${safeName}-darwin";
+          value = mkDarwinConfiguration {
+            inherit system user;
           };
-          "${safeName}-darwin-x86" = mkDarwinConfiguration {
-            system = "x86_64-darwin";
-            inherit user;
-          };
-        }
+        }) (nixpkgs.lib.filterAttrs (system: _: isDarwinSystem system) platforms)
       ) { } users;
 
       defaultHomeDirectory =
@@ -353,6 +336,24 @@
       # 全ユーザー × macOSプラットフォームの組み合わせを自動生成
       # ============================================================
       darwinConfigurations = mkAllDarwinConfigurations // hostDarwinConfigurations;
+
+      # --no-build の make check でも回帰を検出するため評価時にテストする
+      checks = forAllSystems (
+        system:
+        let
+          failures = import ./tests/flake-outputs.nix {
+            inherit (nixpkgs) lib;
+            flake = self;
+          };
+        in
+        {
+          flake-outputs =
+            if failures == [ ] then
+              nixpkgs.legacyPackages.${system}.runCommand "flake-outputs" { } "touch $out"
+            else
+              throw "Flake output tests failed: ${builtins.toJSON failures}";
+        }
+      );
 
       # ============================================================
       # Development shells
