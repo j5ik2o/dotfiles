@@ -55,11 +55,10 @@
       # デフォルトユーザー (nix-darwin用)
       defaultUser = "j5ik2o";
 
-      # サポートするシステム
+      # 開発シェルの対象 (nixpkgs 26.11 で x86_64-darwin のサポート終了)
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "x86_64-darwin"
         "aarch64-darwin"
       ];
 
