@@ -1077,7 +1077,8 @@ in
           (
             export CODEX_IDENTITY="$identity"
             export CODEX_HOME="$codex_home"
-            codex --dangerously-bypass-approvals-and-sandbox "$@"
+            codex -c check_for_update_on_startup=false \
+              --dangerously-bypass-approvals-and-sandbox "$@"
           )
         }
       '')
