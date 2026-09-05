@@ -27,7 +27,7 @@ claude = "2.1.261"
 # pi: 2026-08-14 の AWS 公開パイプライン障害で @smithy の一部バージョンに provenance が
 # 欠落しているため、tarball 検証済みのバージョンのみ trust policy から除外。
 # 0.84.3 以降(2026-08-15 17:24 UTC の修正バッチ以降の公開)にバンプしたら除外は削除してよい
-"npm:@earendil-works/pi-coding-agent" = { version = "0.85.0", trust_policy_excludes = [ # pin
+"npm:@earendil-works/pi-coding-agent" = { version = "0.85.1", trust_policy_excludes = [ # pin
   "@smithy/core@3.33.0",
   "@smithy/node-http-handler@4.11.0",
 ] }
