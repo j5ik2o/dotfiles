@@ -152,6 +152,12 @@
                 "antigravity-cli"
                 "coderabbit"
                 "copilot-language-server"
+                # CUDA 再頒布物。ollama-cuda (spark-153d) が依存する
+                "cuda_cccl"
+                "cuda_cudart"
+                "cuda_nvcc"
+                "cuda_nvrtc"
+                "libcublas"
               ];
           };
           modules = modules ++ [
