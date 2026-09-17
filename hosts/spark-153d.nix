@@ -7,9 +7,45 @@
 
   homeModules = [
     (
-      { config, lib, ... }:
+      {
+        config,
+        lib,
+        pkgs,
+        ...
+      }:
       let
         hfHome = "${config.home.homeDirectory}/.local/share/huggingface";
+
+        # 非 NixOS では libcuda.so.1 / libnvidia-ml.so.1 は NVIDIA ドライバ側
+        # (/usr/lib/aarch64-linux-gnu) にあり、Nix ビルドのバイナリからは見えない。
+        # Ubuntu の lib ディレクトリを丸ごと LD_LIBRARY_PATH に載せると Nix 側の
+        # libstdc++ 等まで上書きされてしまうため、必要な 2 本だけを集めて渡す。
+        nvidiaDriverLibs = pkgs.runCommand "nvidia-driver-libs" { } ''
+          mkdir -p "$out/lib"
+          for so in libcuda.so.1 libnvidia-ml.so.1; do
+            ln -s "/usr/lib/aarch64-linux-gnu/$so" "$out/lib/$so"
+          done
+        '';
+
+        # GB10 は sm_121。nixpkgs の cudaPackages 12.9 は既定 capability に 12.1 を
+        # 含むため native にビルドできるが、既定の 9 アーキ分を全部ビルドするのは
+        # 時間の無駄なので実機の 1 アーキに絞る。
+        # ドライバのライブラリは systemd service ではなく実行ファイル側に持たせる
+        # (手で ollama serve を上げても効くようにするため)。
+        ollamaCuda = pkgs.symlinkJoin {
+          name = "ollama-cuda-wrapped";
+          paths = [
+            (pkgs.ollama.override {
+              acceleration = "cuda";
+              cudaArches = [ "sm_121" ];
+            })
+          ];
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            wrapProgram "$out/bin/ollama" \
+              --suffix LD_LIBRARY_PATH : "${nvidiaDriverLibs}/lib"
+          '';
+        };
       in
       {
         # DGX Spark は Docker Engine と CLI がプリインストールされている。
@@ -30,6 +66,9 @@
         home.activation.createHfHome = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           mkdir -p "${hfHome}"
         '';
+
+        # Ollama は動作検証用。常駐させず、使うときに ollama serve を手で上げる。
+        home.packages = [ ollamaCuda ];
       }
     )
   ];
