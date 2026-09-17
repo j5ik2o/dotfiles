@@ -385,7 +385,8 @@ init-linux:
 ifeq ($(UNAME),Linux)
 	@echo "Preparing for first home-manager installation on Linux..."
 	@echo "Running initial home-manager switch..."
-	nix run home-manager/master -- switch --flake '.#"$(HM_CONFIG)"'
+	@# 初回は既存の非管理ファイルと衝突するため .backup へ退避して上書きする
+	nix run home-manager/master -- switch -b backup --flake '.#"$(HM_CONFIG)"'
 else
 	@echo "init-linux is only available on Linux"
 	@exit 1
