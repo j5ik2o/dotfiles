@@ -84,8 +84,10 @@ in
       strace
 
     ]
-    ++ lib.optionals (!isWSL) [
+    ++ lib.optionals (!isWSL && config.dotfiles.features.dockerClient) [
       # コンテナ - WSL では Docker Desktop を使用
+      # デーモン同梱の CLI を持つホスト (DGX OS など) では dotfiles.features.dockerClient を
+      # false にして、PATH の奪い合いとバージョン乖離を避ける
       docker-client
       docker-compose
       docker-buildx
