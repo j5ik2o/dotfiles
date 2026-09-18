@@ -32,6 +32,7 @@ lib.runTests {
       "parallels@linux-aarch64" = "aarch64-linux";
       "parallels@linux-x86_64" = "x86_64-linux";
       spark-153d = "aarch64-linux";
+      spark-5083 = "aarch64-linux";
     };
   };
 
