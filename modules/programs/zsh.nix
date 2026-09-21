@@ -1055,6 +1055,53 @@ in
             mise exec -- claude --dangerously-skip-permissions "$@"
         }
 
+        # OpenCode Go (https://opencode.ai/zen/go) を LLM gateway として Claude Code を起動する
+        # NOTE: Claude Code の Gateway Model Discovery は id に claude/anthropic を含むモデルしか
+        #       採用しないため、/v1/models を自前で引いて modelPicker に流し込む
+        #       (Anthropic 形式非対応のモデルは選んでも 500 が返る)
+        run-claude-go() {
+          local auth_file="$HOME/.local/share/opencode/auth.json"
+          local api_key
+
+          api_key="$(jq -r '."opencode-go".key // empty' "$auth_file" 2>/dev/null)"
+          if [[ -z "$api_key" ]]; then
+            print -u2 "run-claude-go: opencode-go の API key が $auth_file にありません (opencode auth login を実行してください)"
+            return 1
+          fi
+
+          # /v1/models の全モデルをそのまま picker に並べる (取得失敗時は前回のキャッシュを使う)
+          local -r default_model="minimax-m3"
+          local -r cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/run-claude-go"
+          local -r cache_file="$cache_dir/model-picker.json"
+          local picker
+
+          command mkdir -p "$cache_dir"
+          picker="$(command curl -sf -m 5 \
+            -H "x-api-key: $api_key" \
+            "https://opencode.ai/zen/go/v1/models?limit=1000" \
+            | jq -c '{replaceBuiltInOptions: true, options: [.data[] | {model: .id, label: .id, description: "OpenCode Go"}]}' 2>/dev/null)"
+          if [[ -n "$picker" ]]; then
+            print -r -- "$picker" >| "$cache_file"
+          elif [[ -r "$cache_file" ]]; then
+            picker="$(<"$cache_file")"
+          else
+            picker='{"replaceBuiltInOptions":true,"options":[{"model":"'"$default_model"'","label":"'"$default_model"'","description":"OpenCode Go"}]}'
+          fi
+
+          command env -u CLAUDE_CODE_OAUTH_TOKEN \
+            ANTHROPIC_BASE_URL="https://opencode.ai/zen/go" \
+            ANTHROPIC_API_KEY="$api_key" \
+            ANTHROPIC_DEFAULT_OPUS_MODEL="$default_model" \
+            ANTHROPIC_DEFAULT_SONNET_MODEL="$default_model" \
+            ANTHROPIC_DEFAULT_HAIKU_MODEL="$default_model" \
+            CLAUDE_CODE_SUBAGENT_MODEL="$default_model" \
+            CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 \
+            CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \
+            mise exec -- claude --dangerously-skip-permissions \
+              --settings "{\"modelPicker\":$picker}" \
+              --model "$default_model" "$@"
+        }
+
         # identity ごとに独立した設定で Codex を起動する
         run-codex() {
           local identity="''${CODEX_IDENTITY:-}"
