@@ -1,9 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "enabled_providers": [
+    "opencode-go",
     "cliproxyapi",
     "zai-coding-plan",
-    "lmstudio"
+    "lmstudio",
+    "ollama"
   ],
   "provider": {
     "lmstudio": {
@@ -72,6 +74,19 @@
           "options": {
             "reasoningEffort": "high"
           }
+        }
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local proxy to Ollama Cloud)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "glm-5.3-flash:cloud": {
+          "name": "GLM 5.3 Flash (Ollama Cloud)",
+          "tools": true
         }
       }
     }
