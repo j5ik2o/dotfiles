@@ -45,7 +45,7 @@ jobs:
       # node のマイナーバージョンが未インストールだと npm ツール一括で失敗し、
       # mise.toml への書き戻しまで到達しない。先に node をインストールしておく。
       - name: Install node
-        run: mise install node
+        run: mise install node --cd config/mise
 
       # mise.toml の書き換え自体は成功しても、一部ツールの実インストールが
       # CI の非対話環境で中断されてジョブが落ち、バンプが commit されないため
