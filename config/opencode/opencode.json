@@ -87,6 +87,22 @@
         "glm-5.3-flash:cloud": {
           "name": "GLM 5.3 Flash (Ollama Cloud)",
           "tools": true
+        },
+        "glm-5.3:cloud": {
+          "name": "GLM 5.3 (Ollama Cloud)",
+          "tools": true
+        },
+        "deepseek-v4.1-flash:cloud": {
+          "name": "DeepSeek V4.1 Flash (Ollama Cloud)",
+          "tools": true
+        },
+        "minimax-m3:cloud": {
+          "name": "MiniMax M3 (Ollama Cloud)",
+          "tools": true
+        },
+        "kimi-k3:cloud": {
+          "name": "Kimi K3 (Ollama Cloud)",
+          "tools": true
         }
       }
     }
