@@ -86,7 +86,7 @@
   homebrew.masApps = {
     "Amazon Kindle" = 302584613;
     "LINE" = 539883307;
-    "Pages" = 409201541;
+    "Pages" = 361309726;
   };
 
   # Homebrew クリーンアップ戦略

@@ -75,7 +75,7 @@
   # Mac App Store アプリ
   homebrew.masApps = {
     "LINE" = 539883307;
-    "Pages" = 409201541;
+    "Pages" = 361309726;
   };
 
   # Homebrew クリーンアップ戦略
