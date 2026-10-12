@@ -14,3 +14,13 @@ result
 *.env
 .anthropic_api_key.sh
 .glm_api_key.sh
+
+# Codex runtime data (login credentials, conversation history, logs, state)
+.codex*/auth.json
+.codex*/history.jsonl
+.codex*/installation_id
+.codex*/sessions/
+.codex*/log/
+.codex*/*.sqlite
+.codex*/*.sqlite-shm
+.codex*/*.sqlite-wal
