@@ -726,6 +726,12 @@ in
         source "$HOME/.config/claude-code/env-personal"
       fi
 
+      # 汎用 API キー (chezmoi 管理の ~/.config/env/) を全て読み込む
+      for _env_file in "$HOME/.config/env"/*(N); do
+        source "$_env_file"
+      done
+      unset _env_file
+
       if [[ -f "$HOME/.config/glm/env" ]]; then
         source "$HOME/.config/glm/env"
       fi
