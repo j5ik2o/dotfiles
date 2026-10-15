@@ -100,6 +100,7 @@
     # AI ツール
     # claude-code, codex は mise で管理
     claude-code-acp
+    dsh-tui # 互換版 dsh を同梱し、既存 CLI と別ホームで起動
     claude-code-proxy
     claudecodex
     cliproxyapi

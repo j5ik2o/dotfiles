@@ -65,6 +65,7 @@
     (final: prev: {
       gwq = final.callPackage ../packages/gwq.nix { };
       claude-code-acp = final.callPackage ../packages/claude-code-acp.nix { };
+      dsh-tui = final.callPackage ../packages/dsh-tui.nix { };
       claude-code-proxy =
         inputs.claude-code-proxy.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
           (old: {

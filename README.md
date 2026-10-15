@@ -59,6 +59,85 @@ make build
 make gc
 ```
 
+### DeepSeek Harness TUI
+
+`dsh-tui` は npm 公開版の `@tomowang/dsh-tui 0.9.0` と対応する
+`@deepseek-ai/dsh 0.1.7-rc.2` を依存 lockfile ごと Nix で固定する。
+`dsh 0.2` 系の機能への置き換えではない。既存の `dsh` コマンドとは別名で、
+`DSH_HOME` を常に `~/.dsh-tui` に設定するため、`~/.dsh` の設定・認証・セッションは共有しない。
+
+```bash
+# 未登録の新規ファイルがある場合は Git にパスを登録する（commit は不要）
+git add -N packages/dsh-tui*
+nix build .#dsh-tui --out-link .tmp/dsh-tui
+./.tmp/dsh-tui/bin/dsh-tui --version
+./.tmp/dsh-tui/bin/dsh-tui --help
+./.tmp/dsh-tui/bin/dsh-tui
+```
+
+通常の `make apply` 後は `dsh-tui` で起動できる。Home Manager の現行世代が
+本体・プラグイン・Node を保持するので、`make gc` でも失われない。
+全体適用前のビルド実体は `.tmp/dsh-tui` が GC root になる。
+
+API キーは実行時の `DEEPSEEK_API_KEY`、または `~/.dsh-tui/.env` に設定する。
+`.env` を作る場合は `chmod 600 ~/.dsh-tui/.env` とし、キーを Nix 設定や Git に書かない。
+カスタマイズは `~/.dsh-tui/profiles/tui/cordis.patch.yml` に置く。
+プロファイルの manifest と `node_modules` は起動ごとに Nix 側へリンクするため、
+プラグインの追加・更新は `packages/dsh-tui-package.json` と lockfile を変更して再ビルドする。
+
+既定モデルは OpenCode Go の `minimax-m3`。`opencode auth login` で登録済みの
+`opencode-go` のキーを起動時に読み込む。別のキーを使う場合は
+`OPENCODE_GO_API_KEY` を実行時の環境変数で指定する。
+Ollama Cloud は OpenCode と同じ `http://localhost:11434/v1` のローカルサーバー経由で使う。
+Ollama にログインしてサーバーを起動しておく（通常は Ollama アプリ、CLI なら `ollama serve`）。
+TUI の `/model` で `OpenCode Go` または `Ollama Cloud (local proxy)` を選び、
+`s` でモデル一覧を開いて `Enter` で切り替える。選択はユーザーの profile patch に保存される。
+OpenAI Codex は ChatGPT のサブスクリプションに含まれる Codex の利用枠で接続する。
+メールアドレスを指定して、それぞれの ChatGPT アカウントを登録する。
+
+```bash
+dsh-tui --login j5ik2o@gmail.com
+dsh-tui --login junichi.kato@ideo-plus.jp
+dsh-tui --accounts
+dsh-tui --account j5ik2o@gmail.com
+dsh-tui
+```
+
+macOS ではメールアドレスに対応する Chrome プロファイルを探してログイン画面を開く。
+対応するプロファイルがない場合は、表示されたリンクを使用するブラウザーで開く。
+ログイン時は指定したアカウントを確認する。別のアカウントに自動ログインされる場合は、
+ブラウザーでログアウトしてから再実行する。
+`--accounts` は登録済みの名前を表示し、選択中のアカウントに `*` を付ける。
+`--account メールアドレス` で保存済みの認証を選び直せる。切り替え後は `dsh-tui` を起動し直す。
+実行中のセッションは起動時のアカウントを使い続ける。
+`--login` を名前なしで実行すると、選択中のアカウントの認証を更新する。
+以前の名前なしの認証は、トークンのメールアドレス（取得できない場合は `default`）で自動移行する。
+起動時に選択中のアカウントのモデル一覧を接続先から取得する。
+`/model` には `OpenAI Codex (メールアドレス)` と、そのアカウントの表示対象モデルだけが出る。
+一覧でモデルを選ぶと、チャットのモデル表示と次の推論に即座に反映される。会話の作り直しは不要。
+推論強度は起動後に `/effort` で現在値と対応する値を確認し、`/effort high` や
+`/effort xhigh` で変更できる。変更は次の推論から反映され、設定にも保存される。
+`/effort default` は接続先の既定値に戻す。モデルを変更すると、推論強度も接続先の既定値に戻る。
+`--account` またはログイン後の初回起動では Codex に切り替え、前のモデルが使えない場合は
+接続先の優先順で最初のモデルを選ぶ。選択したモデルが利用可能ならそのまま使う。
+モデル一覧の取得に失敗した場合は、古い固定一覧で起動せずエラーで終了する。
+認証情報は `~/.dsh-tui/.credentials.yaml` にアカウントごとに保存され、ログイン画面とターミナル画面で共有する。
+トークンは接続プラグインが更新するため、API キーや既存の Codex トークンのコピーは不要。
+ログイン処理は認証情報の保存後に終了する。中止するときは `Ctrl+C` を押す。
+利用上限は契約プランに従う（[OpenAI の認証説明](https://developers.openai.com/codex/auth)）。
+
+OpenCode Go と Ollama の接続先・モデル一覧の既定値は `packages/dsh-tui-providers.yml` で管理する。
+Codex の一覧はアカウントごとの `~/.dsh-tui/accounts/*/models.patch.json` に生成し、
+起動時の追加設定として読み込む。ユーザーの他の設定とコメントは保持する。
+
+[OpenCode Go の接続仕様](https://opencode.ai/docs/go/)に合わせて、
+全 API 形式の推論リクエストに会話ごとの `x-opencode-session` を付けるローカルパッチも適用する。
+[Ollama の OpenAI 互換 API](https://docs.ollama.com/api/openai-compatibility)を使うため、
+Ollama の認証やモデルのダウンロードを Nix ビルドで行う必要はない。
+
+Nix 版 Node と dsh の native addon の既知の不具合は、`--expose-internals` と
+app-boot のローカルパッチで回避する。ビルド時に API キーなしでバージョン・設定合成・help を検証する。
+
 ## シークレット管理 (chezmoi + 1Password)
 
 SSH キーなどのシークレットは chezmoi + 1Password CLI で管理します。
