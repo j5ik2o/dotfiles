@@ -1,0 +1,36 @@
+- id: llm-pi-ai
+  config:
+    providers:
+      openai-codex:
+        displayName: OpenAI Codex (ChatGPT subscription)
+        # カタログの OAuth 認証とモデル一覧を利用する。API キーは指定しない。
+      opencode-go:
+        displayName: OpenCode Go
+        apiKeyEnv: OPENCODE_GO_API_KEY
+        # pi-ai のカタログにある各モデルの API 形式と接続先を利用する。
+        models:
+          - id: minimax-m3
+          - id: glm-5.3-flash
+          - id: glm-5.3
+          - id: kimi-k3
+          - id: deepseek-v4-flash
+      ollama-cloud:
+        displayName: Ollama Cloud (local proxy)
+        api: openai-completions
+        baseURL: http://localhost:11434/v1
+        apiKeyEnv: DSH_OLLAMA_API_KEY
+        compat:
+          supportsStore: false
+          supportsDeveloperRole: false
+          maxTokensField: max_tokens
+        models:
+          - id: glm-5.3-flash:cloud
+          - id: glm-5.3:cloud
+          - id: deepseek-v4.1-flash:cloud
+          - id: minimax-m3:cloud
+          - id: kimi-k3:cloud
+
+- id: agent-default-model
+  config:
+    provider: opencode-go
+    model: minimax-m3

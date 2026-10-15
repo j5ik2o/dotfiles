@@ -73,6 +73,7 @@
         {
           gwq = final.callPackage ./packages/gwq.nix { };
           claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
+          dsh-tui = final.callPackage ./packages/dsh-tui.nix { };
           claude-code-proxy =
             inputs.claude-code-proxy.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
               (old: {
@@ -342,6 +343,14 @@
       # 全ユーザー × macOSプラットフォームの組み合わせを自動生成
       # ============================================================
       darwinConfigurations = mkAllDarwinConfigurations // hostDarwinConfigurations;
+
+      packages = forAllSystems (system: {
+        dsh-tui =
+          (import nixpkgs {
+            inherit system;
+            overlays = [ customOverlay ];
+          }).dsh-tui;
+      });
 
       # --no-build の make check でも回帰を検出するため評価時にテストする
       checks = forAllSystems (

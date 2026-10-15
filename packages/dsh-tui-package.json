@@ -1,0 +1,9 @@
+{
+  "name": "dsh-tui",
+  "version": "0.9.0",
+  "private": true,
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.1.7-rc.2",
+    "@tomowang/dsh-tui": "0.9.0"
+  }
+}
