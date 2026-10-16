@@ -5,7 +5,8 @@
     "cliproxyapi",
     "zai-coding-plan",
     "lmstudio",
-    "ollama"
+    "ollama",
+    "tensorfold"
   ],
   "provider": {
     "lmstudio": {
@@ -103,6 +104,23 @@
         "kimi-k3:cloud": {
           "name": "Kimi K3 (Ollama Cloud)",
           "tools": true
+        }
+      }
+    },
+    "tensorfold": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "TensorFold (DGX Spark x4)",
+      "options": {
+        "baseURL": "http://10.0.1.60:8000/v1"
+      },
+      "models": {
+        "glm-5.3-flash": {
+          "name": "GLM 5.3 Flash (TensorFold, DGX Spark x4)",
+          "tools": true,
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
         }
       }
     }
