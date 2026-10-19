@@ -46,6 +46,10 @@ try {
     assert.deepEqual(patch[0].config.providers["openai-codex"].models.map(model => model.id), [ids[index]]);
     assert.equal(patch[0].config.providers["openai-codex"].reasoning, "high", "生成したモデル一覧が接続先の推論強度を消しています");
     assert.match(patch[0].config.providers["openai-codex"].displayName, new RegExp(name));
+    // patch は llm-pi-ai の config を丸ごと置き換えるので、同梱の接続先も残す。
+    for (const provider of ["opencode-go", "ollama-cloud", "tensorfold"]) {
+      assert.ok(patch[0].config.providers[provider], `生成したモデル一覧が ${provider} を消しています`);
+    }
     const source = await readFile(profilePath, "utf8");
     assert.match(source, /利用者のコメント/);
     const config = parse(source);
@@ -57,6 +61,7 @@ try {
       await display.plugin(Llm);
       await display.plugin(PiAi, patch[0].config);
       assert.deepEqual((await display.llm.listModels("openai-codex")).map(model => model.id), [ids[index]]);
+      assert.deepEqual((await display.llm.listModels("tensorfold")).map(model => model.id), ["deepseek-v4.1-flash"]);
     } finally { await display.fiber.dispose(); }
     await assert.rejects(prepareModels(ctx.credentials, selection, home, async () => ({ ok: false, status: 503 })), /503/);
     assert.equal(await readFile(profilePath, "utf8"), source);

@@ -131,6 +131,7 @@ macOS ではメールアドレスに対応する Chrome プロファイルを探
 OpenCode Go、Ollama、TensorFold の接続先・モデル一覧の既定値は `packages/dsh-tui-providers.yml` で管理する。
 Codex の一覧はアカウントごとの `~/.dsh-tui/accounts/*/models.patch.json` に生成し、
 起動時の追加設定として読み込む。ユーザーの他の設定とコメントは保持する。
+追加設定は `llm-pi-ai` の設定を丸ごと置き換えるため、同梱の接続先と、利用者の接続先ごとの上書きも含めて生成する。
 
 [OpenCode Go の接続仕様](https://opencode.ai/docs/go/)に合わせて、
 全 API 形式の推論リクエストに会話ごとの `x-opencode-session` を付けるローカルパッチも適用する。
