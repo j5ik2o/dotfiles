@@ -61,9 +61,8 @@ make gc
 
 ### DeepSeek Harness TUI
 
-`dsh-tui` は npm 公開版の `@tomowang/dsh-tui 0.9.0` と対応する
-`@deepseek-ai/dsh 0.1.7-rc.2` を依存 lockfile ごと Nix で固定する。
-`dsh 0.2` 系の機能への置き換えではない。既存の `dsh` コマンドとは別名で、
+`dsh-tui` は npm 公開版の `@tomowang/dsh-tui 0.10.0` と対応する
+`@deepseek-ai/dsh 0.2.1-rc.2` を依存 lockfile ごと Nix で固定する。既存の `dsh` コマンドとは別名で、
 `DSH_HOME` を常に `~/.dsh-tui` に設定するため、`~/.dsh` の設定・認証・セッションは共有しない。
 
 ```bash
@@ -84,6 +83,7 @@ API キーは実行時の `DEEPSEEK_API_KEY`、または `~/.dsh-tui/.env` に�
 カスタマイズは `~/.dsh-tui/profiles/tui/cordis.patch.yml` に置く。
 プロファイルの manifest と `node_modules` は起動ごとに Nix 側へリンクするため、
 プラグインの追加・更新は `packages/dsh-tui-package.json` と lockfile を変更して再ビルドする。
+`dsh plugin add` は Nix 側の manifest と `node_modules` に書けず、書けても次の起動で戻るため使わない。
 
 既定モデルは OpenCode Go の `minimax-m3`。`opencode auth login` で登録済みの
 `opencode-go` のキーを起動時に読み込む。別のキーを使う場合は
@@ -98,6 +98,8 @@ TUI の `/model` で `OpenCode Go`、`Ollama Cloud (local proxy)`、`TensorFold 
 鍵は不要で、DeepSeek 公式の検索は使わない。宛先は起動時の環境変数 `SEARXNG_URL` で変えられる。
 検索は `/search?format=json` を使うため、宛先の SearXNG は `settings.yml` の `search.formats` に `json` を含める
 （含めないと 403 で失敗する。NAS の SearXNG は設定済み）。
+この包みが対応を表明しているのは dsh 0.1.7-rc.2 までで、npm が依存を解決できないため、
+npm を通さずに公開ファイルをハッシュで固定して置く。0.2.1-rc.2 で検索できることは確かめてある。
 profile patch で `web` の行を上書きする場合は、`searchProvider: searxng` も書く。行の設定は丸ごと置き換わるため、
 書かないと SearXNG が選ばれなくなる。
 OpenAI Codex は ChatGPT のサブスクリプションに含まれる Codex の利用枠で接続する。
