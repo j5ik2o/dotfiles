@@ -21,7 +21,7 @@ buildNpmPackage {
     cp ${./dsh-tui-lock.json} $out/package-lock.json
   '';
 
-  npmDepsHash = "sha256-WP7RmWdqCqvzUM9GwlLjDX/C7ZwsmOER62xuJgPHGPk=";
+  npmDepsHash = "sha256-ku1LLRkyfJ7UD7zMjjZkcGRytcZLtW0qQRX4H/IpIwY=";
   dontNpmBuild = true;
   # npm 公開版のビルド済み JS / native addon を利用し、追加取得を行わない。
   npmRebuildFlags = [ "--ignore-scripts" ];
@@ -84,7 +84,7 @@ buildNpmPackage {
       "dependencies": { "@tomowang/dsh-tui": "0.9.0" },
       "dsh": {
         "profile": {
-          "bundles": ["@deepseek-ai/dsh-base", "@tomowang/dsh-tui", "dsh-tui-providers"]
+          "bundles": ["@deepseek-ai/dsh-base", "@tomowang/dsh-tui", "dsh-web-search-searxng", "dsh-tui-providers"]
         }
       }
     }
@@ -122,6 +122,9 @@ buildNpmPackage {
     export DSH_OLLAMA_API_KEY="\''${DSH_OLLAMA_API_KEY:-ollama}"
     # DGX Spark の TensorFold は鍵を確かめないが、SDK が値を要求する。
     export DSH_TENSORFOLD_API_KEY="\''${DSH_TENSORFOLD_API_KEY:-tensorfold}"
+    # ウェブ検索は NAS の SearXNG を使う。行の設定は丸ごと置き換わるため、利用者が
+    # web-search-searxng の行を上書きしても宛先が消えないよう、環境変数で渡す。
+    export SEARXNG_URL="\''${SEARXNG_URL:-http://10.0.1.30:8888}"
     patch_args=()
     if [[ -n "\$account_patch" ]]; then
       patch_args=(--patch "\$account_patch")
@@ -155,6 +158,9 @@ buildNpmPackage {
     grep -q 'baseURL: http://localhost:11434/v1' tui-config.yml
     grep -q 'baseURL: http://10.0.1.60:8000/v1' tui-config.yml
     grep -q 'provider: opencode-go' tui-config.yml
+    grep -q "name: dsh-web-search-searxng" tui-config.yml
+    grep -q 'searchProvider: searxng' tui-config.yml
+    grep -q 'SEARXNG_URL:-http://10.0.1.30:8888' "$out/bin/dsh-tui"
     run_dsh_tui --help > tui-help.txt
     grep -q 'Interactive terminal session' tui-help.txt
     run_dsh_tui --login --help > login-help.txt
