@@ -8,11 +8,20 @@
   jq,
   stdenv,
   autoPatchelfHook,
+  fetchurl,
 }:
 
+let
+  # 相手側の依存の範囲が dsh 0.1.7-rc.2 までで、npm が 0.2 系との組み合わせを拒むため、
+  # npm の依存解決を通さずに置く。読み込む部品と相手側の依存は node_modules の一番上にある。
+  webSearchSearxng = fetchurl {
+    url = "https://registry.npmjs.org/dsh-web-search-searxng/-/dsh-web-search-searxng-0.5.1.tgz";
+    hash = "sha512-WPFM6FmMq1ksj3fq5l8/M4nCmpUFeHffZ8MvCkEYVbOmfcwSsHQERn4Svoc9TVUAB+UDR0QmKEox5YhoIgrz4g==";
+  };
+in
 buildNpmPackage {
   pname = "dsh-tui";
-  version = "0.9.0";
+  version = "0.10.0";
   nodejs = nodejs_24;
 
   src = runCommand "dsh-tui-source" { } ''
@@ -21,7 +30,7 @@ buildNpmPackage {
     cp ${./dsh-tui-lock.json} $out/package-lock.json
   '';
 
-  npmDepsHash = "sha256-ku1LLRkyfJ7UD7zMjjZkcGRytcZLtW0qQRX4H/IpIwY=";
+  npmDepsHash = "sha256-PTSJoRKfVAbhbK3H9qGe6GX19c/1XAqEOJdVwZBD70I=";
   dontNpmBuild = true;
   # npm 公開版のビルド済み JS / native addon を利用し、追加取得を行わない。
   npmRebuildFlags = [ "--ignore-scripts" ];
@@ -61,6 +70,8 @@ buildNpmPackage {
 
     mkdir -p $out/lib/dsh-tui $out/bin
     cp -r node_modules $out/lib/dsh-tui/
+    mkdir -p $out/lib/dsh-tui/node_modules/dsh-web-search-searxng
+    tar -xzf ${webSearchSearxng} --strip-components=1 -C $out/lib/dsh-tui/node_modules/dsh-web-search-searxng
     mkdir -p $out/lib/dsh-tui/node_modules/dsh-tui-providers
     cp ${./dsh-tui-providers.yml} $out/lib/dsh-tui/node_modules/dsh-tui-providers/cordis.patch.yml
     cat > $out/lib/dsh-tui/node_modules/dsh-tui-providers/package.json <<'EOF'
@@ -81,7 +92,7 @@ buildNpmPackage {
     {
       "name": "dsh-tui-profile",
       "private": true,
-      "dependencies": { "@tomowang/dsh-tui": "0.9.0" },
+      "dependencies": { "@tomowang/dsh-tui": "0.10.0" },
       "dsh": {
         "profile": {
           "bundles": ["@deepseek-ai/dsh-base", "@tomowang/dsh-tui", "dsh-web-search-searxng", "dsh-tui-providers"]
@@ -150,7 +161,7 @@ buildNpmPackage {
         DSH_HOME="$TMPDIR/existing-dsh" DSH_TELEMETRY_DISABLED=1 \
         "$out/bin/dsh-tui" "$@"
     }
-    test "$(run_dsh_tui --version)" = "0.1.7-rc.2"
+    test "$(run_dsh_tui --version)" = "0.2.1-rc.2"
     run_dsh_tui --dump-config > tui-config.yml
     grep -q "name: '@tomowang/dsh-tui'" tui-config.yml
     grep -q 'displayName: OpenCode Go' tui-config.yml
@@ -161,6 +172,9 @@ buildNpmPackage {
     grep -q "name: dsh-web-search-searxng" tui-config.yml
     grep -q 'searchProvider: searxng' tui-config.yml
     grep -q 'SEARXNG_URL:-http://10.0.1.30:8888' "$out/bin/dsh-tui"
+    # npm の依存確認を通していないので、この版の部品で読み込めることを確かめる。
+    ${nodejs_24}/bin/node --input-type=module -e \
+      "const plugin = await import('$out/lib/dsh-tui/node_modules/dsh-web-search-searxng/lib/index.js'); if (typeof plugin.apply !== 'function') throw new Error('dsh-web-search-searxng を読み込めません');"
     run_dsh_tui --help > tui-help.txt
     grep -q 'Interactive terminal session' tui-help.txt
     run_dsh_tui --login --help > login-help.txt
