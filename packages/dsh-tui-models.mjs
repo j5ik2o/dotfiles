@@ -83,14 +83,17 @@ export async function prepareModels(store, selection, dshHome, fetchCatalog = fe
   const directory = join(dshHome, "accounts", accountId);
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const patchPath = join(directory, "models.patch.json");
-  const providerConfig = entries.find(entry => entry.id === "llm-pi-ai")?.config?.providers?.["openai-codex"] ?? {};
+  // patch の config は深く混ぜずに丸ごと置き換わる。同梱の接続先と利用者の接続先ごとの
+  // 上書きを含めないと、Codex 以外の接続先が /model から消える。
+  const bundled = parseDocument(await readFile(new URL("./node_modules/dsh-tui-providers/cordis.patch.yml", import.meta.url), "utf8")).toJS();
+  const bundledConfig = bundled.find(entry => entry.id === "llm-pi-ai")?.config ?? {};
+  const userConfig = entries.find(entry => entry.id === "llm-pi-ai")?.config ?? {};
+  const providers = { ...bundledConfig.providers };
+  for (const [id, override] of Object.entries(userConfig.providers ?? {})) providers[id] = { ...providers[id], ...override };
+  providers["openai-codex"] = { ...providers["openai-codex"], displayName: `OpenAI Codex (${name})`, models };
   await writeAtomic(patchPath, JSON.stringify([{
     id: "llm-pi-ai",
-    config: { providers: { "openai-codex": {
-      displayName: `OpenAI Codex (${name})`,
-      ...(providerConfig.reasoning === undefined ? {} : { reasoning: providerConfig.reasoning }),
-      models,
-    } } },
+    config: { ...bundledConfig, ...userConfig, providers },
   }], null, 2));
   await store.modifyRecord(credentialKey("dsh-tui", "openai-codex-account"), async current => {
     // 別プロセスが選択を変えた場合、その選択を上書きしない。
