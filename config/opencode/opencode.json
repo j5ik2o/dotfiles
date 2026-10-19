@@ -121,6 +121,26 @@
             "context": 1048576,
             "output": 32768
           }
+        },
+        "deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash 1017 (TensorFold, DGX Spark x4)",
+          "tools": true,
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "deepseek-v4.1-flash-high": {
+          "id": "deepseek-v4.1-flash",
+          "name": "DeepSeek V4.1 Flash 1017 High (TensorFold, DGX Spark x4)",
+          "tools": true,
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          },
+          "options": {
+            "reasoningEffort": "high"
+          }
         }
       }
     }

@@ -29,6 +29,24 @@
           - id: deepseek-v4.1-flash:cloud
           - id: minimax-m3:cloud
           - id: kimi-k3:cloud
+      tensorfold:
+        displayName: TensorFold (DGX Spark x4)
+        api: openai-completions
+        baseURL: http://10.0.1.60:8000/v1
+        # 鍵は不要だが SDK が値を要求するため、起動スクリプトで仮の値を入れる。
+        apiKeyEnv: DSH_TENSORFOLD_API_KEY
+        # 出力の上限 32,768 と入力の文字のみは pi-ai の既定値と同じ。
+        models:
+          - id: deepseek-v4.1-flash
+            name: DeepSeek V4.1 Flash 1017
+            contextWindow: 1048576
+            # 既定は考えない。/effort で reasoning_effort に送る値を選ぶ。
+            reasoningEfforts:
+              "off": none
+              low: low
+              medium: medium
+              high: high
+              max: max
 
 - id: agent-default-model
   config:
