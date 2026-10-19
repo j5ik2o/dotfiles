@@ -96,6 +96,8 @@ TUI の `/model` で `OpenCode Go`、`Ollama Cloud (local proxy)`、`TensorFold 
 `s` でモデル一覧を開いて `Enter` で切り替える。選択はユーザーの profile patch に保存される。
 ウェブ検索（`web_search`）は、npm の `dsh-web-search-searxng` で NAS の SearXNG `http://10.0.1.30:8888` を使う。
 鍵は不要で、DeepSeek 公式の検索は使わない。宛先は起動時の環境変数 `SEARXNG_URL` で変えられる。
+検索は `/search?format=json` を使うため、宛先の SearXNG は `settings.yml` の `search.formats` に `json` を含める
+（含めないと 403 で失敗する。NAS の SearXNG は設定済み）。
 profile patch で `web` の行を上書きする場合は、`searchProvider: searxng` も書く。行の設定は丸ごと置き換わるため、
 書かないと SearXNG が選ばれなくなる。
 OpenAI Codex は ChatGPT のサブスクリプションに含まれる Codex の利用枠で接続する。
