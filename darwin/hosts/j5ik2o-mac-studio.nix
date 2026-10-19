@@ -73,6 +73,12 @@
     "aionui"
   ];
 
+  # Stripe CLI は nixpkgs の版が公式より古いため、Stripe 公式の tap から入れる。
+  # 完全名で書くと nix-darwin が trusted: true を付け、Homebrew の tap 信頼の確認を通る。
+  homebrew.brews = [
+    "stripe/stripe-cli/stripe"
+  ];
+
   # Mac App Store アプリ
   homebrew.masApps = {
     "Amazon Kindle" = 302584613;
