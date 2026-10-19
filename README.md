@@ -90,7 +90,9 @@ API キーは実行時の `DEEPSEEK_API_KEY`、または `~/.dsh-tui/.env` に�
 `OPENCODE_GO_API_KEY` を実行時の環境変数で指定する。
 Ollama Cloud は OpenCode と同じ `http://localhost:11434/v1` のローカルサーバー経由で使う。
 Ollama にログインしてサーバーを起動しておく（通常は Ollama アプリ、CLI なら `ollama serve`）。
-TUI の `/model` で `OpenCode Go` または `Ollama Cloud (local proxy)` を選び、
+TensorFold は DGX Spark 4 台の `http://10.0.1.60:8000/v1` で DeepSeek V4.1 Flash 1017 を使う。
+鍵は不要で、既定では考えない。`/effort low`、`medium`、`high`、`max` で考える強さを選べる。
+TUI の `/model` で `OpenCode Go`、`Ollama Cloud (local proxy)`、`TensorFold (DGX Spark x4)` のいずれかを選び、
 `s` でモデル一覧を開いて `Enter` で切り替える。選択はユーザーの profile patch に保存される。
 OpenAI Codex は ChatGPT のサブスクリプションに含まれる Codex の利用枠で接続する。
 メールアドレスを指定して、それぞれの ChatGPT アカウントを登録する。
@@ -126,7 +128,7 @@ macOS ではメールアドレスに対応する Chrome プロファイルを探
 ログイン処理は認証情報の保存後に終了する。中止するときは `Ctrl+C` を押す。
 利用上限は契約プランに従う（[OpenAI の認証説明](https://developers.openai.com/codex/auth)）。
 
-OpenCode Go と Ollama の接続先・モデル一覧の既定値は `packages/dsh-tui-providers.yml` で管理する。
+OpenCode Go、Ollama、TensorFold の接続先・モデル一覧の既定値は `packages/dsh-tui-providers.yml` で管理する。
 Codex の一覧はアカウントごとの `~/.dsh-tui/accounts/*/models.patch.json` に生成し、
 起動時の追加設定として読み込む。ユーザーの他の設定とコメントは保持する。
 

@@ -120,6 +120,8 @@ buildNpmPackage {
     fi
     # ログイン済みローカル Ollama ではこの値は使われないが、SDK が要求する。
     export DSH_OLLAMA_API_KEY="\''${DSH_OLLAMA_API_KEY:-ollama}"
+    # DGX Spark の TensorFold は鍵を確かめないが、SDK が値を要求する。
+    export DSH_TENSORFOLD_API_KEY="\''${DSH_TENSORFOLD_API_KEY:-tensorfold}"
     patch_args=()
     if [[ -n "\$account_patch" ]]; then
       patch_args=(--patch "\$account_patch")
@@ -151,6 +153,7 @@ buildNpmPackage {
     grep -q 'displayName: OpenCode Go' tui-config.yml
     grep -q 'displayName: OpenAI Codex (ChatGPT subscription)' tui-config.yml
     grep -q 'baseURL: http://localhost:11434/v1' tui-config.yml
+    grep -q 'baseURL: http://10.0.1.60:8000/v1' tui-config.yml
     grep -q 'provider: opencode-go' tui-config.yml
     run_dsh_tui --help > tui-help.txt
     grep -q 'Interactive terminal session' tui-help.txt
