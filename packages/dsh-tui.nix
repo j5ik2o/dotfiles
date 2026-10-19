@@ -180,7 +180,8 @@ buildNpmPackage {
     run_dsh_tui --login --help > login-help.txt
     grep -q 'ChatGPT' login-help.txt
     ${nodejs_24}/bin/node ${./dsh-tui-accounts-check.mjs} "$out/lib/dsh-tui" "$out/bin/dsh-tui"
-    ${nodejs_24}/bin/node ${./dsh-tui-models-check.mjs} "$out/lib/dsh-tui"
+    # 鍵の値がない接続先はモデル一覧が空になるので、起動スクリプトと同じ仮の値を渡す。
+    DSH_TENSORFOLD_API_KEY=tensorfold ${nodejs_24}/bin/node ${./dsh-tui-models-check.mjs} "$out/lib/dsh-tui"
     ${nodejs_24}/bin/node ${./dsh-tui-model-selection-check.mjs} "$out/lib/dsh-tui"
     ${nodejs_24}/bin/node ${./dsh-tui-effort-check.mjs} "$out/lib/dsh-tui"
     test ! -e "$TMPDIR/existing-dsh"

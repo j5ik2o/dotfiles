@@ -19,8 +19,6 @@ const home = await mkdtemp(join(tmpdir(), "dsh-models-check-"));
 const ctx = new Context();
 const selectionKey = credentialKey("dsh-tui", "openai-codex-account");
 const names = ["personal@example.com", "work@example.com"];
-// 鍵の値がない接続先はモデル一覧が空になるので、起動スクリプトと同じ仮の値を入れる。
-process.env.DSH_TENSORFOLD_API_KEY ??= "tensorfold";
 const ids = ["gpt-6-luna", "gpt-6.1-sol"];
 try {
   await ctx.plugin(LocalCredentialProvider, { dshHome: home, watch: false });
