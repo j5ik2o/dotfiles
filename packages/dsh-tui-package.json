@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.7-rc.2",
-    "@tomowang/dsh-tui": "0.9.0"
+    "@tomowang/dsh-tui": "0.9.0",
+    "dsh-web-search-searxng": "0.5.1"
   }
 }

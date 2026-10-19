@@ -9,7 +9,8 @@
       "version": "0.9.0",
       "dependencies": {
         "@deepseek-ai/dsh": "0.1.7-rc.2",
-        "@tomowang/dsh-tui": "0.9.0"
+        "@tomowang/dsh-tui": "0.9.0",
+        "dsh-web-search-searxng": "0.5.1"
       }
     },
     "node_modules/@agentclientprotocol/sdk": {
@@ -7642,6 +7643,25 @@
       "license": "BSD-3-Clause",
       "engines": {
         "node": ">=0.3.1"
+      }
+    },
+    "node_modules/dsh-web-search-searxng": {
+      "version": "0.5.1",
+      "resolved": "https://registry.npmjs.org/dsh-web-search-searxng/-/dsh-web-search-searxng-0.5.1.tgz",
+      "integrity": "sha512-WPFM6FmMq1ksj3fq5l8/M4nCmpUFeHffZ8MvCkEYVbOmfcwSsHQERn4Svoc9TVUAB+UDR0QmKEox5YhoIgrz4g==",
+      "license": "MIT",
+      "dependencies": {
+        "@deepseek-ai/schemastery": "^3.18.4"
+      },
+      "engines": {
+        "node": ">=22"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": ">=4.0.4",
+        "@deepseek-ai/dsh-settings": ">=0.1.7-rc.2",
+        "@deepseek-ai/dsh-typert-protocol": ">=0.1.7-rc.2",
+        "@deepseek-ai/dsh-typert-registry": ">=0.1.7-rc.2",
+        "@deepseek-ai/dsh-web": ">=0.1.7-rc.2"
       }
     },
     "node_modules/ecdsa-sig-formatter": {
