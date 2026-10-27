@@ -75,8 +75,10 @@
 
   # Stripe CLI は nixpkgs の版が公式より古いため、Stripe 公式の tap から入れる。
   # 完全名で書くと nix-darwin が trusted: true を付け、Homebrew の tap 信頼の確認を通る。
+  # Kapitsa (Apple シリコン向けのローカル推論サーバー) は nixpkgs にないため、Nace AI の tap から入れる。
   homebrew.brews = [
     "stripe/stripe-cli/stripe"
+    "nace-ai/tap/kapitsa"
   ];
 
   # Mac App Store アプリ
