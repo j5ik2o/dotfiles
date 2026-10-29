@@ -24,6 +24,7 @@
 
     # CLI ツール (Nix にないもの)
     brews = [
+      "macmon"
       "rtk"
     ];
 
