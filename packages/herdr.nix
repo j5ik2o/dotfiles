@@ -5,23 +5,23 @@
 }:
 
 let
-  version = "0.7.1";
+  version = "0.9.5";
   targets = {
     aarch64-darwin = {
       asset = "macos-aarch64";
-      hash = "sha256-FvRlPwSR6h59K0a1sCVC8Y4bguiNqvnikAVy5btjTfg=";
+      hash = "sha256-+3fCIyoFqANUITgsiUOS9BdOTjihjkivPdApAVfDp+I=";
     };
     x86_64-darwin = {
       asset = "macos-x86_64";
-      hash = "sha256-V4D6B9u5p4155S0guGphAT9sugJmfyC2z4lmMBUJCEY=";
+      hash = "sha256-X7CpCOx/Z0Xj4kVziwa/rVbEY5HDkas8CVX76tAfE2k=";
     };
     aarch64-linux = {
       asset = "linux-aarch64";
-      hash = "sha256-PXV6wwxjHnncRQOMPsxkI/4TqJ+c/6D0Fa7dLCfxV2w=";
+      hash = "sha256-F9dTby2lCFlSNoDvJ53/ysjkojX05G/o2mwuxEFBiXw=";
     };
     x86_64-linux = {
       asset = "linux-x86_64";
-      hash = "sha256-uWWsr/wsIvVLbmxkr3z46Yo/SsJiJjCgWZxnpLnYplQ=";
+      hash = "sha256-FNnovItKngEY13wyJm921GHwm0A0LrI3UpYL2J9Zkp0=";
     };
   };
   target =
@@ -33,7 +33,7 @@ stdenvNoCC.mkDerivation {
   inherit version;
 
   src = fetchurl {
-    url = "https://github.com/ogulcancelik/herdr/releases/download/v${version}/herdr-${target.asset}";
+    url = "https://github.com/herdrdev/herdr/releases/download/v${version}/herdr-${target.asset}";
     hash = target.hash;
   };
 
@@ -51,7 +51,7 @@ stdenvNoCC.mkDerivation {
 
   meta = with lib; {
     description = "Agent multiplexer that lives in your terminal";
-    homepage = "https://github.com/ogulcancelik/herdr";
+    homepage = "https://github.com/herdrdev/herdr";
     license = licenses.agpl3Only;
     mainProgram = "herdr";
     platforms = builtins.attrNames targets;
