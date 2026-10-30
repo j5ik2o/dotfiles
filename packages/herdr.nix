@@ -52,7 +52,7 @@ stdenvNoCC.mkDerivation {
   meta = with lib; {
     description = "Agent multiplexer that lives in your terminal";
     homepage = "https://github.com/herdrdev/herdr";
-    license = licenses.agpl3Only;
+    license = licenses.asl20;
     mainProgram = "herdr";
     platforms = builtins.attrNames targets;
     sourceProvenance = [ sourceTypes.binaryNativeCode ];
