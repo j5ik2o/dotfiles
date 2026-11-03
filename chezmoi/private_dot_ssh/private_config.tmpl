@@ -1,0 +1,102 @@
+# ~/.ssh/config
+#
+# このファイルは chezmoi が管理する。直接編集しない。
+# 変更する場合は dotfiles/chezmoi/private_dot_ssh/private_config.tmpl を編集し、
+# リポジトリで `make secrets-apply` を実行する。
+
+{{- if eq .chezmoi.os "darwin" }}
+
+# NVIDIA Sync が生成する設定 (macOS のみ)
+Include "{{ .chezmoi.homeDir }}/Library/Application Support/NVIDIA/Sync/config/ssh_config"
+{{- end }}
+
+Host *
+  AddKeysToAgent yes
+  TCPKeepAlive yes
+{{ if eq .chezmoi.os "darwin" }}  UseKeychain yes
+{{ end }}
+# --- GitHub ---
+Host j5ik2o.github.com
+  HostName github.com
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_rsa_github
+
+Host precena.github.com
+  HostName github.com
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_rsa_precena
+
+Host reg9phak.github.com
+  HostName github.com
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_reg9phak
+
+# --- 自宅 LAN / 検証機 ---
+Host softether-vpn
+  HostName 10.0.1.54
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+
+Host vega-nas
+  HostName 10.0.1.30
+  Port 1022
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+
+Host forgejo
+  HostName 10.0.1.30
+  Port 2222
+  User git
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_forgejo
+
+Host spark1
+  HostName 10.0.1.60
+  User spark
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_dgx
+
+Host spark2
+  HostName 10.0.1.61
+  User spark
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_dgx
+
+Host spark3
+  HostName 10.0.1.62
+  User spark
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_dgx
+
+Host spark4
+  HostName 10.0.1.63
+  User spark
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_dgx
+
+Host crs812
+  HostName 10.0.1.64
+  User admin
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_dgx
+
+# --- LAN 内の Mac (herdr --remote 用) ---
+Host air j5ik2o-macbook-air
+  HostName j5ik2o-macbook-air
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+
+Host studio j5ik2o-mac-studio
+  HostName j5ik2o-mac-studio
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+
+Host mini junichimac-mini
+  HostName junichimac-mini
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
