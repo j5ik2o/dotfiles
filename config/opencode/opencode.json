@@ -6,7 +6,7 @@
     "zai-coding-plan",
     "lmstudio",
     "ollama",
-    "tensorfold"
+    "dgx"
   ],
   "provider": {
     "lmstudio": {
@@ -107,23 +107,15 @@
         }
       }
     },
-    "tensorfold": {
+    "dgx": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "TensorFold (DGX Spark x4)",
+      "name": "DGX Spark x4 (vLLM)",
       "options": {
         "baseURL": "http://10.0.1.60:8000/v1"
       },
       "models": {
-        "glm-5.3-flash": {
-          "name": "GLM 5.3 Flash (TensorFold, DGX Spark x4)",
-          "tools": true,
-          "limit": {
-            "context": 1048576,
-            "output": 32768
-          }
-        },
         "deepseek-v4.1-flash": {
-          "name": "DeepSeek V4.1 Flash 1017 (TensorFold, DGX Spark x4)",
+          "name": "DeepSeek V4.1 Flash 1017 (DGX Spark x4, vLLM)",
           "tools": true,
           "limit": {
             "context": 1048576,
@@ -132,7 +124,7 @@
         },
         "deepseek-v4.1-flash-high": {
           "id": "deepseek-v4.1-flash",
-          "name": "DeepSeek V4.1 Flash 1017 High (TensorFold, DGX Spark x4)",
+          "name": "DeepSeek V4.1 Flash 1017 High (DGX Spark x4, vLLM)",
           "tools": true,
           "limit": {
             "context": 1048576,
