@@ -14,12 +14,40 @@ chezmoi           →  シークレット（SSH キー、トークンなど）
 
 ```
 dotfiles/chezmoi/
-├── .chezmoi.toml.tmpl           # chezmoi 設定
-├── .chezmoiignore               # 無視するファイル
-└── private_dot_ssh/             # ~/.ssh/ にマッピング
-    ├── private_id_rsa.github.tmpl    # 秘密鍵テンプレート
-    └── id_rsa.github.pub.tmpl        # 公開鍵テンプレート
+├── .chezmoi.toml.tmpl              # chezmoi 設定
+├── .chezmoiignore                  # 無視するファイル
+└── private_dot_ssh/                # ~/.ssh/ にマッピング
+    ├── private_config.tmpl         # ~/.ssh/config (mode 0600)
+    ├── private_id_rsa_github.tmpl  # 秘密鍵 (mode 0600)
+    ├── id_rsa_github.pub.tmpl      # 公開鍵 (mode 0644)
+    ├── private_id_ed25519_dgx.tmpl
+    ├── id_ed25519_dgx.pub.tmpl
+    └── ...                         # 他の鍵も同じ規則
 ```
+
+## 管理している鍵
+
+| 鍵ファイル | 用途 | 1Password アイテム |
+|---|---|---|
+| `id_rsa_github` | 個人 GitHub (`j5ik2o.github.com`) | `SSH id_rsa_github` |
+| `id_rsa_precena` | 法人 GitHub (`precena.github.com`) | `SSH id_rsa_precena` |
+| `id_ed25519_reg9phak` | GitHub (`reg9phak.github.com`) | `SSH id_ed25519_reg9phak` |
+| `id_ed25519_lan` | 自宅 LAN (`vega-nas`, `softether-vpn`, LAN 内の Mac) | `SSH id_ed25519_lan` |
+| `id_ed25519_dgx` | DGX Spark / CRS (`spark1`〜`spark4`, `crs812`) | `SSH id_ed25519_dgx` |
+| `id_ed25519_forgejo` | Forgejo (`forgejo`) | `SSH id_ed25519_forgejo` |
+| `xs303275.key` | Xserver (`xs303275.xsrv.jp`) | `SSH xs303275` |
+| `xs834220.key` | Xserver (`xs834220.xsrv.jp`) | `SSH xs834220` |
+| `google_compute_engine` | gcloud の既定鍵 | `SSH google_compute_engine` |
+
+ホストを追加するときは `private_config.tmpl` を編集します。鍵を追加するときは 1Password に `SSH <ファイル名>` の項目を作り、秘密鍵と公開鍵のテンプレートを追加します。
+
+## ~/.ssh の整理方針
+
+- 鍵ファイル名は `id_<種別>_<用途>` に統一する（例: `id_ed25519_dgx`, `id_rsa_github`）。
+- `~/.ssh/config` も chezmoi が生成する。ホストの追加・変更は `private_config.tmpl` で行う。
+- 使わなくなった鍵やバックアップは削除せず、`~/.ssh/archive/<日時>/` に退避する。
+- 秘密鍵を改名すると、macOS の Keychain に保存されたパスフレーズは新しいパスに関連付かない。初回の SSH で一度だけパスフレーズを聞かれるので、入力すれば `UseKeychain` により再保存される。
+- `id_ed25519_reg9phak` と `id_rsa_precena` はパスフレーズ付きのため、`BatchMode` では検証できない。対話で一度接続して確認する。
 
 ## 命名規則
 
@@ -49,8 +77,9 @@ chezmoi は**ファイル名の命名規則**でターゲットパスと属性�
 ソース                                    ターゲット
 ──────────────────────────────────────────────────────────────
 private_dot_ssh/                      →   ~/.ssh/ (mode 0700)
-private_id_rsa.github.tmpl            →   id_rsa.github (mode 0600)
-id_rsa.github.pub.tmpl                →   id_rsa.github.pub
+private_id_rsa_github.tmpl            →   id_rsa_github (mode 0600)
+id_rsa_github.pub.tmpl                →   id_rsa_github.pub
+private_config.tmpl                   →   config (mode 0600)
 dot_config/private_dot_gitconfig      →   ~/.config/.gitconfig (mode 0600)
 executable_dot_local/bin/myscript     →   ~/.local/bin/myscript (executable)
 ```
@@ -67,7 +96,7 @@ chezmoi は Go テンプレートを使用します。
 
 例:
 ```
-{{ onepasswordRead "op://Private/GitHub SSH/private_key" }}
+{{ onepasswordRead "op://Private/SSH id_rsa_github/private_key" }}
 ```
 
 ### 条件分岐
@@ -128,10 +157,10 @@ make secrets-apply
 chezmoi --source=~/Sources/dotfiles/chezmoi apply
 
 # 特定ファイルの差分
-chezmoi diff ~/.ssh/id_rsa.github
+chezmoi diff ~/.ssh/id_rsa_github
 
 # テンプレートの展開結果を確認
-chezmoi execute-template < chezmoi/private_dot_ssh/private_id_rsa.github.tmpl
+chezmoi execute-template < chezmoi/private_dot_ssh/private_id_rsa_github.tmpl
 ```
 
 ## 1Password 連携
@@ -144,14 +173,19 @@ chezmoi execute-template < chezmoi/private_dot_ssh/private_id_rsa.github.tmpl
 
 ### アイテムの追加
 
+鍵ファイルを 1Password に登録します。値は `jq` で読み込み、シェルの履歴や引数に秘密鍵を残さないようにします。chezmoi は `op read --no-newline` を使うため、末尾改行はあらかじめ取り除きます。
+
 ```bash
-# SSH キーを追加
-op item create \
-  --category=Login \
-  --title="GitHub SSH" \
-  --vault="Private" \
-  "private_key[password]=$(cat ~/.ssh/id_rsa.github)" \
-  "public_key[text]=$(cat ~/.ssh/id_rsa.github.pub)"
+tmp=$(mktemp); chmod 600 "$tmp"
+jq -n \
+  --arg title "SSH id_ed25519_example" \
+  --rawfile priv ~/.ssh/id_ed25519_example \
+  --rawfile pub ~/.ssh/id_ed25519_example.pub \
+  '{title:$title, category:"LOGIN", vault:{name:"Private"}, fields:[
+     {id:"private_key", label:"private_key", type:"CONCEALED", value:($priv|rtrimstr("\n"))},
+     {id:"public_key",  label:"public_key",  type:"STRING",     value:($pub |rtrimstr("\n"))}]}' > "$tmp"
+op item create --template "$tmp"
+rm -f "$tmp"
 ```
 
 ### URI 形式
@@ -161,13 +195,14 @@ op://Vault名/アイテム名/フィールド名
 ```
 
 例:
-- `op://Private/GitHub SSH/private_key`
+- `op://Private/SSH id_rsa_github/private_key`
+- `op://Private/SSH id_ed25519_dgx/public_key`
 - `op://Personal/AWS Credentials/access_key_id`
 
 ### フィールド名の確認
 
 ```bash
-op item get "GitHub SSH" --vault="Private"
+op item get "SSH id_rsa_github" --vault="Private"
 ```
 
 ## 新しいシークレットの追加
@@ -242,7 +277,7 @@ chezmoi execute-template < path/to/template.tmpl
 
 ```bash
 # 特定ファイルのみ確認
-chezmoi diff ~/.ssh/id_rsa.github
+chezmoi diff ~/.ssh/id_rsa_github
 ```
 
 ## 参考リンク

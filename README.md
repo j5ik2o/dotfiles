@@ -172,15 +172,19 @@ op vault list
 
 #### 2. SSH キーを 1Password に登録（初回のみ）
 
-既存の SSH キーがある場合：
+既存の SSH キーがある場合、`SSH <ファイル名>` というタイトルで 1Password に登録します。値は `jq` で読み込み、シェルの履歴や引数に秘密鍵を残さないようにします。chezmoi は `op read --no-newline` を使うため、末尾改行はあらかじめ取り除きます。
 
 ```bash
-op item create \
-  --category=Login \
-  --title="GitHub SSH" \
-  --vault="Private" \
-  "private_key[password]=$(cat ~/.ssh/id_rsa.github)" \
-  "public_key[text]=$(cat ~/.ssh/id_rsa.github.pub)"
+tmp=$(mktemp); chmod 600 "$tmp"
+jq -n \
+  --arg title "SSH id_rsa_github" \
+  --rawfile priv ~/.ssh/id_rsa_github \
+  --rawfile pub ~/.ssh/id_rsa_github.pub \
+  '{title:$title, category:"LOGIN", vault:{name:"Private"}, fields:[
+     {id:"private_key", label:"private_key", type:"CONCEALED", value:($priv|rtrimstr("\n"))},
+     {id:"public_key",  label:"public_key",  type:"STRING",     value:($pub |rtrimstr("\n"))}]}' > "$tmp"
+op item create --template "$tmp"
+rm -f "$tmp"
 ```
 
 #### 3. chezmoi でシークレットを適用
@@ -209,7 +213,7 @@ make secrets-init
 make secrets-apply
 ```
 
-これで SSH キーが `~/.ssh/` に展開されます。
+これで SSH キーと `~/.ssh/config` が `~/.ssh/` に展開されます。
 
 ### シークレットの追加
 
@@ -218,10 +222,10 @@ make secrets-apply
 1. 1Password にアイテムを追加
 2. `chezmoi/` 以下にテンプレートファイルを作成
 
-テンプレート例（`chezmoi/private_dot_ssh/private_id_rsa.github.tmpl`）：
+テンプレート例（`chezmoi/private_dot_ssh/private_id_rsa_github.tmpl`）：
 
 ```
-{{ onepasswordRead "op://Private/GitHub SSH/private_key" }}
+{{ onepasswordRead "op://Private/SSH id_rsa_github/private_key" }}
 ```
 
 ファイル名の規則：
