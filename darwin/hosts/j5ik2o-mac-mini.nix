@@ -32,8 +32,6 @@
     "docker-desktop"
     "github"
 
-    "parallels"
-
     # AI / ML
     "lm-studio"
     "chatgpt"
@@ -76,6 +74,7 @@
   homebrew.masApps = {
     "LINE" = 539883307;
     "Pages" = 361309726;
+    "Amphetamine" = 937984704;
   };
 
   # Homebrew クリーンアップ戦略
