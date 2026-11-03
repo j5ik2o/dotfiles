@@ -9,13 +9,19 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 src_dir="${HOME}/.pi/agent"
 dst_dir="${repo_root}/config/pi/agent"
 
-if [ ! -d "${src_dir}" ]; then
-  echo "error: ${src_dir} が見つかりません" >&2
+if [ ! -f "${src_dir}/settings.json" ]; then
+  echo "error: ${src_dir}/settings.json が見つかりません" >&2
   exit 1
 fi
 
 # lastChangelogVersion はホストごとの実行時状態なのでリポジトリに持ち込まない。
-jq 'del(.lastChangelogVersion)' "${src_dir}/settings.json" > "${dst_dir}/settings.json"
+# リダイレクト先が空になるとリポジトリ側の設定を壊すため、一時ファイルへ
+# 書いて jq の成功を確認してから置き換える。
+tmp_settings="$(mktemp "${dst_dir}/.settings.json.XXXXXX")"
+trap 'rm -f "${tmp_settings}"' EXIT
+jq 'del(.lastChangelogVersion)' "${src_dir}/settings.json" > "${tmp_settings}"
+mv "${tmp_settings}" "${dst_dir}/settings.json"
+trap - EXIT
 
 for name in pi-btw.json pi-statusline.json; do
   if [ -f "${src_dir}/${name}" ]; then

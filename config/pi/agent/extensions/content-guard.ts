@@ -148,6 +148,10 @@ export default function contentGuard(pi: ExtensionAPI): void {
   pi.on("input", async (event, ctx) => {
     const root = repoFor(ctx);
     if (!root) return undefined;
+    // 終了時検査の再試行回数は新しいユーザー要求でだけ戻す。
+    // turn_start は継続ターンでも発行されるため、そこで戻すと stop の
+    // continue が続く限り 3 回制限が効かなくなる。
+    settleAttempts = 0;
     const result = await runGuard(root, "remind", basePayload(ctx, root, turnId));
     if (result.code !== 0 || !result.stdout.trim()) return undefined;
     return { action: "transform", text: `${result.stdout.trim()}\n\n${event.text}` };
@@ -155,7 +159,6 @@ export default function contentGuard(pi: ExtensionAPI): void {
 
   pi.on("turn_start", async (event) => {
     turnId = Math.max(turnId, event.turnIndex);
-    settleAttempts = 0;
   });
 
   pi.on("tool_call", async (event, ctx) => {

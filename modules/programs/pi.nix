@@ -28,6 +28,9 @@ let
         cp -f "${piAgentDir}/${name}" "${piAgentDir}/.dotfiles-backup/${name}"
       fi
       cp -f "${piConfigDir}/${name}" "${piAgentDir}/${name}"
+      # Nix store のファイルは 0444 なので、コピー先が新規作成されると
+      # 読み取り専用になり pi が設定を保存できなくなる。
+      chmod u+w "${piAgentDir}/${name}"
     '') mutableFiles
   );
 
@@ -55,13 +58,22 @@ in
 {
   # 読み取り専用の設定は Nix 管理 (opencode の xdg.configFile と同じ考え方)
   home.file = {
-    ".pi/agent/models.json".source = "${piConfigDir}/models.json";
-    ".pi/agent/extensions/content-guard.ts".source = "${piConfigDir}/extensions/content-guard.ts";
+    ".pi/agent/models.json" = {
+      source = "${piConfigDir}/models.json";
+      force = true;
+    };
+    ".pi/agent/extensions/content-guard.ts" = {
+      source = "${piConfigDir}/extensions/content-guard.ts";
+      force = true;
+    };
   }
   // lib.listToAttrs (
     map (name: {
       name = ".pi/agent/agents/${name}";
-      value.source = "${piConfigDir}/agents/${name}";
+      value = {
+        source = "${piConfigDir}/agents/${name}";
+        force = true;
+      };
     }) agentFiles
   );
 
