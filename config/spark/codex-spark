@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export TENSORFOLD_API_KEY=dummy
+
+# TensorFold の窓口は function 型の道具だけを受け付ける。
+# custom 型の道具 (code_mode) と、サーバー側の道具 (web_search、apps、plugins) は外す。
+# Codex は MCP サーバーの道具を namespace 型で送るため、MCP サーバーを使うときは、
+# Mac の上に変換の中継 (namespace_relay.py) を一緒に立ち上げ、Codex はその中継へつなぐ。
+# 中継は namespace 型を function 型に直して TensorFold へ流し、モデルの道具の呼び出しを戻す。
+# 台本は最後に exec codex になる。台本の PID がそのまま codex の PID になるので、信号と終わりの
+# 状態の番号は codex のものになる。中継は --parent-pid でこの PID を見張り、codex が終わったら
+# 自分で止まって一時のフォルダを消す。
+# MCP サーバーは ~/.codex/config.toml に足したら、ここにも enabled=false を足す
+# (使うものは下の mcp_servers.<名前>.url などで有効にする)。
+# 承認と隔離は ~/.codex/config.toml の全開指定 (never / danger-full-access) を上書きして有効にする。
+# 窓 (一度に扱える長さ) は TensorFold の窓口に合わせる (2026-10-16)。262,144 を超える範囲の品質と速さは未確認
+RELAY="${CODEX_SPARK_RELAY:-$HOME/.local/share/codex-spark/namespace_relay.py}"
+UPSTREAM="${CODEX_SPARK_UPSTREAM:-http://10.0.1.60:8000}"
+LOG_DIR="${CODEX_SPARK_LOG_DIR:-$HOME/.cache/codex-spark}"
+PYTHON=/usr/bin/python3
+[ -x "$PYTHON" ] || PYTHON=python3
+
+if [ ! -f "$RELAY" ]; then
+  echo "codex-spark: 変換の中継がありません: $RELAY" >&2
+  echo "codex-spark: dotfiles の make apply で配置してください (docs/spark-agents.md)" >&2
+  exit 1
+fi
+
+mkdir -p "$LOG_DIR"
+# 起動ごとの一時のフォルダ。同時に2つ動かしても、番号のファイルがぶつからない
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/codex-spark.XXXXXX")"
+RELAY_PID=""
+cleanup() {
+  if [ -n "$RELAY_PID" ]; then
+    kill "$RELAY_PID" 2>/dev/null || true
+    wait "$RELAY_PID" 2>/dev/null || true
+  fi
+  rm -rf "$WORK"
+}
+trap cleanup EXIT
+trap 'exit 143' TERM HUP
+
+"$PYTHON" "$RELAY" \
+  --upstream "$UPSTREAM" \
+  --port-file "$WORK/port" \
+  --log "$LOG_DIR/relay.log" \
+  --parent-pid "$$" \
+  --work-dir "$WORK" \
+  </dev/null >"$WORK/relay.err" 2>&1 &
+RELAY_PID=$!
+
+# 中継が選んだ番号のファイルができるまで待つ (最大 10 秒)
+tries=0
+while [ ! -s "$WORK/port" ]; do
+  tries=$((tries + 1))
+  if ! kill -0 "$RELAY_PID" 2>/dev/null || [ "$tries" -gt 100 ]; then
+    echo "codex-spark: 変換の中継が立ち上がりませんでした。TensorFold へ直接はつなぎません" >&2
+    sed 's/^/codex-spark: /' "$WORK/relay.err" >&2 || true
+    exit 1
+  fi
+  sleep 0.1
+done
+PORT="$(tr -d '[:space:]' <"$WORK/port")"
+
+# ここから先は中継が後始末をする (exec のあとは trap が動かない)
+trap - EXIT TERM HUP
+exec codex \
+  -c "model_providers.tensorfold={name=\"TensorFold\", base_url=\"http://127.0.0.1:${PORT}/v1\", env_key=\"TENSORFOLD_API_KEY\", wire_api=\"responses\"}" \
+  -c 'model_provider="tensorfold"' \
+  -c 'model="spark"' \
+  -c 'model_context_window=1048576' \
+  -c 'features.code_mode=false' \
+  -c 'features.apps=false' \
+  -c 'features.plugins=false' \
+  -c 'features.multi_agent=false' \
+  -c 'features.multi_agent_v2=false' \
+  -c 'web_search="disabled"' \
+  -c 'mcp_servers.searxng.url="http://10.0.1.30:8889/mcp"' \
+  -c 'mcp_servers.kimi-cu.enabled=false' \
+  -c 'mcp_servers.node_repl.enabled=false' \
+  -c 'mcp_servers.openaiDeveloperDocs.enabled=false' \
+  -c 'mcp_servers.computer-use.enabled=false' \
+  -c 'approval_policy="on-request"' \
+  -c 'sandbox_mode="workspace-write"' \
+  "$@"
