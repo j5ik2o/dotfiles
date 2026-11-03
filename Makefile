@@ -80,6 +80,7 @@ CLIPROXYAPI_API_KEY ?=
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
+        pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
         cliproxyapi-login-gemini cliproxyapi-login-codex cliproxyapi-login-claude
 
@@ -114,6 +115,7 @@ help:
 	@echo "  zsh-clean      Remove zsh cache (sheldon, starship, etc)"
 	@echo "  gc             Run nix garbage collection"
 	@echo "  sheldon-lock   Lock sheldon plugins"
+	@echo "  pi-collect     pi が書き換えた設定を config/pi へ回収"
 	@echo ""
 	@echo "CLIProxyAPI:"
 	@echo "  cliproxyapi-start         Start CLIProxyAPI in background"
@@ -450,6 +452,13 @@ sheldon-lock:
 sheldon-source:
 	@echo "Sourcing sheldon plugins..."
 	sheldon source
+
+# ============================================================
+# pi
+# ============================================================
+
+pi-collect:
+	@./scripts/pi-collect.sh
 
 # ============================================================
 # Chezmoi (シークレット管理)

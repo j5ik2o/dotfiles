@@ -174,6 +174,7 @@
     ./programs/direnv.nix
     ./programs/cliproxyapi.nix
     ./programs/opencode.nix
+    ./programs/pi.nix
     ./programs/clawdbot.nix
     ./programs/zellij.nix
     ./programs/tmux.nix

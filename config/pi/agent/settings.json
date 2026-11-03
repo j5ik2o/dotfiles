@@ -1,0 +1,17 @@
+{
+  "theme": "dark",
+  "defaultProvider": "dgx",
+  "defaultModel": "deepseek-v4.1-flash",
+  "defaultThinkingLevel": "high",
+  "packages": [
+    "npm:@narumitw/pi-statusline",
+    "npm:@narumitw/pi-btw",
+    "npm:pi-subagents",
+    "git:github.com/michael-denyer/pstack-claude"
+  ],
+  "retry": {
+    "provider": {
+      "maxRetries": 0
+    }
+  }
+}
