@@ -35,8 +35,6 @@ dotfiles/chezmoi/
 | `id_ed25519_lan` | 自宅 LAN (`vega-nas`, `softether-vpn`, LAN 内の Mac) | `SSH id_ed25519_lan` |
 | `id_ed25519_dgx` | DGX Spark / CRS (`spark1`〜`spark4`, `crs812`) | `SSH id_ed25519_dgx` |
 | `id_ed25519_forgejo` | Forgejo (`forgejo`) | `SSH id_ed25519_forgejo` |
-| `xs303275.key` | Xserver (`xs303275.xsrv.jp`) | `SSH xs303275` |
-| `xs834220.key` | Xserver (`xs834220.xsrv.jp`) | `SSH xs834220` |
 | `google_compute_engine` | gcloud の既定鍵 | `SSH google_compute_engine` |
 
 ホストを追加するときは `private_config.tmpl` を編集します。鍵を追加するときは 1Password に `SSH <ファイル名>` の項目を作り、秘密鍵と公開鍵のテンプレートを追加します。
