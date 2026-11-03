@@ -24,13 +24,13 @@ let
   copyMutableFiles = lib.concatStringsSep "\n" (
     map (name: ''
       if [ -f "${piAgentDir}/${name}" ] && ! cmp -s "${piAgentDir}/${name}" "${piConfigDir}/${name}"; then
-        mkdir -p "${piAgentDir}/.dotfiles-backup"
-        cp -f "${piAgentDir}/${name}" "${piAgentDir}/.dotfiles-backup/${name}"
+        run mkdir -p "${piAgentDir}/.dotfiles-backup"
+        run cp -f "${piAgentDir}/${name}" "${piAgentDir}/.dotfiles-backup/${name}"
       fi
-      cp -f "${piConfigDir}/${name}" "${piAgentDir}/${name}"
+      run cp -f "${piConfigDir}/${name}" "${piAgentDir}/${name}"
       # Nix store のファイルは 0444 なので、コピー先が新規作成されると
       # 読み取り専用になり pi が設定を保存できなくなる。
-      chmod u+w "${piAgentDir}/${name}"
+      run chmod u+w "${piAgentDir}/${name}"
     '') mutableFiles
   );
 
@@ -39,12 +39,12 @@ let
   # 起動できなくなるため、見つけたら退避する。
   quarantineLegacySubagent = ''
     if [ -e "${piAgentDir}/extensions/subagent" ]; then
-      mkdir -p "${piAgentDir}/.dotfiles-backup/subagent-legacy"
+      run mkdir -p "${piAgentDir}/.dotfiles-backup/subagent-legacy"
       _pi_legacy_target="${piAgentDir}/.dotfiles-backup/subagent-legacy/subagent"
       if [ -e "$_pi_legacy_target" ]; then
         _pi_legacy_target="$_pi_legacy_target.$(date +%Y%m%d%H%M%S)"
       fi
-      mv "${piAgentDir}/extensions/subagent" "$_pi_legacy_target"
+      run mv "${piAgentDir}/extensions/subagent" "$_pi_legacy_target"
     fi
   '';
 
@@ -64,6 +64,11 @@ in
     };
     ".pi/agent/extensions/content-guard.ts" = {
       source = "${piConfigDir}/extensions/content-guard.ts";
+      force = true;
+    };
+    # content-guard がリポジトリ内のスクリプトを実行してよいルート。
+    ".pi/agent/content-guard-roots.json" = {
+      source = "${piConfigDir}/content-guard-roots.json";
       force = true;
     };
   }

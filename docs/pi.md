@@ -13,6 +13,7 @@ pi が起動中に書き換えるファイルは Nix の読み取り専用リン
 | `models.json` | Nix リンク | pi は読むだけ |
 | `agents/*.md` | Nix リンク | pi は読むだけ |
 | `extensions/content-guard.ts` | Nix リンク | pi は読むだけ |
+| `content-guard-roots.json` | Nix リンク | pi は読むだけ |
 | `settings.json` | activation でコピー | モデル切替・テーマ・パッケージ導入で pi が保存する |
 | `pi-btw.json` | activation でコピー | プラグインが保存する |
 | `pi-statusline.json` | activation でコピー | プラグインが保存する |
@@ -47,6 +48,32 @@ curl -s http://10.0.1.60:8000/v1/models | jq -r '.data[].id'
 - `config/pi/agent/models.json` の `models`
 - `config/pi/agent/settings.json` の `defaultModel`
 - `config/pi/agent/pi-btw.json` の `model`
+
+## content-guard を実行するリポジトリ
+
+`content-guard.ts` はリポジトリ内の `scripts/content_guard.py` を実行するため、
+`content-guard-roots.json` に書いたルートの配下でだけ動く。許可リストが無い、
+または読めない場合はどのリポジトリでも実行しない。
+
+```json
+{
+  "roots": [
+    "~/Sources/j5ik2o.github.com",
+    "~/orca/workspaces"
+  ]
+}
+```
+
+新しい作業ディレクトリでガードを使うときは、このファイルにルートを足して
+`make apply` する。`~` はホームディレクトリに展開される。
+
+## tensorfold から dgx への移行
+
+プロバイダ名を `tensorfold` から `dgx` に変えたため、変更前のセッションは
+保存済みのプロバイダ ID を解決できず、モデルが `unavailable` になる。
+
+- pi: `/model` を開いて `dgx/deepseek-v4.1-flash` を選び直す
+- opencode: `/models` から `dgx` のモデルを選び直す
 
 ## 運用
 

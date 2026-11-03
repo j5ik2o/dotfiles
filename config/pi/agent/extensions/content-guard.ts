@@ -7,10 +7,15 @@
  *
  * Only repositories that contain `scripts/content_guard.py` and
  * `knowledge/index.md` are guarded; other projects are untouched.
+ *
+ * The guard executes a script from the repository, so it runs only when the
+ * repository is under one of the roots listed in `content-guard-roots.json`
+ * next to this extension. The file is managed by the dotfiles repository.
  */
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 type GuardMode = "check" | "prebash" | "postcheck" | "display" | "remind" | "stop";
@@ -23,6 +28,7 @@ interface GuardResult {
 }
 
 const GUARD = path.join("scripts", "content_guard.py");
+const GUARD_ROOTS_FILE = path.join(getAgentDir(), "content-guard-roots.json");
 const TIMEOUT_MS: Record<GuardMode, number> = {
   check: 120_000,
   prebash: 60_000,
@@ -46,12 +52,43 @@ function detectRepo(start: string | undefined): string | null {
   return null;
 }
 
-function repoFor(ctx: ExtensionContext, target?: string): string | null {
-  if (target) {
-    const fromTarget = detectRepo(path.dirname(path.resolve(target)));
-    if (fromTarget) return fromTarget;
+function expandHome(value: string): string {
+  const home = process.env.HOME ?? "";
+  if (value === "~") return home;
+  return value.startsWith("~/") ? path.join(home, value.slice(2)) : value;
+}
+
+let cachedGuardRoots: string[] | null = null;
+
+function guardRoots(): string[] {
+  if (cachedGuardRoots !== null) return cachedGuardRoots;
+  try {
+    const raw = JSON.parse(readFileSync(GUARD_ROOTS_FILE, "utf-8")) as { roots?: unknown };
+    const roots = Array.isArray(raw.roots)
+      ? raw.roots.filter((entry): entry is string => typeof entry === "string")
+      : [];
+    // 許可リストが無い場合はどのリポジトリでも実行しない (fail closed)。
+    cachedGuardRoots = roots.map((entry) => path.resolve(expandHome(entry)));
+  } catch {
+    cachedGuardRoots = [];
   }
-  return detectRepo(ctx.cwd);
+  return cachedGuardRoots;
+}
+
+function underGuardRoot(root: string): boolean {
+  const resolved = path.resolve(root);
+  return guardRoots().some(
+    (base) => resolved === base || resolved.startsWith(`${base}${path.sep}`),
+  );
+}
+
+function repoFor(ctx: ExtensionContext, target?: string): string | null {
+  if (!ctx.isProjectTrusted()) return null;
+  const root = target
+    ? detectRepo(path.dirname(path.resolve(target))) ?? detectRepo(ctx.cwd)
+    : detectRepo(ctx.cwd);
+  if (!root || !underGuardRoot(root)) return null;
+  return root;
 }
 
 function runGuard(root: string, mode: GuardMode, payload: Record<string, unknown>): Promise<GuardResult> {
