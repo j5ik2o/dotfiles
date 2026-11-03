@@ -24,6 +24,8 @@ Home Manager で `~/.local/bin` と `~/.config`、`~/.local/share` に配るた�
 
 ファイルを直したら `make apply` する。`~/.local/bin` の既存ファイルは
 Home Manager によって `.backup` へ退避され、Nix store へのリンクに置き換わる。
+Linux の `make apply` も `home-manager switch -b backup` を使うため、同じように
+`.backup` が作られる。
 
 ```sh
 make apply
@@ -35,6 +37,9 @@ codex-spark --version
 
 `codex-spark` と `namespace_relay.py` は `dgx-spark-configuration` リポジトリの
 `ops/codex-spark/` が元。いまは dotfiles 側を正として配布する。
+`namespace_relay.py` は上流と突き合わせられるよう処理をそのまま保ち、
+モジュールレベルの型 (`_RelayError` / `_Relay` / `_ClientWatch`) は
+下線付きの実装詳細として扱う。
 `claude-spark` はこれまで `~/.local/bin` にだけ置いていたため、dotfiles が
 唯一の管理元になる。
 

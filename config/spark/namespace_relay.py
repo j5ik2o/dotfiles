@@ -8,6 +8,10 @@ Codex が分かる形 (`name` と `namespace` の組) に戻す。
 
 Python の標準ライブラリだけで書く。起動の台本が macOS の `/usr/bin/python3` (3.9) で動かすので、
 3.9 で動く書き方にする (`match` 文と実行時の `X | Y` の型を使わない)。
+
+このファイルは dgx-spark-configuration の `ops/codex-spark/namespace_relay.py` を取り込んだもの。
+上流のテストと突き合わせられるよう、処理はそのまま保つ。モジュールレベルの型は実装の詳細なので、
+`_RelayError` / `_Relay` / `_ClientWatch` と下線を付けて公開型にしない。
 """
 
 from __future__ import annotations
@@ -52,7 +56,7 @@ HOP_BY_HOP = frozenset(
 BOILERPLATE_DESCRIPTION = "Tools in the {} namespace."
 
 
-class RelayError(Exception):
+class _RelayError(Exception):
     """要求を直せない。中継が 400 で、この文を返す。"""
 
 
@@ -122,10 +126,10 @@ def rewrite_request(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tup
             for item in inner:
                 inner_name = item.get("name")
                 if not isinstance(inner_name, str):
-                    raise RelayError(f"namespace {ns_name!r} に、名前のない道具があります")
+                    raise _RelayError(f"namespace {ns_name!r} に、名前のない道具があります")
                 flat = flat_name(ns_name, inner_name)
                 if flat in top_names or flat in table:
-                    raise RelayError(
+                    raise _RelayError(
                         f"namespace {ns_name!r} の道具 {inner_name!r} を直すと {flat!r} になり、"
                         "同じ名前の道具がすでにあります。名前がぶつかるので、中継は要求を断ります"
                     )
@@ -258,7 +262,7 @@ def restore_body(raw: bytes, table: dict[str, tuple[str, str]]) -> tuple[bytes, 
     return json.dumps(obj, ensure_ascii=False).encode("utf-8"), restored
 
 
-class Relay:
+class _Relay:
     """中継の設定と記録。"""
 
     def __init__(self, upstream: str, log_path: str | None) -> None:
@@ -297,7 +301,7 @@ class Relay:
             handle.write(line)
 
 
-class ClientWatch:
+class _ClientWatch:
     """利用者側の接続が閉じたら、上流への接続をすぐ閉じる見張り。
 
     上流が前置きの読み込みで何も返さない間も、TensorFold に切ったことを知らせて生成を止めさせる。
@@ -325,7 +329,7 @@ class ClientWatch:
             with contextlib.suppress(OSError):
                 self._upstream.shutdown(socket.SHUT_RDWR)
 
-    def __enter__(self) -> ClientWatch:
+    def __enter__(self) -> _ClientWatch:
         self._thread.start()
         return self
 
@@ -355,7 +359,7 @@ class ClientWatch:
             self._stop.wait(0.2)
 
 
-def make_handler(relay: Relay) -> type[http.server.BaseHTTPRequestHandler]:
+def make_handler(relay: _Relay) -> type[http.server.BaseHTTPRequestHandler]:
     class Handler(http.server.BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
@@ -434,7 +438,7 @@ def make_handler(relay: Relay) -> type[http.server.BaseHTTPRequestHandler]:
                     include_stripped = int(_wants_encrypted_reasoning(parsed))
                     try:
                         rewritten, table, fixed = rewrite_request(parsed)
-                    except RelayError as error:
+                    except _RelayError as error:
                         self._reply_error(400, str(error))
                         relay.log(self.command, self.path, 0, 0, 400)
                         return
@@ -455,7 +459,7 @@ def make_handler(relay: Relay) -> type[http.server.BaseHTTPRequestHandler]:
             connection = http.client.HTTPConnection(relay.host, relay.port, timeout=None)
             restored = 0
             status: Any = "-"
-            watch = ClientWatch(self.connection)
+            watch = _ClientWatch(self.connection)
             try:
                 with watch:
                     try:
@@ -594,7 +598,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    relay = Relay(args.upstream, args.log)
+    relay = _Relay(args.upstream, args.log)
     server = http.server.ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(relay))
     server.daemon_threads = True
 

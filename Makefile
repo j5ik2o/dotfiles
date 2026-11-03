@@ -304,7 +304,7 @@ ifeq ($(HOST_CONFIG_FOUND),)
 endif
 endif
 	@echo "Applying Home Manager configuration: $(HM_CONFIG)"
-	$(PROMPT_PROFILE_ENV) home-manager switch --flake '.#"$(HM_CONFIG)"' $(PROMPT_PROFILE_IMPURE)
+	$(PROMPT_PROFILE_ENV) home-manager switch -b backup --flake '.#"$(HM_CONFIG)"' $(PROMPT_PROFILE_IMPURE)
 	@if command -v sheldon >/dev/null 2>&1; then \
 		echo "Locking sheldon plugins..."; \
 		sheldon lock; \
