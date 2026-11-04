@@ -36,6 +36,10 @@
     m-cli # macOS コマンドラインツール
     mas # Mac App Store CLI
     macpm # Apple Silicon パフォーマンスモニタ (旧 asitop)
+
+    # Android 端末の画面ミラーリング / 操作
+    scrcpy
+    android-tools # adb (scrcpy の接続に必要)
   ];
 
   # ============================================================
