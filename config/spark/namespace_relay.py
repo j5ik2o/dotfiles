@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Codex と TensorFold の間に立つ、namespace 型の道具の変換の中継。
+"""Codex と vLLM の間に立つ、namespace 型の道具の変換の中継。
 
 Codex は MCP サーバーの道具を、Responses API の要求の `tools` に `type: "namespace"` の項目で
-包んで送る。TensorFold の窓口は `type: "function"` の道具しか受け付けない。この中継は 127.0.0.1 で
+包んで送る。vLLM の窓口は `type: "function"` の道具しか受け付けない。この中継は 127.0.0.1 で
 待ち受け、行きは namespace の道具を function の道具に直し、帰りはモデルの道具の呼び出しを
 Codex が分かる形 (`name` と `namespace` の組) に戻す。
 
@@ -94,7 +94,7 @@ def rewrite_request(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tup
     table: dict[str, tuple[str, str]] = {}
     count = 0
 
-    # TensorFold は思考を平文で返し、暗号化しないので、この指定を 400 で断る。値だけ外す
+    # vLLM は思考を平文で返し、暗号化しないので、この指定を 400 で断る。値だけ外す
     if _wants_encrypted_reasoning(body):
         new["include"] = [x for x in body["include"] if x != ENCRYPTED_REASONING]
 
@@ -120,7 +120,7 @@ def rewrite_request(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tup
                 and all(isinstance(x, dict) and x.get("type") == "function" for x in inner)
             )
             if not convertible:
-                # function 以外が混じる namespace は直さず残す (TensorFold が断り、理由が見える)
+                # function 以外が混じる namespace は直さず残す (vLLM が断り、理由が見える)
                 out_tools.append(tool)
                 continue
             for item in inner:
@@ -304,8 +304,8 @@ class _Relay:
 class _ClientWatch:
     """利用者側の接続が閉じたら、上流への接続をすぐ閉じる見張り。
 
-    上流が前置きの読み込みで何も返さない間も、TensorFold に切ったことを知らせて生成を止めさせる。
-    TensorFold 自身も、接続の `MSG_PEEK` が 0 バイトなら切れたと見て生成を止める。
+    上流が前置きの読み込みで何も返さない間も、vLLM に切ったことを知らせて生成を止めさせる。
+    vLLM 自身も、接続の `MSG_PEEK` が 0 バイトなら切れたと見て生成を止める。
     """
 
     def __init__(self, client: socket.socket) -> None:
