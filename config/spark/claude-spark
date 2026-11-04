@@ -13,4 +13,4 @@ export CLAUDE_CODE_SUBAGENT_MODEL=deepseek-v4.1-flash
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 # ウェブ検索は NAS の検索用 MCP サーバー (SearXNG、dgx-spark-configuration の ops/searxng) を使う。
 # claude-spark だけに足す (ふだんの Claude Code には、もとからウェブ検索がある)。2026-10-18
-exec claude --mcp-config "$HOME/.config/claude-spark/mcp.json" --disallowedTools "Agent,Workflow,SendMessage" "$@"
+exec claude --mcp-config "$HOME/.config/claude-spark/mcp.json" --disallowedTools "Workflow,SendMessage" "$@"
