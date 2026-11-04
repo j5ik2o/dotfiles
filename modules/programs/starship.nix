@@ -95,7 +95,11 @@
         ssh_only = false;
         ssh_symbol = " ";
         style = "fg:crust bg:green";
-        format = "[$hostname ]($style)";
+        format =
+          if pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.hostName != "" then
+            "[${config.dotfiles.hostName} ]($style)"
+          else
+            "[$hostname ]($style)";
       };
 
       # Git ブランチ
