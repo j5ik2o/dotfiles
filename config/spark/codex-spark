@@ -72,8 +72,6 @@ exec codex \
   -c 'features.code_mode=false' \
   -c 'features.apps=false' \
   -c 'features.plugins=false' \
-  -c 'features.multi_agent=false' \
-  -c 'features.multi_agent_v2=false' \
   -c 'web_search="disabled"' \
   -c 'mcp_servers.searxng.url="http://10.0.1.30:8889/mcp"' \
   -c 'mcp_servers.kimi-cu.enabled=false' \
