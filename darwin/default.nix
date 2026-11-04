@@ -78,6 +78,19 @@
       coderabbit = final.callPackage ../packages/coderabbit.nix { };
       herdr = final.callPackage ../packages/herdr.nix { };
       copilot-chat-nvim = final.callPackage ../packages/copilot-chat.nix { };
+      # opencode 2.2.5 は nixpkgs 側の node_modules ハッシュが壊れている
+      # (NixOS/nixpkgs#582673, 修正 PR #582675 は未マージ)。
+      # bun 1.4.4 で実際に生成されるハッシュへ差し替える。
+      # 上流で version が変われば自動的に解除される。
+      opencode =
+        if prev.opencode.version == "2.2.5" then
+          prev.opencode.overrideAttrs (old: {
+            node_modules = old.node_modules.overrideAttrs (_: {
+              outputHash = "sha256-dIveiaiPFGSItwLyeMuPDxTE9gpvvnlTCB/+nG24qCc=";
+            });
+          })
+        else
+          prev.opencode;
       # macOS で test_scan_invalid_rule_id が "Illegal byte sequence (os error 92)" で失敗するためテストをスキップ
       ast-grep = prev.ast-grep.overrideAttrs (_: {
         doCheck = false;
