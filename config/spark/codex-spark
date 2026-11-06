@@ -13,7 +13,10 @@ export TENSORFOLD_API_KEY=dummy
 # 窓 (一度に扱える長さ) は vLLM の窓口に合わせる (2026-10-16)。262,144 を超える範囲の品質と速さは未確認
 # model は claude-spark と同じものを使う。vLLM が配信しているのは deepseek-v4.1-flash だけ。
 RELAY="${CODEX_SPARK_RELAY:-$HOME/.local/share/codex-spark/namespace_relay.py}"
+# 推論ランタイムの接続先とモデルは変わる可能性があるので、先頭にまとめる。
 UPSTREAM="${CODEX_SPARK_UPSTREAM:-http://10.0.1.60:8000}"
+MODEL="${CODEX_SPARK_MODEL:-deepseek-v4.1-flash}"
+CONTEXT_WINDOW="${CODEX_SPARK_CONTEXT_WINDOW:-1048576}"
 LOG_DIR="${CODEX_SPARK_LOG_DIR:-$HOME/.cache/codex-spark}"
 PYTHON=/usr/bin/python3
 [ -x "$PYTHON" ] || PYTHON=python3
@@ -65,8 +68,8 @@ trap - EXIT TERM HUP
 exec codex \
   -c "model_providers.tensorfold={name=\"TensorFold\", base_url=\"http://127.0.0.1:${PORT}/v1\", env_key=\"TENSORFOLD_API_KEY\", wire_api=\"responses\"}" \
   -c 'model_provider="tensorfold"' \
-  -c 'model="deepseek-v4.1-flash"' \
-  -c 'model_context_window=1048576' \
+  -c "model=\"${MODEL}\"" \
+  -c "model_context_window=${CONTEXT_WINDOW}" \
   -c 'mcp_servers.searxng.url="http://10.0.1.30:8889/mcp"' \
   -c 'approval_policy="on-request"' \
   -c 'sandbox_mode="workspace-write"' \

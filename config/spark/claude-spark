@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export ANTHROPIC_BASE_URL=http://10.0.1.60:8000
+# 推論ランタイムの接続先とモデルは変わる可能性があるので、先頭にまとめる。
+SPARK_BASE_URL=http://10.0.1.60:8000
+SPARK_MODEL=deepseek-v4.1-flash
+# 窓 (一度に扱える長さ) は vLLM の窓口に合わせる (2026-10-16)。262,144 を超える範囲の品質と速さは未確認
+SPARK_CONTEXT_WINDOW=1048576
+
+export ANTHROPIC_BASE_URL="$SPARK_BASE_URL"
 export ANTHROPIC_AUTH_TOKEN=dummy
 export ANTHROPIC_API_KEY=""
-export ANTHROPIC_MODEL=deepseek-v4.1-flash
-# 窓 (一度に扱える長さ) は vLLM の窓口に合わせる (2026-10-16)。262,144 を超える範囲の品質と速さは未確認
-export CLAUDE_CODE_MAX_CONTEXT_TOKENS=1048576
-export ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-v4.1-flash
-export ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4.1-flash
-export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4.1-flash
-export CLAUDE_CODE_SUBAGENT_MODEL=deepseek-v4.1-flash
+export ANTHROPIC_MODEL="$SPARK_MODEL"
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS="$SPARK_CONTEXT_WINDOW"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="$SPARK_MODEL"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="$SPARK_MODEL"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="$SPARK_MODEL"
+export CLAUDE_CODE_SUBAGENT_MODEL="$SPARK_MODEL"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 # ウェブ検索は NAS の検索用 MCP サーバー (SearXNG、dgx-spark-configuration の ops/searxng) を使う。
 # claude-spark だけに足す (ふだんの Claude Code には、もとからウェブ検索がある)。2026-10-18
