@@ -33,6 +33,7 @@
     "chatgpt"
     "claude"
     "codex-app"
+    "grok-bot"
 
     # ユーティリティ
     "coteditor"
