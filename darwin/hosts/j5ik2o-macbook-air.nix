@@ -40,6 +40,7 @@
     "claude"
     "aionui"
     "codex-app"
+    "grok-bot"
 
     # ユーティリティ
     "coteditor"
