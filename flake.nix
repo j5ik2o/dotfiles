@@ -74,6 +74,7 @@
           gwq = final.callPackage ./packages/gwq.nix { };
           claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
           dsh-tui = final.callPackage ./packages/dsh-tui.nix { };
+          ds-bot-app = final.callPackage ./packages/ds-bot-app.nix { };
           claude-code-proxy =
             inputs.claude-code-proxy.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
               (old: {
@@ -357,13 +358,22 @@
       # ============================================================
       darwinConfigurations = mkAllDarwinConfigurations // hostDarwinConfigurations;
 
-      packages = forAllSystems (system: {
-        dsh-tui =
-          (import nixpkgs {
+      packages = forAllSystems (
+        system:
+        let
+          systemPkgs = import nixpkgs {
             inherit system;
             overlays = [ customOverlay ];
-          }).dsh-tui;
-      });
+          };
+        in
+        {
+          dsh-tui = systemPkgs.dsh-tui;
+        }
+        # DS Bot のデスクトップアプリは macOS (Apple Silicon) 版しか配布されていない
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          ds-bot-app = systemPkgs.ds-bot-app;
+        }
+      );
 
       # --no-build の make check でも回帰を検出するため評価時にテストする
       checks = forAllSystems (
