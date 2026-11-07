@@ -43,6 +43,15 @@
   ];
 
   # ============================================================
+  # macOS 固有の GUI アプリ (Nix 管理)
+  # ============================================================
+
+  # DS Bot デスクトップアプリ。Homebrew cask が無いため GitHub Releases の
+  # 配布物をハッシュ固定で取得し、~/Applications にリンクする。
+  # DS Bot の DSH プラグイン側は dsh-tui (packages/dsh-tui.nix) の web プロファイルで動く。
+  home.file."Applications/DS Bot.app".source = "${pkgs.ds-bot-app}/Applications/DS Bot.app";
+
+  # ============================================================
   # macOS 固有の環境変数
   # ============================================================
   home.sessionVariables = {

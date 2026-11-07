@@ -30,7 +30,7 @@ buildNpmPackage {
     cp ${./dsh-tui-lock.json} $out/package-lock.json
   '';
 
-  npmDepsHash = "sha256-PTSJoRKfVAbhbK3H9qGe6GX19c/1XAqEOJdVwZBD70I=";
+  npmDepsHash = "sha256-C+0qoFYQuWbg5FqoP5T3HZWCyPe8RzqKDA9uanIzdQ0=";
   dontNpmBuild = true;
   # npm 公開版のビルド済み JS / native addon を利用し、追加取得を行わない。
   npmRebuildFlags = [ "--ignore-scripts" ];
@@ -101,6 +101,23 @@ buildNpmPackage {
     }
     EOF
 
+    # ds-bot は webserver の service (sessionController, workspaceRegistry, connection) を
+    # 要求するため TUI プロファイルでは activate できない。Web プロファイル側で使う。
+    # ds-bot の patch は web.searchProvider を auto にするが、後に適用される
+    # dsh-web-search-searxng の patch が searxng で上書きする。
+    cat > $out/lib/dsh-tui/web-profile.json <<'EOF'
+    {
+      "name": "dsh-web-profile",
+      "private": true,
+      "dependencies": {},
+      "dsh": {
+        "profile": {
+          "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "ds-bot", "dsh-web-search-searxng", "dsh-tui-providers"]
+        }
+      }
+    }
+    EOF
+
     cp ${./dsh-tui-login.mjs} $out/lib/dsh-tui/login.mjs
     cp ${./dsh-tui-models.mjs} $out/lib/dsh-tui/models.mjs
 
@@ -144,6 +161,42 @@ buildNpmPackage {
     EOF
     chmod +x $out/bin/dsh-tui
 
+    # dsh web (ブラウザ UI) 用。DS Bot はこのプロファイルでだけ動く。
+    # 認証と環境変数の扱いは dsh-tui と同じにそろえる。
+    cat > $out/bin/dsh-web <<EOF
+    #!${bash}/bin/bash
+    set -euo pipefail
+    export DSH_HOME="\$HOME/.dsh-tui"
+    DSH_CODEX_CREDENTIAL_ID="\$(${nodejs_24}/bin/node "$out/lib/dsh-tui/login.mjs" --current)"
+    export DSH_CODEX_CREDENTIAL_ID
+    account_patch=""
+    case "\''${1:-}" in
+      --version|-V|--help|-h|--dump-default-config|--dump-config-schema) ;;
+      *) account_patch="\$(${nodejs_24}/bin/node "$out/lib/dsh-tui/login.mjs" --prepare)" ;;
+    esac
+    ${coreutils}/bin/mkdir -p "\$DSH_HOME/profiles/web"
+    ${coreutils}/bin/ln -sfnT "$out/lib/dsh-tui/web-profile.json" "\$DSH_HOME/profiles/web/package.json"
+    ${coreutils}/bin/ln -sfnT "$out/lib/dsh-tui/node_modules" "\$DSH_HOME/profiles/web/node_modules"
+    # 認証は実行時に既存の OpenCode から読み、値を Nix store に保存しない。
+    auth_file="\''${XDG_DATA_HOME:-\$HOME/.local/share}/opencode/auth.json"
+    if [[ -z "\''${OPENCODE_GO_API_KEY:-}" && -r "\$auth_file" ]]; then
+      OPENCODE_GO_API_KEY="\$(${jq}/bin/jq -r '."opencode-go".key // empty' "\$auth_file")"
+      export OPENCODE_GO_API_KEY
+    fi
+    # ログイン済みローカル Ollama ではこの値は使われないが、SDK が要求する。
+    export DSH_OLLAMA_API_KEY="\''${DSH_OLLAMA_API_KEY:-ollama}"
+    # DGX Spark の TensorFold は鍵を確かめないが、SDK が値を要求する。
+    export DSH_TENSORFOLD_API_KEY="\''${DSH_TENSORFOLD_API_KEY:-tensorfold}"
+    # ウェブ検索は NAS の SearXNG を使う。宛先は環境変数で変えられる。
+    export SEARXNG_URL="\''${SEARXNG_URL:-http://10.0.1.30:8888}"
+    patch_args=()
+    if [[ -n "\$account_patch" ]]; then
+      patch_args=(--patch "\$account_patch")
+    fi
+    exec ${nodejs_24}/bin/node --expose-internals "$out/lib/dsh-tui/node_modules/@deepseek-ai/dsh/lib/bin.js" --profile web "\''${patch_args[@]}" "\$@"
+    EOF
+    chmod +x $out/bin/dsh-web
+
     runHook postInstall
   '';
 
@@ -184,6 +237,26 @@ buildNpmPackage {
     DSH_TENSORFOLD_API_KEY=tensorfold ${nodejs_24}/bin/node ${./dsh-tui-models-check.mjs} "$out/lib/dsh-tui"
     ${nodejs_24}/bin/node ${./dsh-tui-model-selection-check.mjs} "$out/lib/dsh-tui"
     ${nodejs_24}/bin/node ${./dsh-tui-effort-check.mjs} "$out/lib/dsh-tui"
+
+    # dsh web プロファイルに DS Bot が入り、SearXNG の選択が生きていること。
+    run_dsh_web() {
+      env -i HOME="$TMPDIR/dsh-web-check" PATH="${
+        lib.makeBinPath [
+          bash
+          coreutils
+        ]
+      }:/usr/bin:/bin" \
+        DSH_HOME="$TMPDIR/existing-dsh" DSH_TELEMETRY_DISABLED=1 \
+        "$out/bin/dsh-web" "$@"
+    }
+    run_dsh_web --help > web-help.txt
+    grep -q 'Serve the DeepSeek Harness browser UI' web-help.txt
+    run_dsh_web --dump-config > web-config.yml
+    grep -q "name: '@deepseek-ai/dsh-web-app'" web-config.yml
+    grep -q "name: ds-bot" web-config.yml
+    grep -q 'searchProvider: searxng' web-config.yml
+    grep -q 'provider: opencode-go' web-config.yml
+    grep -q 'SEARXNG_URL:-http://10.0.1.30:8888' "$out/bin/dsh-web"
     test ! -e "$TMPDIR/existing-dsh"
 
     runHook postInstallCheck

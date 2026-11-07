@@ -149,6 +149,44 @@ Ollama の認証やモデルのダウンロードを Nix ビルドで行う必�
 Nix 版 Node と dsh の native addon の既知の不具合は、`--expose-internals` と
 app-boot のローカルパッチで回避する。ビルド時に API キーなしでバージョン・設定合成・help を検証する。
 
+### DS Bot
+
+[DS Bot](https://github.com/Fei2411/DS-Bot) は DeepSeek Harness のプラグインで、
+長期稼働する Bot、Bot 間のメッセージ、グループチャットを提供する。次の2つの形で管理する。
+
+#### Web プロファイル（プラグイン）
+
+`ds-bot` は webserver の service（`sessionController`、`workspaceRegistry`、`connection`）を
+要求するため、TUI プロファイルでは activate できない。`dsh-web` は同じ Nix パッケージの
+`web` プロファイルに `ds-bot` を入れてブラウザー UI を起動する。
+
+```bash
+git add -N packages/dsh-tui*
+nix build .#dsh-tui --out-link .tmp/dsh-tui
+./.tmp/dsh-tui/bin/dsh-web      # ブラウザーが開く
+```
+
+プロファイルは `~/.dsh-tui/profiles/web` で、`DSH_HOME` と認証は `dsh-tui` と共有する。
+`ds-bot` の patch は `web.searchProvider` を `auto` にするが、後から適用される
+`dsh-web-search-searxng` の patch が `searxng` で上書きする。
+プラグインの追加・更新は `packages/dsh-tui-package.json` と lockfile を変更して再ビルドする
+（`dsh plugin add` は使わない）。
+
+#### デスクトップアプリ
+
+Homebrew cask が無いため、GitHub Releases の macOS (Apple Silicon) 版を
+`packages/ds-bot-app.nix` でハッシュ固定し、Home Manager が `~/Applications/DS Bot.app` に
+リンクする。
+
+```bash
+git add -N packages/ds-bot-app.nix
+nix build .#ds-bot-app --out-link .tmp/ds-bot-app
+```
+
+配布物は ad-hoc 署名済みで署名・公証が無いため、shebang の書き換えや strip で署名が壊れないよう
+ビルド時に fixup を行わない。macOS 版は自己更新しない。更新するときは
+`packages/ds-bot-app.nix` の `version` と `hash` を上げる。
+
 ## シークレット管理 (chezmoi + 1Password)
 
 SSH キーなどのシークレットは chezmoi + 1Password CLI で管理します。
