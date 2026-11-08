@@ -53,6 +53,7 @@
     "monitorcontrol"
     "cleanshot"
     "angry-ip-scanner"
+    "openmtp"
     "tailscale-app"
     "geekbench"
 
