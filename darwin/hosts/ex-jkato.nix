@@ -34,6 +34,7 @@
     "claude"
     "codex-app"
     "grok-bot"
+    "t3-code"
 
     # ユーティリティ
     "coteditor"
