@@ -27,7 +27,7 @@ let
   };
   target =
     targets.${stdenvNoCC.hostPlatform.system}
-    or (throw "Unsupported system for coderabbit: ${stdenvNoCC.hostPlatform.system}");
+      or (throw "Unsupported system for coderabbit: ${stdenvNoCC.hostPlatform.system}");
 in
 stdenvNoCC.mkDerivation {
   pname = "coderabbit";

@@ -8,11 +8,11 @@ vim.opt.spell = false
 vim.opt.clipboard = "unnamedplus"
 
 -- Diagnostics: keep code view clean; use Trouble/loclist instead
-vim.diagnostic.config({
+vim.diagnostic.config {
   virtual_text = false,
   signs = false,
   underline = false,
   update_in_insert = false,
   severity_sort = true,
   float = { border = "rounded", source = "if_many" },
-})
+}

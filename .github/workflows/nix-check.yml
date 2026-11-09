@@ -29,3 +29,6 @@ jobs:
 
       - name: Run flake check
         run: make check
+
+      - name: Run lint gates
+        run: make lint

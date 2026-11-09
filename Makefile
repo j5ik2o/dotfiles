@@ -79,6 +79,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
+        lint format-check done \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
@@ -103,6 +104,9 @@ help:
 	@echo ""
 	@echo "Other targets:"
 	@echo "  check          Run nix flake check"
+	@echo "  lint           Run lint gates on our own code (vendor paths excluded)"
+	@echo "  format-check   Check formatting only (nixfmt, stylua)"
+	@echo "  done           format-check, then check, then lint"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  host-info      Show detected host/config info only"
 	@echo "  check-host     Fail if host config file is missing"
@@ -191,6 +195,24 @@ check-update:
 	rm -f $$tmp; rm -rf $$outdir
 
 test: check
+
+# ============================================================
+# lint
+# ============================================================
+
+# ツールは flake の devShell で固定した版を使う (レジストリ経由で解決しない)
+LINT_SHELL ?= nix develop --command
+
+lint:
+	$(LINT_SHELL) bash scripts/lint.sh
+
+format-check:
+	$(LINT_SHELL) bash scripts/lint.sh --format-only
+
+# 整形 → flake check → lint の順に流す。
+done: format-check
+	$(MAKE) check
+	$(MAKE) lint
 
 # ============================================================
 # Neovim config tests
@@ -414,11 +436,7 @@ update:
 
 fmt:
 	@echo "Formatting nix files..."
-	@if command -v rg >/dev/null 2>&1; then \
-		rg --files -g '*.nix' -0 | xargs -0 nix run nixpkgs#nixfmt --; \
-	else \
-		find . -name "*.nix" -print0 | xargs -0 nix run nixpkgs#nixfmt --; \
-	fi
+	$(LINT_SHELL) sh -c 'git ls-files -z -- "*.nix" | xargs -0 nixfmt'
 
 clean:
 	@echo "Cleaning build artifacts..."

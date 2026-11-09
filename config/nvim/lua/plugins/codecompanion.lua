@@ -19,9 +19,7 @@ return {
     },
     opts = {
       adapters = {
-        claude_code = function()
-          return require("codecompanion.adapters").extend("claude_code", {})
-        end,
+        claude_code = function() return require("codecompanion.adapters").extend("claude_code", {}) end,
       },
       strategies = {
         chat = {
