@@ -304,6 +304,7 @@ make help
 - [Neovim Tree-sitter これだけ](docs/tree-sitter.md)
 - [Neo-tree これだけ](docs/neo-tree.md)
 - [chezmoi シークレット管理](docs/chezmoi.md)
+- [コミットサブジェクトのゲート](docs/commit-subject.md)
 
 ## Neovim (LazyVim)
 

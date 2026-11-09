@@ -124,7 +124,7 @@ fi
 sh_files=()
 while IFS= read -r file; do
   sh_files+=("$file")
-done < <(own_files '*.sh' '*.bash')
+done < <(own_files '*.sh' '*.bash' '.githooks/*')
 
 gate="shellcheck"
 if ((${#sh_files[@]} > 0)); then
