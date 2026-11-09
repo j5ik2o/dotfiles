@@ -30,6 +30,10 @@
 
     # Mac App Store アプリ
     masApps = {
+      # Meta の Muse。Homebrew の cask "muse" は署名付き URL が必要なため
+      # 2026-10-01 に無効化されているので、App Store 版を入れる。
+      # インストールには Mac App Store へのサインインが必要。
+      "Muse from Meta" = 6760173601;
     };
   };
 }
