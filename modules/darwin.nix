@@ -3,8 +3,15 @@
   pkgs,
   lib,
   username,
+  inputs,
   ...
 }:
+
+let
+  # 上流 flake のパッケージ。署名済みの OpenBot.app をそのまま含む。
+  # Nix ストアのアプリは自己更新しないため、更新は make update (flake input) で行う。
+  openbot = inputs.openbot.packages.${pkgs.stdenv.hostPlatform.system}.openbot;
+in
 
 {
   # ============================================================
@@ -40,7 +47,16 @@
     # Android 端末の画面ミラーリング / 操作
     scrcpy
     android-tools # adb (scrcpy の接続に必要)
+
+    # AI エージェント用デスクトップアプリ
+    openbot
   ];
+
+  # home.packages に含まれる .app を ~/Applications/Home Manager Apps へコピーする。
+  # linkApps は Nix ストアへの symlink を作るだけで Spotlight から見えないため使わない。
+  # 初回は App Management 権限の許可を求められ、実体コピー分のディスクを使う。
+  targets.darwin.linkApps.enable = false;
+  targets.darwin.copyApps.enable = true;
 
   # ============================================================
   # macOS 固有の GUI アプリ (Nix 管理)

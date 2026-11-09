@@ -33,6 +33,15 @@
       url = "github:karem505/claudecodex/1bd7ee03c407bbe6d4449981b6402205487ac754";
       flake = false;
     };
+
+    # OpenBot デスクトップアプリ (macOS / Linux)。
+    # Homebrew cask が無いため、上流が提供する flake のパッケージを使う。
+    # 上流の flake は nixpkgs を allowUnfreePredicate (openbot のみ) 付きで読み込むので、
+    # こちらの nixpkgs 設定を変えなくても評価できる。
+    openbot = {
+      url = "github:nightly-labs/openbot";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

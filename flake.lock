@@ -211,6 +211,26 @@
         "type": "github"
       }
     },
+    "openbot": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793758461,
+        "narHash": "sha256-woi+nh0gN1KWvIa8Tm0mTaDIybUnAicU4gIGsXH4sTU=",
+        "owner": "nightly-labs",
+        "repo": "openbot",
+        "rev": "ceafe16c5708219c496c1c7445af039beb4d9668",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nightly-labs",
+        "repo": "openbot",
+        "type": "github"
+      }
+    },
     "qmd": {
       "inputs": {
         "flake-utils": [
@@ -245,7 +265,8 @@
         "home-manager": "home-manager",
         "nix-clawdbot": "nix-clawdbot",
         "nix-darwin": "nix-darwin",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs_2",
+        "openbot": "openbot"
       }
     },
     "systems": {
