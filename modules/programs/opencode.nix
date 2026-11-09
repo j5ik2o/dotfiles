@@ -15,6 +15,5 @@
   # JSON にはコメントを書けないので、ここに残す
   xdg.configFile."opencode/opencode.json" = {
     source = "${self}/config/opencode/opencode.json";
-    force = true;
   };
 }

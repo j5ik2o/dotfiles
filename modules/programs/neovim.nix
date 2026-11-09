@@ -332,11 +332,11 @@ in
   };
 
   # Lua 設定ファイルをシンボリンク
+  # recursive = true なので 1 ファイルずつリンクされ、手編集されたファイルは .backup へ退避される
   xdg.configFile = {
     "nvim" = {
       source = nvimPath;
       recursive = true;
-      force = true;
     };
   };
 

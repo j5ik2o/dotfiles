@@ -55,8 +55,6 @@ in
   # mise (言語ランタイム管理)
   # ============================================================
   xdg.configFile."mise/config.toml" = {
-    # 既存ファイルがあっても Home Manager の定義を優先する
-    force = true;
     source = "${self}/config/mise/mise.toml";
   };
 
