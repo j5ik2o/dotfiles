@@ -148,8 +148,11 @@ endif
 
 NIX_FLAKE_CHECK_FLAGS ?= --no-build --all-systems
 
+# 1 回目で全システムの評価、2 回目で現在のシステムの checks のビルドを行う。
+# ビルドを --all-systems と分け、他アーキテクチャ向けのビルドを要求しない。
 check:
 	nix flake check $(NIX_FLAKE_CHECK_FLAGS)
+	nix flake check
 
 check-update:
 	@tmpdir="$(CURDIR)/.tmp"; \
