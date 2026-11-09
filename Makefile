@@ -76,7 +76,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
-        lint format-check done \
+        lint format-check done test-activation \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
@@ -103,11 +103,12 @@ help:
 	@echo "  check          Run nix flake check"
 	@echo "  lint           Run lint gates on our own code (vendor paths excluded)"
 	@echo "  format-check   Check formatting only (nixfmt, stylua)"
-	@echo "  done           format-check, then check, then lint"
+	@echo "  done           format-check, then check, test-activation, then lint"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  host-info      Show detected host/config info only"
 	@echo "  check-host     Fail if host config file is missing"
-	@echo "  test           Alias for check"
+	@echo "  test           test-activation, then check"
+	@echo "  test-activation  Run scripts/install-muse.sh tests (no network, no \$$HOME)"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
@@ -190,7 +191,12 @@ check-update:
 	fi; \
 	rm -f $$tmp; rm -rf $$outdir
 
-test: check
+# scripts/ 配下のシェルをテストする。ネットワークも $HOME も触らない。
+test-activation:
+	bash tests/install-muse-test.sh
+
+test: test-activation
+	$(MAKE) check
 
 # ============================================================
 # lint
@@ -205,9 +211,10 @@ lint:
 format-check:
 	$(LINT_SHELL) bash scripts/lint.sh --format-only
 
-# 整形 → flake check → lint の順に流す。
+# 整形 → flake check → シェルのテスト → lint の順に流す。
 done: format-check
 	$(MAKE) check
+	$(MAKE) test-activation
 	$(MAKE) lint
 
 # ============================================================
