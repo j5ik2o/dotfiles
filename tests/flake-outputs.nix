@@ -13,10 +13,6 @@ lib.runTests {
   testHomeConfigurationPlatforms = {
     expr = lib.mapAttrs (_: home: home.pkgs.stdenv.hostPlatform.system) flake.homeConfigurations;
     expected = {
-      ex-jkato = "aarch64-darwin";
-      "ex_j.kato@darwin-aarch64" = "aarch64-darwin";
-      "ex_j.kato@linux-aarch64" = "aarch64-linux";
-      "ex_j.kato@linux-x86_64" = "x86_64-linux";
       instance-dinov2-gpu2-c = "x86_64-linux";
       j5ik2o-desktop = "x86_64-linux";
       j5ik2o-mac-mini = "aarch64-darwin";
@@ -39,8 +35,6 @@ lib.runTests {
   testDarwinConfigurationPlatforms = {
     expr = lib.mapAttrs (_: darwin: darwin.pkgs.stdenv.hostPlatform.system) flake.darwinConfigurations;
     expected = {
-      ex-jkato = "aarch64-darwin";
-      ex_j_kato-darwin = "aarch64-darwin";
       j5ik2o-darwin = "aarch64-darwin";
       j5ik2o-mac-mini = "aarch64-darwin";
       j5ik2o-mac-studio = "aarch64-darwin";
@@ -63,15 +57,10 @@ lib.runTests {
           ]
         )
         [
-          "ex_j.kato@darwin-aarch64"
           "j5ik2o@linux-x86_64"
           "parallels@linux-aarch64"
         ];
     expected = [
-      [
-        "ex_j.kato"
-        "/Users/ex_j.kato"
-      ]
       [
         "j5ik2o"
         "/home/j5ik2o"

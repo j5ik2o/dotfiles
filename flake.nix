@@ -58,7 +58,6 @@
       users = [
         "j5ik2o"
         "parallels"
-        "ex_j.kato"
       ];
 
       # デフォルトユーザー (nix-darwin用)
