@@ -189,6 +189,7 @@
                 username = username;
                 homeDirectory = homeDirectory;
                 stateVersion = "24.11";
+                backupFileExtension = "backup"; # 衝突した既存ファイルを .backup に退避する
               };
             }
           ];
@@ -387,17 +388,27 @@
       checks = forAllSystems (
         system:
         let
-          failures = import ./tests/flake-outputs.nix {
-            inherit (nixpkgs) lib;
-            flake = self;
-          };
+          pkgs = nixpkgs.legacyPackages.${system};
+          evalCheck =
+            name: failures:
+            if failures == [ ] then
+              pkgs.runCommand name { } "touch $out"
+            else
+              throw "${name} failed: ${builtins.toJSON failures}";
         in
         {
-          flake-outputs =
-            if failures == [ ] then
-              nixpkgs.legacyPackages.${system}.runCommand "flake-outputs" { } "touch $out"
-            else
-              throw "Flake output tests failed: ${builtins.toJSON failures}";
+          flake-outputs = evalCheck "flake-outputs" (
+            import ./tests/flake-outputs.nix {
+              inherit (nixpkgs) lib;
+              flake = self;
+            }
+          );
+          backup-policy = evalCheck "backup-policy" (
+            import ./tests/backup-policy.nix {
+              inherit (nixpkgs) lib;
+              flake = self;
+            }
+          );
         }
       );
 

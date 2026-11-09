@@ -9,6 +9,5 @@
   # ============================================================
   xdg.configFile."cliproxyapi/config.yaml" = {
     source = "${self}/config/cliproxyapi/config.yaml";
-    force = true;
   };
 }

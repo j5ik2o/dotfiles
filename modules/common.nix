@@ -234,14 +234,12 @@
   home.file.".local/bin/claude-code-acp" = {
     source = "${pkgs.claude-code-acp}/bin/claude-code-acp";
   };
-  # 手動インストール済みのファイルを Nix 管理の実体へ置き換える
+  # 手動インストール済みのファイルは .backup へ退避したうえで置き換える
   home.file.".local/bin/claude-code-proxy" = {
     source = "${pkgs.claude-code-proxy}/bin/claude-code-proxy";
-    force = true;
   };
   home.file.".local/bin/claudecodex" = {
     source = "${pkgs.claudecodex}/bin/claudecodex";
-    force = true;
   };
   # Claude Code ステータスライン（identity 表示用）
   home.file.".claude/statusline.sh" = {

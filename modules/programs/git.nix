@@ -310,6 +310,5 @@ in
       [include]
         path = ${config.xdg.configHome}/git/config
     '';
-    force = true;
   };
 }

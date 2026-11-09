@@ -60,16 +60,13 @@ in
   home.file = {
     ".pi/agent/models.json" = {
       source = "${piConfigDir}/models.json";
-      force = true;
     };
     ".pi/agent/extensions/content-guard.ts" = {
       source = "${piConfigDir}/extensions/content-guard.ts";
-      force = true;
     };
     # content-guard がリポジトリ内のスクリプトを実行してよいルート。
     ".pi/agent/content-guard-roots.json" = {
       source = "${piConfigDir}/content-guard-roots.json";
-      force = true;
     };
   }
   // lib.listToAttrs (
@@ -77,7 +74,6 @@ in
       name = ".pi/agent/agents/${name}";
       value = {
         source = "${piConfigDir}/agents/${name}";
-        force = true;
       };
     }) agentFiles
   );
