@@ -48,5 +48,10 @@ jobs:
       - name: Run flake check
         run: make check
 
+      # ローカルでしか走らないゲートはゲートではないので、make done と同じ順で回す。
+      # 外部コマンドはすべて PATH の偽物で差し替わるため Linux でも動く。
+      - name: Run activation tests
+        run: make test-activation
+
       - name: Run lint gates
         run: make lint
