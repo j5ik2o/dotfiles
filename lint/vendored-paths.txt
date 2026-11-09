@@ -10,7 +10,6 @@ root: .codex-corporate/
 .codex-corporate/.personality_migration
 .codex-corporate/agents
 .codex-corporate/config.toml
-.codex-corporate/prompts
 .codex-corporate/skills/.system/.codex-system-skills.marker
 .codex-corporate/skills/.system/imagegen/LICENSE.txt
 .codex-corporate/skills/.system/imagegen/SKILL.md
@@ -84,7 +83,6 @@ root: .codex-corporate/
 .codex-personal/plugins/cache/openai-curated/github/3c463363/skills/yeet/agents/openai.yaml
 .codex-personal/plugins/cache/openai-curated/github/3c463363/skills/yeet/assets/yeet-small.svg
 .codex-personal/plugins/cache/openai-curated/github/3c463363/skills/yeet/assets/yeet.png
-.codex-personal/prompts
 .codex-personal/shell_snapshots/019decef-5337-7a12-b6ef-3c3b28ee696b.1777796600633680000.sh
 .codex-personal/skills/.system/.codex-system-skills.marker
 .codex-personal/skills/.system/imagegen/LICENSE.txt

@@ -12,7 +12,7 @@ SAFE_USER := $(subst .,_,$(USER))
 UNAME := $(shell uname)
 ARCH := $(shell uname -m)
 # darwin-rebuild は LocalHostName を使用するため、同じ順序で取得
-HOST_RAW ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
+HOST := $(shell if [ "$(UNAME)" = "Darwin" ]; then \
   _hn=$$(scutil --get LocalHostName 2>/dev/null); \
   if [ -n "$$_hn" ]; then \
     echo "$$_hn"; \
@@ -23,16 +23,13 @@ HOST_RAW ?= $(shell if [ "$(UNAME)" = "Darwin" ]; then \
 else \
   hostname -s; \
 fi)
-HOST ?= $(subst .,_,$(subst -,_,$(HOST_RAW)))
-# ホストファイルは正規化前の名前で検索（darwin-rebuild と一致させるため）
-HOST_FILE := $(CURDIR)/hosts/$(HOST_RAW).nix
+HOST_FILE := $(CURDIR)/hosts/$(HOST).nix
 HOST_CONFIG_FOUND := $(wildcard $(HOST_FILE))
 
 ifneq ($(HOST_CONFIG_FOUND),)
-  HM_CONFIG := $(HOST_RAW)
+  HM_CONFIG := $(HOST)
   ifeq ($(UNAME),Darwin)
-    # darwin-rebuild は正規化前の名前で設定を検索
-    DARWIN_CONFIG := $(HOST_RAW)
+    DARWIN_CONFIG := $(HOST)
   endif
 else
   ifeq ($(UNAME),Darwin)
@@ -78,7 +75,7 @@ CLIPROXYAPI_PORT ?= 8317
 CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
-        rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test nvim-test \
+        rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
         lint format-check done \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
@@ -111,7 +108,6 @@ help:
 	@echo "  host-info      Show detected host/config info only"
 	@echo "  check-host     Fail if host config file is missing"
 	@echo "  test           Alias for check"
-	@echo "  nvim-test      Run Neovim config tests"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
@@ -215,29 +211,12 @@ done: format-check
 	$(MAKE) lint
 
 # ============================================================
-# Neovim config tests
-# ============================================================
-
-nvim-test:
-	@echo "Running Neovim config tests..."
-	@tmp="$(CURDIR)/.tmp/nvim-test"; \
-	mkdir -p "$$tmp/config" "$$tmp/data" "$$tmp/state" "$$tmp/cache"; \
-	XDG_CONFIG_HOME="$$tmp/config" \
-	XDG_DATA_HOME="$$tmp/data" \
-	XDG_STATE_HOME="$$tmp/state" \
-	XDG_CACHE_HOME="$$tmp/cache" \
-	NVIM_TEST_ROOT="$(CURDIR)" \
-	nvim --headless -u "$(CURDIR)/config/nvim/tests/minimal_init.lua" \
-	-c "lua dofile(os.getenv('NVIM_TEST_ROOT') .. '/config/nvim/tests/run.lua')"
-
-# ============================================================
 # Build (dry-run / test)
 # ============================================================
 
 host-info:
 	@echo "UNAME: $(UNAME)"
 	@echo "ARCH: $(ARCH)"
-	@echo "HOST_RAW: $(HOST_RAW)"
 	@echo "HOST: $(HOST)"
 	@echo "HOST_FILE: $(HOST_FILE)"
 	@if [ -n "$(HOST_CONFIG_FOUND)" ]; then \
