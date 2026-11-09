@@ -37,6 +37,10 @@ buildNpmPackage {
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
+  # koffi は同じ tarball に glibc 版と musl 版の addon を同梱する。glibc の
+  # Linux は musl 版を読み込まないので、libc.musl-*.so.1 が無いことを許容する。
+  autoPatchelfIgnoreMissingDeps = [ "libc.musl-*.so.1" ];
+
   # Nix 版 Node の getter は native addon の機械語パターンと一致しない。
   # Cordis loader と同じ --expose-internals の経路を app-boot にも使わせる。
   # https://github.com/deepseek-ai/deepseek-harness/discussions/690

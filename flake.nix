@@ -123,6 +123,21 @@
           });
         };
 
+      allowedUnfreePackages = [
+        "1password-cli"
+        "antigravity-cli"
+        "coderabbit"
+        "copilot-language-server"
+        # CUDA 再頒布物。ollama-cuda (modules/dgx-spark.nix) が依存する
+        "cuda_cccl"
+        "cuda_cudart"
+        "cuda_nvcc"
+        "cuda_nvrtc"
+        "libcublas"
+      ];
+
+      allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) allowedUnfreePackages;
+
       # home-manager 設定のパス
       hmConfigPath = ./modules;
 
@@ -168,20 +183,7 @@
               customOverlay
               inputs.nix-clawdbot.overlays.default
             ];
-            config.allowUnfreePredicate =
-              pkg:
-              builtins.elem (nixpkgs.lib.getName pkg) [
-                "1password-cli"
-                "antigravity-cli"
-                "coderabbit"
-                "copilot-language-server"
-                # CUDA 再頒布物。ollama-cuda (modules/dgx-spark.nix) が依存する
-                "cuda_cccl"
-                "cuda_cudart"
-                "cuda_nvcc"
-                "cuda_nvrtc"
-                "libcublas"
-              ];
+            config.allowUnfreePredicate = allowUnfreePredicate;
           };
           modules = modules ++ [
             {
@@ -395,8 +397,31 @@
               pkgs.runCommand name { } "touch $out"
             else
               throw "${name} failed: ${builtins.toJSON failures}";
+          systemPkgs = import nixpkgs {
+            inherit system;
+            overlays = [ customOverlay ];
+            config.allowUnfreePredicate = allowUnfreePredicate;
+          };
+
+          customPackages = {
+            inherit (systemPkgs)
+              gwq
+              claude-code-acp
+              dsh-tui
+              claudecodex
+              cliproxyapi
+              coderabbit
+              herdr
+              ;
+            copilot-chat = systemPkgs.callPackage ./packages/copilot-chat.nix { };
+          }
+          # DS Bot のデスクトップアプリは macOS (Apple Silicon) 版しか配布されていない
+          // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+            ds-bot-app = systemPkgs.ds-bot-app;
+          };
         in
-        {
+        customPackages
+        // {
           flake-outputs = evalCheck "flake-outputs" (
             import ./tests/flake-outputs.nix {
               inherit (nixpkgs) lib;
