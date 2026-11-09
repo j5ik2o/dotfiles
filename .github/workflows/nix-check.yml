@@ -14,20 +14,23 @@ permissions:
   id-token: write
 
 jobs:
-  # squash マージでは PR タイトルがそのままサブジェクトになる。
   # 検証するのはこれから入る 1 件だけで、過去のコミットは対象にしない。
   commit-subject:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      # 1 コミットの PR ではコミットの主題が入るので、その履歴も要る。
+      - name: Checkout the pull request head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
-      - name: Check that the PR title names the cause
+      - name: Check the PR title and the single commit subject
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: make commit-subject-check
+        run: make commit-subject-check-pr
 
   flake-check:
     runs-on: ubuntu-latest

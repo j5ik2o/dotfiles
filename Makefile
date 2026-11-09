@@ -76,7 +76,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
-        lint format-check done test-activation commit-subject-check hooks \
+        lint format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
@@ -220,6 +220,19 @@ commit-subject-check:
 	  bash scripts/check-commit-subject.sh --subject "$${PR_TITLE}"; \
 	else \
 	  bash scripts/check-commit-subject.sh --head; \
+	fi
+
+# CI 用。squash で入るのは、コミットが 2 つ以上なら PR タイトル、
+# 1 つだけならそのコミットの主題なので、両方を見る。
+commit-subject-check-pr:
+	@test -n "$${PR_TITLE:-}" || { echo "エラー: PR_TITLE が未設定です" >&2; exit 2; }
+	@bash scripts/check-commit-subject.sh --subject "$$PR_TITLE"
+	@count=$$(git rev-list --count origin/main..HEAD) || { \
+	  echo "エラー: origin/main からのコミット数を数えられません" >&2; exit 2; \
+	}; \
+	if [ "$$count" = 1 ]; then \
+	  echo "1 コミットの PR なので、そのコミットの主題も検証します"; \
+	  bash scripts/check-commit-subject.sh --subject "$$(git log -1 --format=%s)"; \
 	fi
 
 # core.hooksPath はディレクトリごと差し替えるので、.git/hooks は使われなくなる。
