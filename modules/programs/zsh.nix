@@ -178,7 +178,9 @@ in
       _uname=""
     fi
     _awk="${pkgs.gawk}/bin/awk"
-    _otool="${if pkgs.stdenv.hostPlatform.isDarwin then "${pkgs.darwin.cctools}/bin/otool" else "/usr/bin/otool"}"
+    _otool="${
+      if pkgs.stdenv.hostPlatform.isDarwin then "${pkgs.darwin.cctools}/bin/otool" else "/usr/bin/otool"
+    }"
     _ldd="${if pkgs.stdenv.hostPlatform.isLinux then "${pkgs.glibc.bin}/bin/ldd" else "/usr/bin/ldd"}"
     if [ "$_uname" = "Darwin" ] && [ ! -x "$_otool" ]; then
       _otool="/usr/bin/otool"

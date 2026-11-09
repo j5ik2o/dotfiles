@@ -18,6 +18,4 @@ vim.keymap.set(
   "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
   { desc = "Buffer Diagnostics (Trouble)" }
 )
-vim.keymap.set("n", "<leader>xl", function()
-  vim.diagnostic.setloclist()
-end, { desc = "Diagnostics (LocList)" })
+vim.keymap.set("n", "<leader>xl", function() vim.diagnostic.setloclist() end, { desc = "Diagnostics (LocList)" })

@@ -1,21 +1,17 @@
 local uv = vim.uv or vim.loop
-local data_path = vim.fn.stdpath("data")
+local data_path = vim.fn.stdpath "data"
 local plugin_dir = vim.env.NVIM_PLUGIN_DIR
 if type(plugin_dir) ~= "string" or plugin_dir == "" then
   plugin_dir = vim.fn.fnamemodify(data_path, ":h") .. "/nvim-plugins"
 end
 
 local function is_dir(path)
-  if type(path) ~= "string" or path == "" then
-    return false
-  end
+  if type(path) ~= "string" or path == "" then return false end
   local stat = uv.fs_stat(path)
   return stat and stat.type == "directory"
 end
 
-local function has_plugin_dir(base, name)
-  return is_dir(base) and is_dir(base .. "/" .. name)
-end
+local function has_plugin_dir(base, name) return is_dir(base) and is_dir(base .. "/" .. name) end
 
 local use_nix_plugins = has_plugin_dir(plugin_dir, "LazyVim")
 local rtp_paths = {}
@@ -31,9 +27,9 @@ local function fatal(msg)
 end
 
 if not use_nix_plugins then
-  fatal(("Nix-managed LazyVim is missing in NVIM_PLUGIN_DIR: %s\nRun `make apply` to provision plugins."):format(
-    plugin_dir
-  ))
+  fatal(
+    ("Nix-managed LazyVim is missing in NVIM_PLUGIN_DIR: %s\nRun `make apply` to provision plugins."):format(plugin_dir)
+  )
 end
 -- Nix-managed plugin flow (overview in docs/neovim.md).
 
@@ -42,7 +38,7 @@ local lazy_dir = plugin_dir .. "/lazy.nvim"
 if is_dir(lazy_dir) then
   vim.opt.rtp:prepend(lazy_dir)
 else
-  fatal("Nix-managed lazy.nvim is missing. Run `make apply` to provision plugins.")
+  fatal "Nix-managed lazy.nvim is missing. Run `make apply` to provision plugins."
 end
 
 -- Ensure trouble.nvim runtime files are visible when using Nix plugin dir.
@@ -65,11 +61,9 @@ end
 
 -- Require Nix-managed lazy.nvim (runtimepath). Do not bootstrap from git.
 local ok_lazy, lazy = pcall(require, "lazy")
-if not ok_lazy then
-  fatal("Failed to load Nix-managed lazy.nvim. Run `make apply` to provision plugins.")
-end
+if not ok_lazy then fatal "Failed to load Nix-managed lazy.nvim. Run `make apply` to provision plugins." end
 
-lazy.setup({
+lazy.setup {
   spec = {
     -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
@@ -123,4 +117,4 @@ lazy.setup({
       paths = rtp_paths,
     },
   },
-})
+}
