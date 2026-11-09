@@ -75,6 +75,8 @@ if [[ -n "${DOCKER_DATA_ROOT}" ]]; then
     echo "Docker data-root already configured; leaving /etc/docker/daemon.json unchanged"
   else
     DEFAULT_DOCKER_DATA_ROOT="/var/lib/docker"
+    # $1 は sh -c の側で展開させる。こちらのシェルでは展開しない。
+    # shellcheck disable=SC2016
     if ${SUDO} sh -c 'test -d "$1" && [ "$(ls -A "$1" 2>/dev/null)" ]' _ "${DEFAULT_DOCKER_DATA_ROOT}"; then
       if [[ "${DOCKER_DATA_ROOT_MIGRATE}" == "1" ]]; then
         echo "Copying existing Docker data to ${DOCKER_DATA_ROOT}..."

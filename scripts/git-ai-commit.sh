@@ -14,7 +14,7 @@ DIFF=$(git diff --staged)
 DIFF_SIZE=${#DIFF}
 
 # diff が大きすぎる場合は統計情報のみ使用
-if [ $DIFF_SIZE -gt 6000 ]; then
+if [ "$DIFF_SIZE" -gt 6000 ]; then
   DIFF_STAT=$(git diff --staged --stat)
   DIFF_SAMPLE=$(git diff --staged --unified=2 | head -n 40)
   DIFF_CONTENT="File changes:
@@ -46,7 +46,7 @@ Output the commit message NOW:"
 
 # Claude Code で生成（Opus 4.5 を使用）
 TEMP_FILE=$(mktemp)
-trap "rm -f $TEMP_FILE" EXIT
+trap 'rm -f "$TEMP_FILE"' EXIT
 
 claude -p --model opus --dangerously-skip-permissions "$PROMPT" > "$TEMP_FILE" 2>/dev/null
 COMMIT_MSG=$(cat "$TEMP_FILE")

@@ -60,9 +60,6 @@
         "parallels"
       ];
 
-      # デフォルトユーザー (nix-darwin用)
-      defaultUser = "j5ik2o";
-
       # 対応プラットフォームと Home Manager 構成名のサフィックス
       # nixpkgs 26.11 で x86_64-darwin のサポート終了
       platforms = {
@@ -73,6 +70,22 @@
 
       # 各システム用の関数を生成
       forAllSystems = nixpkgs.lib.genAttrs (builtins.attrNames platforms);
+
+      # scripts/lint.sh が使うツール
+      lintTools =
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        with pkgs;
+        [
+          deadnix
+          git
+          nixfmt
+          ruff
+          shellcheck
+          stylua
+        ];
 
       # カスタムパッケージの overlay
       # claude-code, codex は mise で管理
@@ -447,10 +460,7 @@
         in
         {
           default = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              nixfmt
-              nil
-            ];
+            buildInputs = [ pkgs.nil ] ++ lintTools system;
           };
         }
       );

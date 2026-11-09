@@ -409,7 +409,7 @@ let
   skillFiles =
     let
       entriesForInstance =
-        instName: inst:
+        _instName: inst:
         let
           base = "${toRelative (resolvePath inst.workspaceDir)}/skills";
           entryFor =
@@ -498,7 +498,7 @@ let
           in
           "- " + plugin.name + pkgSuffix + " (" + plugin.source + ")";
         pluginLinesFor =
-          instName: inst:
+          instName: _inst:
           let
             plugins = resolvedPluginsByInstance.${instName} or [ ];
             lines = if plugins == [ ] then [ "- (none)" ] else map renderPlugin plugins;
@@ -649,7 +649,7 @@ let
 
   pluginAssertions = lib.flatten (
     lib.mapAttrsToList (
-      instName: inst:
+      instName: _inst:
       let
         plugins = resolvedPluginsByInstance.${instName} or [ ];
         envFor = p: (p.config.env or { });
@@ -715,7 +715,7 @@ let
   pluginConfigFiles =
     let
       entryFor =
-        instName: inst:
+        instName: _inst:
         let
           plugins = resolvedPluginsByInstance.${instName} or [ ];
           mkEntries =

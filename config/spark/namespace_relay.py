@@ -329,11 +329,12 @@ class _ClientWatch:
             with contextlib.suppress(OSError):
                 self._upstream.shutdown(socket.SHUT_RDWR)
 
-    def __enter__(self) -> _ClientWatch:
+    # 3.9 でも動かすので typing.Self は使わない。戻り値の型は自分自身で明示する。
+    def __enter__(self) -> _ClientWatch:  # noqa: PYI034
         self._thread.start()
         return self
 
-    def __exit__(self, *_: Any) -> None:
+    def __exit__(self, *_: object) -> None:
         self._stop.set()
         self._thread.join(timeout=2)
 
@@ -363,7 +364,7 @@ def make_handler(relay: _Relay) -> type[http.server.BaseHTTPRequestHandler]:
     class Handler(http.server.BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
-        def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        def log_message(self, format: str, *args: Any) -> None:
             return
 
         def do_GET(self) -> None:
