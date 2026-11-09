@@ -3,6 +3,9 @@ result
 
 .tmp/
 
+# Agent session scratch: plans, decision trails, per-session notes
+/.audit/
+
 /.serena/cache/
 
 /.kiro/
