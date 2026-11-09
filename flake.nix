@@ -87,69 +87,10 @@
           stylua
         ];
 
-      # カスタムパッケージの overlay
-      # claude-code, codex は mise で管理
-      customOverlay =
-        final: prev:
-        {
-          gwq = final.callPackage ./packages/gwq.nix { };
-          claude-code-acp = final.callPackage ./packages/claude-code-acp.nix { };
-          dsh-tui = final.callPackage ./packages/dsh-tui.nix { };
-          ds-bot-app = final.callPackage ./packages/ds-bot-app.nix { };
-          claude-code-proxy =
-            inputs.claude-code-proxy.packages.${final.stdenv.hostPlatform.system}.default.overrideAttrs
-              (old: {
-                patches = (old.patches or [ ]) ++ [ ./packages/claude-code-proxy-gpt-5-6-aliases.patch ];
-              });
-          claudecodex = final.callPackage ./packages/claudecodex.nix {
-            claudecodexSrc = inputs.claudecodex-src;
-          };
-          cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
-          coderabbit = final.callPackage ./packages/coderabbit.nix { };
-          herdr = final.callPackage ./packages/herdr.nix { };
-          # opencode 2.2.5 は nixpkgs 側の node_modules ハッシュが壊れている
-          # (NixOS/nixpkgs#582673, 修正 PR #582675 は未マージ)。
-          # bun 1.4.4 で実際に生成されるハッシュへ差し替える。
-          # 上流で version が変われば自動的に解除される。
-          opencode =
-            if prev.stdenv.hostPlatform.system == "aarch64-darwin" && prev.opencode.version == "2.2.5" then
-              prev.opencode.overrideAttrs (old: {
-                node_modules = old.node_modules.overrideAttrs (_: {
-                  outputHash = "sha256-dIveiaiPFGSItwLyeMuPDxTE9gpvvnlTCB/+nG24qCc=";
-                });
-              })
-            else
-              prev.opencode;
-        }
-        // nixpkgs.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
-          # macOS の Nix sandbox で test/direnv-test.zsh がハングするためテストをスキップ
-          direnv = prev.direnv.overrideAttrs (_: {
-            doCheck = false;
-            doInstallCheck = false;
-          });
-          # macOS の Nix sandbox で OCI layer の特殊権限ビット保持テストが失敗するためテストをスキップ
-          # あわせて libz-ng-sys のビルドに必要な cmake を補う (nixpkgs 側の nativeBuildInputs から欠落)
-          mise = prev.mise.overrideAttrs (old: {
-            doCheck = false;
-            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.cmake ];
-            dontUseCmakeConfigure = true;
-          });
-        };
-
-      allowedUnfreePackages = [
-        "1password-cli"
-        "antigravity-cli"
-        "coderabbit"
-        "copilot-language-server"
-        # CUDA 再頒布物。ollama-cuda (modules/dgx-spark.nix) が依存する
-        "cuda_cccl"
-        "cuda_cudart"
-        "cuda_nvcc"
-        "cuda_nvrtc"
-        "libcublas"
-      ];
-
-      allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) allowedUnfreePackages;
+      packageSet = import ./package-set.nix {
+        inherit (nixpkgs) lib;
+        inherit inputs;
+      };
 
       # home-manager 設定のパス
       hmConfigPath = ./modules;
@@ -192,11 +133,8 @@
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [
-              customOverlay
-              inputs.nix-clawdbot.overlays.default
-            ];
-            config.allowUnfreePredicate = allowUnfreePredicate;
+            overlays = packageSet.overlays;
+            config.allowUnfreePredicate = packageSet.allowUnfreePredicate;
           };
           modules = modules ++ [
             {
@@ -387,7 +325,7 @@
         let
           systemPkgs = import nixpkgs {
             inherit system;
-            overlays = [ customOverlay ];
+            overlays = [ packageSet.overlay ];
           };
         in
         {
@@ -412,8 +350,8 @@
               throw "${name} failed: ${builtins.toJSON failures}";
           systemPkgs = import nixpkgs {
             inherit system;
-            overlays = [ customOverlay ];
-            config.allowUnfreePredicate = allowUnfreePredicate;
+            overlays = [ packageSet.overlay ];
+            config.allowUnfreePredicate = packageSet.allowUnfreePredicate;
           };
 
           customPackages = {
@@ -443,6 +381,12 @@
           );
           backup-policy = evalCheck "backup-policy" (
             import ./tests/backup-policy.nix {
+              inherit (nixpkgs) lib;
+              flake = self;
+            }
+          );
+          unfree-parity = evalCheck "unfree-parity" (
+            import ./tests/unfree-parity.nix {
               inherit (nixpkgs) lib;
               flake = self;
             }
