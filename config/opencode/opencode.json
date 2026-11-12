@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "enabled_providers": [
-    "opencode-go",
     "cliproxyapi",
     "zai-coding-plan",
     "lmstudio",
