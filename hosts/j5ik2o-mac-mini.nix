@@ -8,4 +8,6 @@
   features = {
     clawdbot = false;
   };
+
+  homeModules = [ ../modules/mac-mini.nix ];
 }
