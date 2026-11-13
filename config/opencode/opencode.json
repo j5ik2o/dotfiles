@@ -103,6 +103,14 @@
         "kimi-k3:cloud": {
           "name": "Kimi K3 (Ollama Cloud)",
           "tools": true
+        },
+        "kimi-k3.1-pro:cloud": {
+          "name": "Kimi K3.1 Pro (Ollama Cloud)",
+          "tools": true
+        },
+        "deepseek-v4-pro:cloud": {
+          "name": "DeepSeek V4 Pro (Ollama Cloud)",
+          "tools": true
         }
       }
     },
