@@ -110,7 +110,7 @@ help:
 	@echo "  host-info      Show detected host/config info only"
 	@echo "  check-host     Fail if host config file is missing"
 	@echo "  test           test-activation, then check"
-	@echo "  test-activation  Run scripts/install-muse.sh tests (no network, no \$$HOME)"
+	@echo "  test-activation  Run scripts/ shell tests (no network, no \$$HOME)"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
@@ -196,6 +196,7 @@ check-update:
 # scripts/ 配下のシェルをテストする。ネットワークも $HOME も触らない。
 test-activation:
 	bash tests/install-muse-test.sh
+	bash tests/coordinator-switch-test.sh
 
 test: test-activation
 	$(MAKE) check
