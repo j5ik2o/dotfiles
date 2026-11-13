@@ -283,3 +283,5 @@ chezmoi diff ~/.ssh/id_rsa_github
 - [chezmoi 公式ドキュメント](https://www.chezmoi.io/)
 - [chezmoi + 1Password](https://www.chezmoi.io/user-guide/password-managers/1password/)
 - [1Password CLI](https://developer.1password.com/docs/cli/)
+
+<!-- review-thread-gate test: このPRはマージしない -->
