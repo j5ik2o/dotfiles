@@ -11,11 +11,15 @@
 #   5. 見回り automation の現任から後任への向け替え
 #   6. issue #187 への交代記録
 #
+# 手順 5 の読み取り (見回りの prompt と向き先の確認) は手順 4 の前に
+# 済ませる。見回りが現任ターミナルと Run のどちらも指していなければ、
+# 現任を止めずに異常終了する。
+#
 # 外部コマンド (orca / gh / date / python3) は PATH から解決する。
 # テストが偽コマンドを差し込めるようにするため。python3 の版は
 # config/mise/mise.toml で固定する (jq は mise に無い)。
 #
-# exit 2 は使用法エラー (--brief なし)、exit 1 は手順の失敗。
+# exit 2 は使用法エラー (--brief なし、待機時間の引数不正)、exit 1 は手順の失敗。
 
 set -euo pipefail
 
@@ -41,6 +45,17 @@ die() {
 usage() {
   printf 'usage: %s --brief FILE [--repo DIR] [--worktree-name NAME] [--model MODEL] [--run RUN] [--coordinator-terminal TERMINAL] [--handoff FILE] [--watch NAME] [--poll-interval SECONDS] [--ack-timeout SECONDS] [--dry-run]\n' \
     "${0##*/}" >&2
+}
+
+# 待機時間の引数は 1 以上の 10 進整数だけを受け付ける。08 のような先頭 0 は
+# 以降の算術展開が 8 進法として解釈して手順の途中で壊れるため、使用法エラーの
+# 段階で拒む。
+validate_wait_seconds() {
+  if [[ ! $2 =~ ^[1-9][0-9]*$ ]]; then
+    printf 'エラー: %s は 1 以上の整数を指定してください (指定値: %s)\n' "$1" "$2" >&2
+    usage
+    exit 2
+  fi
 }
 
 repo=$repo_default
@@ -93,6 +108,9 @@ if [ -z "$brief" ]; then
   exit 2
 fi
 
+validate_wait_seconds --poll-interval "$poll_interval"
+validate_wait_seconds --ack-timeout "$ack_timeout"
+
 # 引き継ぎ文書の慣例置き場は ~/orca/handoff/<repo>/handoff-coordinator-<日付>.md。
 if [ -z "$handoff" ]; then
   handoff="$HOME/orca/handoff/dotfiles/handoff-coordinator-$(date +%Y-%m-%d).md"
@@ -100,6 +118,7 @@ fi
 
 # orca の応答 JSON を読む細い helper。JSON は stdin へ渡し、判定結果は
 # 終了コードか stdout で返す。応答の形は orca_json 内に閉じさせる。
+# 終了コードは 0 が対象あり、1 が対象なし、3 が解析失敗・構造違反。
 #   worktree-exists <name>   result.worktrees[].displayName に <name> があるか
 #   launch-handle            result.launch.outcome.handle を stdout へ
 #   inbox-has-subject <s>    result.messages[].subject に <s> があるか
@@ -117,7 +136,7 @@ except ValueError:
     sys.exit(3)
 result = data.get("result") if isinstance(data, dict) else None
 if not isinstance(result, dict):
-    result = {}
+    sys.exit(3)
 
 
 def entries(key):
@@ -157,6 +176,22 @@ sys.exit(3)
 ' "$@"
 }
 
+# orca_json を if 条件で使うための wrapper。終了コード 0/1 はそのまま返し、
+# 解析失敗 (3) は die へ変える。パイプを関数の中に置くのは、外に出すと die が
+# サブシェルしか終了させず、if 条件が非零一律を false 扱いする元の欠陥に
+# 戻るため。if 条件の中では errexit が効かないので $? を自前で判定する。
+orca_json_check() {
+  local response=$1
+  shift
+  local status
+  printf '%s' "$response" | orca_json "$@"
+  status=$?
+  if ((status > 1)); then
+    die "orca の応答を解析できませんでした ($1)"
+  fi
+  return "$status"
+}
+
 # --- 手順 1: 引き継ぎの確認 -------------------------------------------------
 
 if [ ! -f "$brief" ]; then
@@ -185,9 +220,11 @@ if ((dry_run)); then
     "$repo" "$worktree_name" "$model"
   printf 'dry-run: 手順 3: orca orchestration inbox --terminal run:%s --json を %s 秒間隔で確認し、件名 %s の報告を最大 %s 秒待ちます。\n' \
     "$run" "$poll_interval" "$ack_subject" "$ack_timeout"
+  printf 'dry-run: 手順 4 の前に orca automations list --json で見回り %s を読み、現任ターミナルと Run のどちらを指すか確認します。\n' \
+    "$watch"
   printf 'dry-run: 手順 4: orca terminal close --terminal %s --tab --json の後、orca terminal list --json で一覧から消えたことを確認します。\n' \
     "$coordinator_terminal"
-  printf 'dry-run: 手順 5: orca automations list --json で見回り %s を特定し、prompt 内の現任ターミナルを後任へ置換して orca automations edit --id <id> --prompt <置換後> --json で向け替えます。\n' \
+  printf 'dry-run: 手順 5: 見回り %s が現任ターミナルを指していれば orca automations edit --id <id> --prompt <現任ターミナルを後任へ置換した prompt> --json で向け替えます。Run 宛てなら向け替えません。\n' \
     "$watch"
   printf 'dry-run: 手順 6: gh issue comment %s -R %s --body <止めた時刻・現任と後任のターミナル・モデル・Run>\n' \
     "$issue" "$issue_repo"
@@ -200,7 +237,7 @@ fi
 # 作りかけの後任が残るため。
 out=$(orca worktree list --repo "path:$repo" --json) \
   || die "作業ツリーの一覧を取得できませんでした"
-if printf '%s' "$out" | orca_json worktree-exists "$worktree_name"; then
+if orca_json_check "$out" worktree-exists "$worktree_name"; then
   die "同名の作業ツリー $worktree_name が既に存在します。--worktree-name で別の名前を指定してください"
 fi
 
@@ -220,7 +257,7 @@ deadline=$((started + ack_timeout))
 while :; do
   out=$(orca orchestration inbox --terminal "run:$run" --json) \
     || die "Run の mailbox を読めませんでした"
-  if printf '%s' "$out" | orca_json inbox-has-subject "$ack_subject"; then
+  if orca_json_check "$out" inbox-has-subject "$ack_subject"; then
     break
   fi
   now=$(date +%s)
@@ -231,6 +268,24 @@ while :; do
 done
 printf '手順 3: 後任の受け取りを確認しました (件名 %s)\n' "$ack_subject"
 
+# --- 手順 5 の事前確認: 見回りの向き先 ---------------------------------------
+
+# 手順 4 で現任を止める前に、見回りが誰を指すか読んでおく。現任ターミナルと
+# Run のどちらも指していなければ、現任を止めずにここで異常終了する。読んだ
+# 一覧は手順 5 の付け替えでもそのまま使い、二度呼ばない。
+out=$(orca automations list --json) || die "見回りの一覧を取得できませんでした"
+automation_id=$(printf '%s' "$out" | orca_json automation-id "$watch") \
+  || die "見回り $watch が見つかりませんでした。--watch で正しい名前を指定してください"
+watch_prompt=$(printf '%s' "$out" | orca_json automation-prompt "$watch") \
+  || die "見回り $watch の prompt を読めませんでした"
+if [[ $watch_prompt == *"$coordinator_terminal"* ]]; then
+  watch_replace=1
+elif [[ $watch_prompt == *"$run"* ]]; then
+  watch_replace=0
+else
+  die "見回り $watch は現任ターミナル $coordinator_terminal と Run $run のどちらも指していません。--watch で正しい名前を指定してください"
+fi
+
 # --- 手順 4: 現任の停止と消滅の確認 -----------------------------------------
 
 # --tab を付けるとタブごと閉じて durable persistence を待つ。閉じた応答を
@@ -238,7 +293,7 @@ printf '手順 3: 後任の受け取りを確認しました (件名 %s)\n' "$ac
 orca terminal close --terminal "$coordinator_terminal" --tab --json >/dev/null \
   || die "現任ターミナルの停止に失敗しました"
 out=$(orca terminal list --json) || die "ターミナルの一覧を取得できませんでした"
-if printf '%s' "$out" | orca_json terminal-exists "$coordinator_terminal"; then
+if orca_json_check "$out" terminal-exists "$coordinator_terminal"; then
   die "現任ターミナル $coordinator_terminal が一覧に残っています"
 fi
 printf '手順 4: 現任ターミナル %s を停止し、一覧から消えたことを確認しました\n' \
@@ -246,12 +301,7 @@ printf '手順 4: 現任ターミナル %s を停止し、一覧から消えた�
 
 # --- 手順 5: 見回りの向け替え -----------------------------------------------
 
-out=$(orca automations list --json) || die "見回りの一覧を取得できませんでした"
-automation_id=$(printf '%s' "$out" | orca_json automation-id "$watch") \
-  || die "見回り $watch が見つかりませんでした。--watch で正しい名前を指定してください"
-watch_prompt=$(printf '%s' "$out" | orca_json automation-prompt "$watch") \
-  || die "見回り $watch の prompt を読めませんでした"
-if [[ $watch_prompt == *"$coordinator_terminal"* ]]; then
+if ((watch_replace)); then
   new_watch_prompt=${watch_prompt//"$coordinator_terminal"/"$new_terminal"}
   orca automations edit --id "$automation_id" --prompt "$new_watch_prompt" --json >/dev/null \
     || die "見回り $watch の向け替えに失敗しました"

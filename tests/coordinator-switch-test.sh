@@ -178,7 +178,10 @@ case "${1:-}" in
 esac
 EOF
 
-chmod +x "$bin/orca" "$bin/gh" "$bin/date"
+chmod +x "$bin/orca" "$bin/gh" "$bin/date" || {
+  printf 'chmod に失敗しました: %s\n' "$bin" >&2
+  exit 1
+}
 
 # --- 共通の値と fixture ---------------------------------------------------
 
@@ -289,9 +292,9 @@ step_sequence() {
 expected_happy_steps='worktree-list
 worktree-create
 inbox
+automations-list
 terminal-close
 terminal-list
-automations-list
 automations-edit
 gh'
 
@@ -305,6 +308,20 @@ PATH="$bin:$PATH" "$switcher" --repo "$repo" --handoff "$handoff" \
 
 check "--brief なしは exit 2" test "$status" -eq 2
 check "--brief なしでは orca を呼ばない" test ! -s "$log"
+
+# --- 待機時間の引数が不正なら副作用の前に使用法エラー ---------------------
+
+for opt in --poll-interval --ack-timeout; do
+  for value in invalid 0 -1 08; do
+    case_dir="$root/wait-arg-${opt#--}-${value#-}"
+    prepare_case "$case_dir"
+    run_switch "$case_dir.log" "$opt" "$value"
+    check "$opt $value は exit 2" test "$status" -eq 2
+    check "$opt $value では orca を呼ばない" test ! -s "$log"
+    check "$opt $value のエラーはオプションと値を述べる" \
+      grep -Eq -- "${opt}.*${value}|${value}.*${opt}" "$case_dir.log"
+  done
+done
 
 # --- 指示書がなければ手順1で止まる ---------------------------------------
 
@@ -347,6 +364,37 @@ run_switch "$root/name-exists.log"
 check "同名の作業ツリー既存は exit 1" test "$status" -eq 1
 check "既存チェックに worktree list を使う" grep -q '^orca worktree list' "$log"
 check "同名既存では worktree create を呼ばない" not_grep '^orca worktree create' "$log"
+
+# --- worktree list の応答が壊れていれば作成の前に止まる -------------------
+
+case_dir="$root/broken-worktree-list"
+prepare_case "$case_dir"
+printf '{"ok":true,\n' >"$SWITCH_TEST_WORKTREES_JSON"
+run_switch "$root/broken-worktree-list.log" --poll-interval 1 --ack-timeout 2
+
+check "worktree list が不正 JSON なら exit 1" test "$status" -eq 1
+check "worktree list が不正 JSON なら worktree create を呼ばない" \
+  not_grep '^orca worktree create' "$log"
+
+case_dir="$root/no-result-worktree-list"
+prepare_case "$case_dir"
+printf '{"ok":true}\n' >"$SWITCH_TEST_WORKTREES_JSON"
+run_switch "$root/no-result-worktree-list.log" --poll-interval 1 --ack-timeout 2
+
+check "worktree list が result なしなら exit 1" test "$status" -eq 1
+check "worktree list が result なしなら worktree create を呼ばない" \
+  not_grep '^orca worktree create' "$log"
+
+# --- result に worktrees が無くても「対象なし」として進む -----------------
+
+case_dir="$root/no-worktrees-key"
+prepare_case "$case_dir"
+printf '{"id":"wt-list","ok":true,"result":{}}\n' >"$SWITCH_TEST_WORKTREES_JSON"
+run_switch "$root/no-worktrees-key.log" --poll-interval 1 --ack-timeout 2
+
+check "worktrees が欠損しても exit 0 で進む" test "$status" -eq 0
+check "worktrees が欠損しても worktree create を呼ぶ" \
+  grep -q '^orca worktree create' "$log"
 
 # --- 正常時は手順1〜6の順序で進む -----------------------------------------
 
@@ -429,6 +477,18 @@ check "過去の ack だけで待ちを終えない" \
   test "$(grep -c '^orca orchestration inbox' "$log")" -ge 2
 check "受け取り確認後に現任を止める" grep -q '^orca terminal close' "$log"
 
+# --- inbox の応答が壊れていれば現任を止めずに止まる -----------------------
+
+case_dir="$root/broken-inbox"
+prepare_case "$case_dir"
+printf 'これは JSON ではありません\n' >"$SWITCH_TEST_MESSAGES_FILE"
+run_switch "$root/broken-inbox.log" --poll-interval 1 --ack-timeout 2
+
+check "inbox が不正 JSON なら exit 1" test "$status" -eq 1
+check "inbox が不正 JSON なら確認 1 回で止まる" \
+  test "$(grep -c '^orca orchestration inbox' "$log")" -eq 1
+check "inbox が不正 JSON なら現任を止めない" not_grep '^orca terminal close' "$log"
+
 # --- 現任が一覧から消えなければ手順5に進まない ---------------------------
 
 case_dir="$root/terminal-remains"
@@ -443,7 +503,42 @@ check "現任の close は呼ぶ" grep -q '^orca terminal close' "$log"
 check "現任が残れば見回りを替えない" not_grep '^orca automations edit' "$log"
 check "現任が残れば issue コメントしない" not_grep '^gh ' "$log"
 
-# --- 見回りが見つからなければ手順6に進まない -----------------------------
+# --- terminal list の応答が壊れていれば交代を完結しない -------------------
+
+case_dir="$root/broken-terminal-list"
+prepare_case "$case_dir"
+printf '{"ok":true,\n' >"$SWITCH_TEST_TERMINALS_CLOSED_JSON"
+run_switch "$root/broken-terminal-list.log" --poll-interval 1 --ack-timeout 2
+
+check "terminal list が不正 JSON なら exit 1" test "$status" -eq 1
+check "terminal list が不正 JSON でも現任の close は呼ぶ" \
+  grep -q '^orca terminal close' "$log"
+check "terminal list が不正 JSON なら見回りを替えない" \
+  not_grep '^orca automations edit' "$log"
+check "terminal list が不正 JSON なら issue コメントしない" not_grep '^gh ' "$log"
+
+case_dir="$root/no-result-terminal-list"
+prepare_case "$case_dir"
+printf '{"ok":true}\n' >"$SWITCH_TEST_TERMINALS_CLOSED_JSON"
+run_switch "$root/no-result-terminal-list.log" --poll-interval 1 --ack-timeout 2
+
+check "terminal list が result なしなら exit 1" test "$status" -eq 1
+check "terminal list が result なしなら見回りを替えない" \
+  not_grep '^orca automations edit' "$log"
+check "terminal list が result なしなら issue コメントしない" not_grep '^gh ' "$log"
+
+# --- 空のターミナル一覧は「消えた」として扱い中止しない -------------------
+
+case_dir="$root/empty-terminals"
+prepare_case "$case_dir"
+printf '{"id":"tl-list","ok":true,"result":{"terminals":[]}}\n' \
+  >"$SWITCH_TEST_TERMINALS_CLOSED_JSON"
+run_switch "$root/empty-terminals.log" --poll-interval 1 --ack-timeout 2
+
+check "空のターミナル一覧なら exit 0" test "$status" -eq 0
+check "空のターミナル一覧でも交代の記録は残す" grep -q '^gh issue comment' "$log"
+
+# --- 見回りが見つからなければ現任を止めない -------------------------------
 
 case_dir="$root/no-watch"
 prepare_case "$case_dir"
@@ -452,7 +547,23 @@ printf '{"id":"au-list","ok":true,"result":{"automations":[]}}\n' \
 run_switch "$root/no-watch.log" --poll-interval 1 --ack-timeout 2
 
 check "見回り不在は exit 1" test "$status" -eq 1
+check "見回り不在では現任を止めない" not_grep '^orca terminal close' "$log"
 check "見回り不在では issue コメントしない" not_grep '^gh ' "$log"
+
+# --- 見回りが現 Run と現任ターミナルのどちらも指さなければ現任を止めない ---
+
+case_dir="$root/watch-mismatch"
+prepare_case "$case_dir"
+printf '{"id":"au-list","ok":true,"result":{"automations":[{"id":"%s","name":"%s","prompt":"シェルで次の1コマンドだけを1回実行して終える。: npm run --silent pm:tick -- --run run_000000000000"}]}}\n' \
+  "$automation_id" "$watch" >"$SWITCH_TEST_AUTOMATIONS_JSON"
+run_switch "$root/watch-mismatch.log" --poll-interval 1 --ack-timeout 2
+
+check "見回りが別の Run 宛てなら exit 1" test "$status" -eq 1
+check "見回りの確認に automations list を使う" \
+  grep -q '^orca automations list --json' "$log"
+check "見回りが別の Run 宛てなら現任を止めない" not_grep '^orca terminal close' "$log"
+check "見回りが別の Run 宛てなら見回りを替えない" not_grep '^orca automations edit' "$log"
+check "見回りが別の Run 宛てなら issue コメントしない" not_grep '^gh ' "$log"
 
 # --- Run 宛て型の見回りは向き先の変更が要らない ---------------------------
 
