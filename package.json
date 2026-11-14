@@ -13,6 +13,7 @@
     "steering:custom": "takt --pipeline --skip-git --create-worktree no -w steering-custom -t"
   },
   "devDependencies": {
+    "aislop": "0.20.1",
     "takt": "^0.20.0"
   }
 }
