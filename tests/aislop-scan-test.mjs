@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { isExcluded, judgedOnly, readAccepted, reconcile } from "./aislop-fixture.mjs";
 
-const repoRoot = new URL("..", import.meta.url).pathname;
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const aislopBin = join(repoRoot, "node_modules/.bin/aislop");
 
 const runScan = (excludeArgs) => {

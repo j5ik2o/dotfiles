@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { basename, extname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = new URL("..", import.meta.url).pathname;
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const readJson = (relativePath) => JSON.parse(readFileSync(join(repoRoot, relativePath), "utf8"));
 

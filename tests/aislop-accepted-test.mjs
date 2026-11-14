@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 
 import {
   REQUIRED_KEYS,
@@ -14,7 +15,7 @@ import {
   reconcile,
 } from "./aislop-fixture.mjs";
 
-const repoRoot = new URL("..", import.meta.url).pathname;
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const accepted = () => readAccepted(repoRoot).accepted;
 
 const expand = (entries) =>

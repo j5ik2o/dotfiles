@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = new URL("..", import.meta.url).pathname;
+const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
 const readDoc = () => {
   try {
@@ -58,7 +59,7 @@ test("docs/aislop.md の受け入れ行は規則ごとの件数と区分を持�
   assert.match(rowFor("`config/pi/agent/extensions/content-guard.ts` の hallucinated-import"), /2（error 2）/);
   assert.match(
     rowFor("`packages/dsh-tui-login.mjs` / `dsh-tui-models.mjs` の hallucinated-import"),
-    /8（error 8）/,
+    /7（error 7）/,
   );
   assert.match(rowFor("`packages/dsh-tui-login.mjs` の console-leftover"), /10（warning 10）/);
   assert.match(rowFor("`packages/*-check.mjs` の console-leftover"), /4（warning 4）/);

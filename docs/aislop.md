@@ -56,7 +56,7 @@ error 9 件・warning 19 件だった。`info` は `npm ci` 後の正規の状�
 | `.codex-corporate/` 配下の指摘 | 10（error 2・warning 6・info 2） | 0 | 除外 | 取り込み済みの上流コンテンツ。`lint/vendored-paths.txt` の `root:` に合わせて scan 対象から除外 |
 | `.codex-personal/` 配下の指摘 | 12（error 2・warning 8・info 2） | 0 | 除外 | 取り込み済みの実行時状態。同上 |
 | `config/pi/agent/extensions/content-guard.ts` の hallucinated-import | 2（error 2） | 2（`count`: 2） | 受け入れ | Pi 実行時環境が提供する `@earendil-works/pi-coding-agent` を import する拡張。2 行の同一 4 キーをまとめて `count`: 2 で受理 |
-| `packages/dsh-tui-login.mjs` / `dsh-tui-models.mjs` の hallucinated-import | 8（error 8） | 8（8 エントリ各 `count`: 1） | 受け入れ | dsh と pi の実行時環境が提供するモジュールを import する接着コード。root の `package.json` へ依存を宣言せず実行時に解決する設計 |
+| `packages/dsh-tui-login.mjs` / `dsh-tui-models.mjs` の hallucinated-import | 7（error 7） | 7（7 エントリ各 `count`: 1） | 受け入れ | dsh と pi の実行時環境が提供するモジュールを import する接着コード。root の `package.json` へ依存を宣言せず実行時に解決する設計 |
 | `packages/dsh-tui-login.mjs` の console-leftover | 10（warning 10） | 10（`count`: 10） | 受け入れ | CLI 接着コードが利用者へ出力するための `console.log/debug/info` が仕様。10 行の同一 4 キーをまとめて `count`: 10 で受理 |
 | `packages/*-check.mjs` の console-leftover | 4（warning 4） | 4（4 エントリ各 `count`: 1） | 受け入れ | `*_check.mjs` は確認スクリプトで、結果を標準出力へ出すのが役割。検査対象には含めたまま受け入れる |
 | `packages/dsh-tui-models.mjs` の hardcoded-url | 1（warning 1） | 1 | 受け入れ | Codex のモデル一覧エンドポイントの絶対 URL。環境依存の設定値ではない |
@@ -72,6 +72,11 @@ hallucinated-import は `node_modules` の有無で結果が変わる。`npm ci`
 再 scan した結果を根拠に、上記のとおり修正ではなく理由付きの受け入れとして判断した。
 `packages/dsh-tui-login.mjs` と `packages/dsh-tui-models.mjs` の指摘は、dsh と pi の実行時環境が提供する
 モジュールを import する接着コードであるため、root の `package.json` に依存を足さない。
+
+aislop 0.20.1 を `npm ci` した状態で除外 3 種（`.codex-corporate/`・`.codex-personal/`・`references/`）により
+scan した実測は、hallucinated-import が `config/pi/agent/extensions/content-guard.ts` 2 件、
+`packages/dsh-tui-login.mjs` 4 件、`packages/dsh-tui-models.mjs` 3 件で計 9 件、
+severity 別では error 9・warning 19・info 1 だった。
 
 ## ruff と knip の判断
 
