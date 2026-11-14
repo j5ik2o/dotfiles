@@ -10,6 +10,10 @@ python.compile = false
 # 不具合があるため、rust プラグイン自体を無効化する
 disable_tools = ["rust"]
 
+# takt の複製（worktree クローン）は実行ごとに新しいパスへ作られるため、複製の置き場所を
+# 信頼済みにして、複製の中の mise.toml が未 trust で読み込みに失敗しないようにする（2026-11-14）。
+trusted_config_paths = ["/Users/j5ik2o/takt-worktrees", "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/takt-worktrees"]
+
 [settings.github]
 github_attestations = false
 # gh は token を keychain に保存するため、mise には明示的に取得方法を教える。
