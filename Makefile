@@ -76,7 +76,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
-        lint format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
+        lint aislop-check format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
