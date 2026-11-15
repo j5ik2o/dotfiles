@@ -44,8 +44,8 @@ test("docs/aislop.md は除外の件数を対象ディレクトリと区分に�
     assert.ok(line, `${label} の行がある`);
     return line;
   };
-  assert.match(rowFor("`.codex-corporate/` 配下の指摘"), /10（error 2・warning 6・info 2）/);
-  assert.match(rowFor("`.codex-personal/` 配下の指摘"), /12（error 2・warning 8・info 2）/);
+  assert.match(rowFor("`.codex-corporate/` 配下の指摘"), /94（error 11・warning 81・info 2）/);
+  assert.match(rowFor("`.codex-personal/` 配下の指摘"), /120（error 13・warning 105・info 2）/);
   assert.match(doc, /references\//);
 });
 
@@ -66,6 +66,10 @@ test("docs/aislop.md の受け入れ行は規則ごとの件数と区分を持�
   assert.match(rowFor("`packages/dsh-tui-models.mjs` の hardcoded-url"), /1（warning 1）/);
   assert.match(rowFor("`config/spark/namespace_relay.py` の complexity"), /3（warning 3）/);
   assert.match(rowFor("`packages/dsh-tui-models.mjs` の function-too-long"), /1（warning 1）/);
+  assert.match(
+    rowFor("`config/spark/namespace_relay.py` / `scripts/clean-commit-msg.py` の python-formatting"),
+    /2（warning 2）/,
+  );
 });
 
 test("docs/aislop.md は受け入れ一覧の件数の合計を記録する", () => {
@@ -75,10 +79,10 @@ test("docs/aislop.md は受け入れ一覧の件数の合計を記録する", ()
 
 test("docs/aislop.md は除外前後の error と warning の件数を区分つきで記録する", () => {
   const doc = requireDoc(readDoc());
-  assert.match(doc, /error 9 件・warning 19 件/);
-  assert.match(doc, /error 13 \/ warning 33/);
-  assert.match(doc, /error 13 − 4 = 9/);
-  assert.match(doc, /warning 33 − 14 = 19/);
+  assert.match(doc, /error 9 件・warning 21 件/);
+  assert.match(doc, /error 33 \/ warning 207/);
+  assert.match(doc, /error 33 − 24 = 9/);
+  assert.match(doc, /warning 207 − 186 = 21/);
 });
 
 test("docs/aislop.md は hallucinated-import の再 scan を根拠にした理由を記録する", () => {
@@ -102,7 +106,7 @@ test("docs/aislop.md は info の件数を記録する", () => {
 
 test("docs/aislop.md は除外前後の件数の対応を記録する", () => {
   const doc = requireDoc(readDoc());
-  for (const count of [13, 33, 9, 19]) {
+  for (const count of [33, 207, 9, 21]) {
     assert.ok(new RegExp(`\\b${count}\\b`).test(doc), `${count} が記録されている`);
   }
   assert.match(doc, /除外/);

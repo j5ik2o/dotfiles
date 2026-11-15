@@ -18,13 +18,20 @@ const aislopEnv = {
   AISLOP_NO_UPDATE_NOTIFIER: "1",
 };
 
-const runBareScan = () => {
-  const result = spawnSync(process.execPath, [aislopCli, "scan", "--json"], {
+// 検査は package.json の check:aislop と同じく devShell の中で走らせる。
+// aislop の format/lint エンジンは呼び出し元 PATH の ruff の有無で結果を変えるため、
+// scan と bootstrap の起動環境を devShell に固定し、テストの観測も採用環境へ揃える。
+const runInDevShell = (args, options = {}) =>
+  spawnSync("nix", ["develop", "--command", process.execPath, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
-    env: aislopEnv,
+    env: { ...aislopEnv },
     maxBuffer: 64 * 1024 * 1024,
+    ...options,
   });
+
+const runBareScan = () => {
+  const result = runInDevShell([aislopCli, "scan", "--json"]);
   assert.equal(result.error, undefined, "aislop を起動できる");
   const status = result.status ?? (result.signal ? 128 : 1);
   assert.ok(status === 0 || status === 1, `aislop の終了コードは 0 か 1: ${result.stderr.slice(0, 500)}`);
@@ -32,12 +39,8 @@ const runBareScan = () => {
 };
 
 const runBootstrap = (mode) =>
-  spawnSync(process.execPath, [join(repoRoot, "scripts/aislop-check-bootstrap.mjs"), mode], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    env: { ...aislopEnv },
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: 60_000,
+  runInDevShell([join(repoRoot, "scripts/aislop-check-bootstrap.mjs"), mode], {
+    timeout: 120_000,
   });
 
 test("除外は .aislop/config.yml から読み、scan に --exclude を付けない", { skip: !hasAislop }, () => {

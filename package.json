@@ -11,7 +11,7 @@
     "sdd:validate-impl": "takt --pipeline --skip-git --create-worktree no -w sdd-validate-impl -t",
     "steering": "takt --pipeline --skip-git --create-worktree no -w steering -t",
     "steering:custom": "takt --pipeline --skip-git --create-worktree no -w steering-custom -t",
-    "check:aislop": "node scripts/aislop-check-bootstrap.mjs check",
+    "check:aislop": "nix develop --command node scripts/aislop-check-bootstrap.mjs check",
     "test:aislop": "node scripts/aislop-check-bootstrap.mjs test"
   },
   "devDependencies": {

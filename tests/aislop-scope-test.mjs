@@ -109,7 +109,10 @@ test("package.json の devDependencies は aislop を固定版で宣言する", 
 
 test("package.json の scripts は check:aislop と test:aislop を bootstrap 経由で定義する", () => {
   const { scripts } = readJson("package.json");
-  assert.equal(scripts["check:aislop"], "node scripts/aislop-check-bootstrap.mjs check");
+  assert.equal(
+    scripts["check:aislop"],
+    "nix develop --command node scripts/aislop-check-bootstrap.mjs check",
+  );
   assert.equal(scripts["test:aislop"], "node scripts/aislop-check-bootstrap.mjs test");
 });
 

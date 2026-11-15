@@ -7,7 +7,7 @@
     "security"
   ],
   "missingToolsAllowed": {
-    "ruff": "npm ci では ruff を導入しない。ruff は Nix の devShell の lintTools で入り、scripts/lint.sh のゲート 4 が ruff check を実行する。aislop の scan では実行ファイルが無いため lint/format エンジンが missingTools に ruff を記録して止まるが、これは想定済みの未導入であり、ruff 側の検査は lint ゲートが担う。"
+    "ruff": "npm ci では ruff を導入しない。正規の入口（package.json の check:aislop）は devShell で走らせ、devShell の lintTools が ruff を入れるため採用環境では欠落しない。devShell を使わずに直接起動した場合だけ、aislop の lint/format エンジンは止まらず（skipped:false）missingTools に ruff を記録する。その欠落を許すための理由であり、ruff 側の検査は scripts/lint.sh のゲート 4 が担う。"
   },
   "accepted": [
     {
@@ -265,6 +265,23 @@
           "rule": "complexity/function-too-long",
           "file": "packages/dsh-tui-models.mjs",
           "message": "Function too long (limit: 80, flagged above 88 lines)"
+        }
+      ]
+    },
+    {
+      "reason": "devShell の ruff が見る既存の Python 2 ファイルで、裁定により今回の整形は変更対象外。整形すると PR の変更対象外の差分になるため、format の指摘を理由付きで受け入れる。将来この 2 ファイルを整形したときは、正本 checker が resolved として落とすので、この群を一覧から消す。",
+      "findings": [
+        {
+          "engine": "format",
+          "rule": "python-formatting",
+          "file": "config/spark/namespace_relay.py",
+          "message": "Python file is not formatted correctly"
+        },
+        {
+          "engine": "format",
+          "rule": "python-formatting",
+          "file": "scripts/clean-commit-msg.py",
+          "message": "Python file is not formatted correctly"
         }
       ]
     }

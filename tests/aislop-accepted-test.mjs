@@ -22,15 +22,15 @@ test("受け入れ一覧は scripts/aislop-accepted.json に存在し、accepted
   assert.ok(document.accepted.length > 0, "accepted 配列は空でない");
 });
 
-test("受け入れ一覧の各群は reason と findings を持ち、件数は 18 群・28 件", () => {
+test("受け入れ一覧の各群は reason と findings を持ち、件数は 19 群・30 件", () => {
   const document = accepted();
-  assert.equal(document.accepted.length, 18, "18 エントリ");
+  assert.equal(document.accepted.length, 19, "19 エントリ");
   for (const group of document.accepted) {
     assert.equal(typeof group.reason, "string");
     assert.ok(group.reason.trim().length > 0, `${group.reason} の reason`);
     assert.ok(Array.isArray(group.findings) && group.findings.length > 0);
   }
-  assert.equal(acceptedFindings(document).length, 28, "findings の合計は 28 件");
+  assert.equal(acceptedFindings(document).length, 30, "findings の合計は 30 件");
 });
 
 test("各 findings は engine/rule/file/message の4キーだけを持ち、空文字を含まない", () => {

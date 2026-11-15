@@ -207,6 +207,8 @@ test: test-activation
 
 # aislop は devDependencies で固定し、node_modules を npm ci で毎回そろえてから
 # 正本の起動役（scripts/aislop-check-bootstrap.mjs）経由で検査する。
+# 検査は check:aislop が devShell へ入ってから走らせ、呼び出し元 PATH の ruff の
+# 有無で合否が変わらないようにする（devShell の ruff で python の format/lint も見る）。
 # node_modules を作り直すのは、手元の状態と CI の差を残さないため。
 aislop-check:
 	npm ci --no-audit --no-fund
