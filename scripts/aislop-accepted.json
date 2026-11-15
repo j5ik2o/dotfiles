@@ -1,148 +1,272 @@
 {
+  "engines": [
+    "ai-slop",
+    "code-quality",
+    "format",
+    "lint",
+    "security"
+  ],
+  "missingToolsAllowed": {
+    "ruff": "npm ci では ruff を導入しない。ruff は Nix の devShell の lintTools で入り、scripts/lint.sh のゲート 4 が ruff check を実行する。aislop の scan では実行ファイルが無いため lint/format エンジンが missingTools に ruff を記録して止まるが、これは想定済みの未導入であり、ruff 側の検査は lint ゲートが担う。"
+  },
   "accepted": [
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "config/pi/agent/extensions/content-guard.ts",
-      "message": "Imports \"@earendil-works/pi-coding-agent\" but it's not declared in package.json",
-      "count": 2,
-      "reason": "Pi 拡張として Pi の実行時環境が提供する @earendil-works/pi-coding-agent を import する。このリポジトリの root package.json には宣言しない配置（config/mise/mise.toml でグローバル固定）が設計であり、依存追加ではなく実行環境側の責務。"
+      "reason": "Pi 拡張として Pi の実行時環境が提供する @earendil-works/pi-coding-agent を import する。このリポジトリの root package.json には宣言しない配置（config/mise/mise.toml でグローバル固定）が設計であり、依存追加ではなく実行環境側の責務。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "config/pi/agent/extensions/content-guard.ts",
+          "message": "Imports \"@earendil-works/pi-coding-agent\" but it's not declared in package.json"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "config/pi/agent/extensions/content-guard.ts",
+          "message": "Imports \"@earendil-works/pi-coding-agent\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-login.mjs",
-      "message": "Imports \"@deepseek-ai/cordis\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "dsh-tui の接着コード。@deepseek-ai/* と @earendil-works/pi-* は dsh と pi の実行時環境が提供するモジュールで、このリポジトリが保守するのは接着部分のみ（order.md の確定判断5）。依存を宣言せず実行時に解決するのが設計。"
+      "reason": "dsh-tui の接着コード。@deepseek-ai/* と @earendil-works/pi-* は dsh と pi の実行時環境が提供するモジュールで、このリポジトリが保守するのは接着部分のみ（order.md の確定判断5）。依存を宣言せず実行時に解決するのが設計。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "Imports \"@deepseek-ai/cordis\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-login.mjs",
-      "message": "Imports \"@deepseek-ai/dsh-credentials\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "Imports \"@deepseek-ai/dsh-credentials\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-login.mjs",
-      "message": "Imports \"@deepseek-ai/dsh-credentials-local\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "Imports \"@deepseek-ai/dsh-credentials-local\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-login.mjs",
-      "message": "Imports \"@earendil-works/pi-ai\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "pi 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "pi 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "Imports \"@earendil-works/pi-ai\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-models.mjs",
-      "message": "Imports \"@deepseek-ai/dsh-credentials\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "dsh 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-models.mjs",
+          "message": "Imports \"@deepseek-ai/dsh-credentials\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-models.mjs",
-      "message": "Imports \"@earendil-works/pi-ai\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "pi 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "pi 実行時環境が提供するモジュールを import する接着コード。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-models.mjs",
+          "message": "Imports \"@earendil-works/pi-ai\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hallucinated-import",
-      "filePath": "packages/dsh-tui-models.mjs",
-      "message": "Imports \"yaml\" but it's not declared in package.json",
-      "count": 1,
-      "reason": "yaml は dsh/pi の実行時環境が提供するモジュールとして接着コードが import する。root の package.json へ宣言しない設計（確定判断5）。"
+      "reason": "yaml は dsh/pi の実行時環境が提供するモジュールとして接着コードが import する。root の package.json へ宣言しない設計（確定判断5）。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "packages/dsh-tui-models.mjs",
+          "message": "Imports \"yaml\" but it's not declared in package.json"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/console-leftover",
-      "filePath": "packages/dsh-tui-login.mjs",
-      "message": "console.log/debug/info statement left in production code",
-      "count": 10,
-      "reason": "dsh-tui の CLI 接着コード。利用者へログイン状態などを表示するための console.log/debug/info 出力が仕様であり、残すのが設計。複数行の同一指摘を件数 10 で受け入れる。"
+      "reason": "dsh-tui の CLI 接着コード。利用者へログイン状態などを表示するための console.log/debug/info 出力が仕様であり、残すのが設計。複数行の同一指摘を件数 10 で受け入れる。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-login.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/console-leftover",
-      "filePath": "packages/dsh-tui-accounts-check.mjs",
-      "message": "console.log/debug/info statement left in production code",
-      "count": 1,
-      "reason": "*_check.mjs は開発者が単体で走らせる確認スクリプトで、結果を標準出力へ出すのが役割。検査対象には含めたまま（除外しない）、出力として受け入れる。"
+      "reason": "*_check.mjs は開発者が単体で走らせる確認スクリプトで、結果を標準出力へ出すのが役割。検査対象には含めたまま（除外しない）、出力として受け入れる。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-accounts-check.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/console-leftover",
-      "filePath": "packages/dsh-tui-effort-check.mjs",
-      "message": "console.log/debug/info statement left in production code",
-      "count": 1,
-      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。"
+      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-effort-check.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/console-leftover",
-      "filePath": "packages/dsh-tui-model-selection-check.mjs",
-      "message": "console.log/debug/info statement left in production code",
-      "count": 1,
-      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。"
+      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-model-selection-check.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/console-leftover",
-      "filePath": "packages/dsh-tui-models-check.mjs",
-      "message": "console.log/debug/info statement left in production code",
-      "count": 1,
-      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。"
+      "reason": "*_check.mjs の確認スクリプトが結果を標準出力へ出すのは役割。検査対象には含めたまま受け入れる。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/console-leftover",
+          "file": "packages/dsh-tui-models-check.mjs",
+          "message": "console.log/debug/info statement left in production code"
+        }
+      ]
     },
     {
-      "engine": "ai-slop",
-      "rule": "ai-slop/hardcoded-url",
-      "filePath": "packages/dsh-tui-models.mjs",
-      "message": "Hardcoded environment URL in production code",
-      "count": 1,
-      "reason": "Codex のモデル一覧を取得する固定エンドポイント。dsh-tui の接着コードが向かう外部 API の絶対 URL であり、環境依存の設定値ではないため設定ファイル化しない。"
+      "reason": "Codex のモデル一覧を取得する固定エンドポイント。dsh-tui の接着コードが向かう外部 API の絶対 URL であり、環境依存の設定値ではないため設定ファイル化しない。",
+      "findings": [
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hardcoded-url",
+          "file": "packages/dsh-tui-models.mjs",
+          "message": "Hardcoded environment URL in production code"
+        }
+      ]
     },
     {
-      "engine": "code-quality",
-      "rule": "complexity/file-too-large",
-      "filePath": "config/spark/namespace_relay.py",
-      "message": "File too large (limit: 400, flagged above 441 lines)",
-      "count": 1,
-      "reason": "既存の spark 連携スクリプトで、今回の変更対象外。行数だけを理由とした分割は責務を変えず、レビュー範囲外の改変になるため受け入れる。"
+      "reason": "既存の spark 連携スクリプトで、今回の変更対象外。行数だけを理由とした分割は責務を変えず、レビュー範囲外の改変になるため受け入れる。",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/file-too-large",
+          "file": "config/spark/namespace_relay.py",
+          "message": "File too large (limit: 400, flagged above 441 lines)"
+        }
+      ]
     },
     {
-      "engine": "code-quality",
-      "rule": "complexity/function-too-long",
-      "filePath": "config/spark/namespace_relay.py",
-      "message": "Function too long (limit: 80, flagged above 88 lines)",
-      "count": 1,
-      "reason": "既存の spark 連携スクリプトの関数で、今回の変更対象外。行数だけを理由とした分割は振る舞いを変えず、範囲外の改変になるため受け入れる。"
+      "reason": "既存の spark 連携スクリプトの関数で、今回の変更対象外。行数だけを理由とした分割は振る舞いを変えず、範囲外の改変になるため受け入れる。",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/function-too-long",
+          "file": "config/spark/namespace_relay.py",
+          "message": "Function too long (limit: 80, flagged above 88 lines)"
+        }
+      ]
     },
     {
-      "engine": "code-quality",
-      "rule": "complexity/deep-nesting",
-      "filePath": "config/spark/namespace_relay.py",
-      "message": "Function nested too deeply (max: 5)",
-      "count": 1,
-      "reason": "既存の spark 連携スクリプトの関数で、今回の変更対象外。ネストの平坦化は振る舞いを変えず、範囲外の改変になるため受け入れる。"
+      "reason": "既存の spark 連携スクリプトの関数で、今回の変更対象外。ネストの平坦化は振る舞いを変えず、範囲外の改変になるため受け入れる。",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/deep-nesting",
+          "file": "config/spark/namespace_relay.py",
+          "message": "Function nested too deeply (max: 5)"
+        }
+      ]
     },
     {
-      "engine": "code-quality",
-      "rule": "complexity/function-too-long",
-      "filePath": "packages/dsh-tui-models.mjs",
-      "message": "Function too long (limit: 80, flagged above 88 lines)",
-      "count": 1,
-      "reason": "dsh-tui の接着コード。prepareModels がモデル一覧取得・検証・変換を一続きで行う設計で、分割は実行時環境に依存する接着部分の責務を分断する。範囲外の改変を避けるため受け入れる。"
+      "reason": "dsh-tui の接着コード。prepareModels がモデル一覧取得・検証・変換を一続きで行う設計で、分割は実行時環境に依存する接着部分の責務を分断する。範囲外の改変を避けるため受け入れる。",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/function-too-long",
+          "file": "packages/dsh-tui-models.mjs",
+          "message": "Function too long (limit: 80, flagged above 88 lines)"
+        }
+      ]
     }
   ]
 }

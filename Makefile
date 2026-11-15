@@ -104,7 +104,8 @@ help:
 	@echo "  lint           Run lint gates on our own code (vendor paths excluded)"
 	@echo "  format-check   Check formatting only (nixfmt, stylua)"
 	@echo "  commit-subject-check  Check that the commit subject names the cause"
-	@echo "  done           commit-subject-check, format-check, then check, test-activation, then lint"
+	@echo "  aislop-check   Run the aislop check from the pinned canonical script"
+	@echo "  done           commit-subject-check, format-check, then check, test-activation, lint, then aislop-check"
 	@echo "  hooks          Enable the commit-msg hook (.githooks)"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  host-info      Show detected host/config info only"
@@ -201,6 +202,17 @@ test: test-activation
 	$(MAKE) check
 
 # ============================================================
+# aislop
+# ============================================================
+
+# aislop は devDependencies で固定し、node_modules を npm ci で毎回そろえてから
+# 正本の起動役（scripts/aislop-check-bootstrap.mjs）経由で検査する。
+# node_modules を作り直すのは、手元の状態と CI の差を残さないため。
+aislop-check:
+	npm ci --no-audit --no-fund
+	npm run check:aislop
+
+# ============================================================
 # lint
 # ============================================================
 
@@ -244,6 +256,7 @@ done: commit-subject-check format-check
 	$(MAKE) check
 	$(MAKE) test-activation
 	$(MAKE) lint
+	$(MAKE) aislop-check
 
 # ============================================================
 # Build (dry-run / test)

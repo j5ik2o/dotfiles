@@ -55,3 +55,20 @@ jobs:
 
       - name: Run lint gates
         run: make lint
+
+      # aislop の検査は node と npm ci が要る。node の版は config/mise/mise.toml を
+      # 正本にするため、mise を setup して config/mise から node を導入する（版を直書きしない）。
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Trust mise config
+        run: mise trust --yes config/mise/mise.toml
+
+      - name: Install node
+        run: mise install node --cd config/mise
+
+      - name: Install npm dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run aislop check
+        run: npm run check:aislop

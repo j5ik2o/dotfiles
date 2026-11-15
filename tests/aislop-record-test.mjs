@@ -17,7 +17,7 @@ const readDoc = () => {
 
 const readAcceptedTotal = () =>
   JSON.parse(readFileSync(join(repoRoot, "scripts/aislop-accepted.json"), "utf8"))
-    .accepted.reduce((sum, entry) => sum + entry.count, 0);
+    .accepted.flatMap((group) => group.findings).length;
 
 const lintGate = () => {
   const script = readFileSync(join(repoRoot, "scripts/lint.sh"), "utf8");
@@ -122,14 +122,9 @@ test("docs/aislop.md は knip の要否の結論と理由を記録する", () =>
   assert.match(doc, /導入しない|導入する/);
 });
 
-test("docs/aislop.md はゲートへ組み込んだと主張しない", () => {
+test("docs/aislop.md は make done と CI への組み込みを記録する", () => {
   const doc = requireDoc(readDoc());
-  assert.match(doc, /未導入/);
-  for (const positive of [
-    /make done[^\n]*含める/,
-    /CI[^\n]*含める/,
-    /make done に組み込んで(いる|ある)/,
-  ]) {
-    assert.ok(!positive.test(doc), `組み込みを主張しない: ${positive}`);
-  }
+  assert.match(doc, /make done/, "make done への組み込みを記録する");
+  assert.match(doc, /nix-check/, "CI への組み込みを記録する");
+  assert.ok(!/未導入/.test(doc), "未導入の記述を残さない");
 });
