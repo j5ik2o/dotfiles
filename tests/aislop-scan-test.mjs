@@ -1,62 +1,79 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isExcluded, judgedOnly, readAccepted, reconcile } from "./aislop-fixture.mjs";
+import { compareCounts, isExcluded, readAccepted } from "./aislop-fixture.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-const aislopBin = join(repoRoot, "node_modules/.bin/aislop");
+const aislopCli = join(repoRoot, "node_modules/aislop/dist/cli.js");
+const hasAislop = existsSync(aislopCli);
 
-const runScan = (excludeArgs) => {
-  const result = spawnSync(aislopBin, ["scan", "--json", ...excludeArgs], {
+// 正本 check-aislop.mjs と同じく AISLOP_NO_TELEMETRY/AISLOP_NO_UPDATE_NOTIFIER を渡す。
+const aislopEnv = {
+  ...process.env,
+  AISLOP_NO_TELEMETRY: "1",
+  AISLOP_NO_UPDATE_NOTIFIER: "1",
+};
+
+// 検査は package.json の check:aislop と同じく devShell の中で走らせる。
+// aislop の format/lint エンジンは呼び出し元 PATH の ruff の有無で結果を変えるため、
+// scan と bootstrap の起動環境を devShell に固定し、テストの観測も採用環境へ揃える。
+const runInDevShell = (args, options = {}) =>
+  spawnSync("nix", ["develop", "--command", process.execPath, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
-    env: {
-      ...process.env,
-      AISLOP_NO_TELEMETRY: "1",
-      AISLOP_NO_UPDATE_NOTIFIER: "1",
-    },
+    env: { ...aislopEnv },
     maxBuffer: 64 * 1024 * 1024,
+    ...options,
   });
+
+const runBareScan = () => {
+  const result = runInDevShell([aislopCli, "scan", "--json"]);
   assert.equal(result.error, undefined, "aislop を起動できる");
   const status = result.status ?? (result.signal ? 128 : 1);
   assert.ok(status === 0 || status === 1, `aislop の終了コードは 0 か 1: ${result.stderr.slice(0, 500)}`);
   return JSON.parse(result.stdout);
 };
 
-const excludedScan = () =>
-  runScan(["--exclude", ".codex-corporate/", "--exclude", ".codex-personal/", "--exclude", "references/"]);
+const runBootstrap = (mode) =>
+  runInDevShell([join(repoRoot, "scripts/aislop-check-bootstrap.mjs"), mode], {
+    timeout: 120_000,
+  });
 
-test("npm ci の依存で aislop 0.20.1 の scan が JSON を返す", () => {
-  const output = excludedScan();
-  const version = JSON.parse(readFileSync(join(repoRoot, "node_modules/aislop/package.json"), "utf8"));
-  assert.equal(version.version, "0.20.1");
+test("除外は .aislop/config.yml から読み、scan に --exclude を付けない", { skip: !hasAislop }, () => {
+  const output = runBareScan();
   assert.equal(output.cliVersion, "0.20.1");
   assert.ok(Array.isArray(output.diagnostics));
+  const leaked = output.diagnostics.filter((item) => isExcluded(item.filePath));
+  assert.deepEqual(leaked, [], "config.yml の除外で取り込み済みの指摘は出ない");
 });
 
-test("scan の error と warning は 4キーと件数で受け入れ一覧と一致する", () => {
-  const output = excludedScan();
-  const { missing, mismatched, extra } = reconcile(judgedOnly(output.diagnostics), readAccepted(repoRoot).accepted);
-  assert.deepEqual(missing, []);
-  assert.deepEqual(mismatched, []);
-  assert.deepEqual(extra, []);
+test("通常 scan は error と warning が受け入れ一覧と一致する", { skip: !hasAislop }, () => {
+  const output = runBareScan();
+  const { unlisted, resolved } = compareCounts(readAccepted(repoRoot), output.diagnostics);
+  assert.deepEqual(unlisted, [], "一覧に無い warn 以上の指摘は無い");
+  assert.deepEqual(resolved, [], "一覧にあるが出ない指摘は無い");
 });
 
-test("除外ありの scan 出力には取り込み済み 3 ディレクトリの指摘が出ない", () => {
-  const output = excludedScan();
-  const excluded = output.diagnostics.filter((item) => isExcluded(item.filePath));
-  assert.deepEqual(excluded, [], "既定の除外で取り込み済みの指摘は出ない");
+test("scan の対象ファイルは 1 件以上ある", { skip: !hasAislop }, () => {
+  const output = runBareScan();
+  const count =
+    typeof output.coverage?.supportedFiles === "number"
+      ? output.coverage.supportedFiles
+      : output.summary?.files;
+  assert.ok(Number.isInteger(count) && count > 0, `対象ファイル数は 1 以上: ${count}`);
 });
 
-test("除外を外すと同じ filePath の取り込み済み指摘が scan 出力に現れる", () => {
-  const output = runScan([]);
-  const excluded = output.diagnostics.filter((item) => isExcluded(item.filePath));
-  assert.ok(excluded.length > 0, "除外なしの scan には取り込み済みディレクトリの指摘が出る");
-  for (const item of excluded) {
-    assert.equal(isExcluded(item.filePath), true, item.filePath);
-  }
+test("bootstrap の check は受け入れ一覧と一致して終了コード 0 になる", { skip: !hasAislop }, () => {
+  const result = runBootstrap("check");
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /一致します/);
+});
+
+test("bootstrap の test は正本のテストを回して通る", { skip: !hasAislop }, () => {
+  const result = runBootstrap("test");
+  assert.equal(result.status, 0, `${result.stdout.slice(-2000)}\n${result.stderr.slice(-2000)}`);
 });

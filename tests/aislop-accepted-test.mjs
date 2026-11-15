@@ -3,151 +3,179 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 
 import {
-  REQUIRED_KEYS,
-  acceptedIndex,
-  acceptedKeys,
-  acceptanceOf,
+  FINDING_KEYS,
+  acceptedFindings,
+  compareCounts,
   finding,
-  groupFindings,
   isExcluded,
-  judgedOnly,
   readAccepted,
-  reconcile,
 } from "./aislop-fixture.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
-const accepted = () => readAccepted(repoRoot).accepted;
+const accepted = () => readAccepted(repoRoot);
 
-const expand = (entries) =>
-  entries.flatMap((entry) => Array.from({ length: entry.count }, () => ({ ...entry })));
+const expand = (findings, count) => Array.from({ length: count }, () => ({ ...findings }));
 
-test("受け入れ一覧は scripts/aislop-accepted.json に存在する", () => {
-  const document = readAccepted(repoRoot);
+test("受け入れ一覧は scripts/aislop-accepted.json に存在し、accepted 配列を持つ", () => {
+  const document = accepted();
   assert.ok(Array.isArray(document.accepted), "accepted 配列を持つ");
   assert.ok(document.accepted.length > 0, "accepted 配列は空でない");
 });
 
-test("受け入れ一覧の各エントリは engine/rule/filePath/message と件数と理由だけを持つ", () => {
-  for (const entry of accepted()) {
-    assert.deepEqual(Object.keys(entry).sort(), acceptedKeys.slice().sort());
+test("受け入れ一覧の各群は reason と findings を持ち、件数は 19 群・30 件", () => {
+  const document = accepted();
+  assert.equal(document.accepted.length, 19, "19 エントリ");
+  for (const group of document.accepted) {
+    assert.equal(typeof group.reason, "string");
+    assert.ok(group.reason.trim().length > 0, `${group.reason} の reason`);
+    assert.ok(Array.isArray(group.findings) && group.findings.length > 0);
   }
+  assert.equal(acceptedFindings(document).length, 30, "findings の合計は 30 件");
 });
 
-test("受け入れ一覧の各エントリは件数が正の整数で理由が空でない", () => {
-  for (const entry of accepted()) {
-    assert.ok(Number.isInteger(entry.count) && entry.count > 0, `${entry.filePath} の count`);
-    assert.equal(typeof entry.reason, "string");
-    assert.ok(entry.reason.trim().length > 0, `${entry.filePath} の reason`);
-  }
-});
-
-test("受け入れ一覧の各エントリは 4キーの文字列を持ち、4キーが重複しない", () => {
-  for (const entry of accepted()) {
-    for (const key of REQUIRED_KEYS) {
-      assert.equal(typeof entry[key], "string");
-      assert.ok(entry[key].length > 0, `${entry.filePath} の ${key}`);
+test("各 findings は engine/rule/file/message の4キーだけを持ち、空文字を含まない", () => {
+  for (const item of acceptedFindings(accepted())) {
+    assert.deepEqual(Object.keys(item).sort(), FINDING_KEYS.slice().sort());
+    for (const key of FINDING_KEYS) {
+      assert.equal(typeof item[key], "string");
+      assert.ok(item[key].length > 0, `${key} は空でない`);
     }
   }
-  const entries = accepted();
-  assert.equal(acceptedIndex(entries).size, entries.length);
 });
 
-test("受け入れ一覧は aislop の baseline を持たない", () => {
-  const document = readAccepted(repoRoot);
-  assert.ok(!("baseline" in document) && !("version" in document) && !("entries" in document));
+test("findings のエンジンは engines に挙げたものだけを使う", () => {
+  const document = accepted();
+  for (const item of acceptedFindings(document)) {
+    assert.ok(document.engines.includes(item.engine), `${item.engine} は engines にある`);
+  }
+});
+
+test("同じ4キーが複数出る指摘は findings をその数だけ並べ、重複キーをまとめない", () => {
+  const document = accepted();
+  const byKey = new Map();
+  for (const item of acceptedFindings(document)) {
+    const key = JSON.stringify([item.engine, item.rule, item.file, item.message]);
+    byKey.set(key, (byKey.get(key) ?? 0) + 1);
+  }
+  const dupCounts = [...byKey.values()].filter((count) => count > 1);
+  assert.ok(dupCounts.length > 0, "複数行の同一指摘がある");
+});
+
+test("受け入れ一覧は aislop の baseline も旧形式（count / filePath）も持たない", () => {
+  const document = accepted();
+  assert.ok(!("baseline" in document) && !("entries" in document));
+  for (const group of document.accepted) {
+    assert.ok(!("count" in group), "群に count を残さない");
+    for (const item of group.findings) {
+      assert.ok(!("filePath" in item), "filePath を残さず file を使う");
+      assert.ok(!("line" in item), "line を持たない");
+    }
+  }
 });
 
 test("受け入れ一覧は連携先モジュールを設計理由つきで登録している", () => {
-  const entries = accepted().filter(
-    (entry) =>
-      entry.rule === "ai-slop/hallucinated-import" &&
-      (entry.filePath === "packages/dsh-tui-login.mjs" ||
-        entry.filePath === "packages/dsh-tui-models.mjs"),
+  const entries = acceptedFindings(accepted()).filter(
+    (item) =>
+      item.rule === "ai-slop/hallucinated-import" &&
+      (item.file === "packages/dsh-tui-login.mjs" || item.file === "packages/dsh-tui-models.mjs"),
   );
   assert.ok(entries.length > 0);
-  for (const entry of entries) {
-    assert.match(entry.reason, /dsh|pi/);
-    assert.match(entry.reason, /実行時/);
+  const reasons = accepted().accepted
+    .filter((group) => group.findings.some((item) => entries.includes(item)))
+    .map((group) => group.reason);
+  for (const reason of reasons) {
+    assert.match(reason, /dsh|pi/);
+    assert.match(reason, /実行時/);
   }
 });
 
-test("受け入れ一覧の件数を足し合わせると既定の除外での error と warning の件数になる", () => {
-  const total = accepted().reduce((sum, entry) => sum + entry.count, 0);
-  assert.equal(total, 28);
+test("一覧どおりの scan は一致し、件数が余らない", () => {
+  const document = accepted();
+  const scanned = acceptedFindings(document).map((item) => ({
+    engine: item.engine,
+    rule: item.rule,
+    filePath: item.file,
+    message: item.message,
+    severity: "warning",
+  }));
+  const { unlisted, resolved } = compareCounts(document, scanned);
+  assert.deepEqual(unlisted, []);
+  assert.deepEqual(resolved, []);
 });
 
-test("受け入れ一覧が scan 出力をそのまま受理する", () => {
-  const entries = accepted();
-  const { missing, mismatched, extra } = reconcile(expand(entries), entries);
-  assert.deepEqual(missing, []);
-  assert.deepEqual(mismatched, []);
-  assert.deepEqual(extra, []);
-});
-
-test("重複した 4キーは件数にまとめ、登録した件数と一致すれば受け入れになる", () => {
-  const entries = [{ ...finding(), count: 10, reason: "CLI の出力が仕様" }];
-  const findings = expand(entries);
-  assert.equal(groupFindings(findings).length, 1);
-  assert.equal(groupFindings(findings)[0].count, 10);
-  const { missing, mismatched, extra } = reconcile(findings, entries);
-  assert.deepEqual(missing, []);
-  assert.deepEqual(mismatched, []);
-  assert.deepEqual(extra, []);
-});
-
-test("登録件数が実際より多いエントリは不一致として拒否する", () => {
-  const entries = [{ ...finding(), count: 10, reason: "CLI の出力が仕様" }];
-  const findings = expand([{ ...entries[0], count: 9 }]);
-  const { missing, mismatched } = reconcile(findings, entries);
-  assert.deepEqual(missing, []);
-  assert.equal(mismatched.length, 1);
-  assert.equal(mismatched[0].entry.count, 10);
-  assert.equal(mismatched[0].group.count, 9);
-});
-
-test("登録件数が実際より少ないエントリは不一致として拒否する", () => {
-  const entries = [{ ...finding(), count: 10, reason: "CLI の出力が仕様" }];
-  const findings = expand([{ ...entries[0], count: 11 }]);
-  assert.equal(reconcile(findings, entries).mismatched.length, 1);
-});
-
-test("行番号だけが違う指摘は同じ 4キーとして受け入れる", () => {
+test("行番号だけが違う指摘は同じ4キーとして受け入れる", () => {
   const seed = {
     engine: "ai-slop",
     rule: "ai-slop/hallucinated-import",
-    filePath: "config/pi/agent/extensions/content-guard.ts",
+    file: "config/pi/agent/extensions/content-guard.ts",
     message: 'Imports "@earendil-works/pi-coding-agent" but it\'s not declared in package.json',
   };
-  const entries = [{ ...seed, count: 2, reason: "設計上の理由" }];
-  const findings = [
-    { ...seed, line: 18 },
-    { ...seed, line: 19 },
+  const document = {
+    engines: ["ai-slop"],
+    missingToolsAllowed: {},
+    accepted: [{ reason: "設計上の理由", findings: [{ ...seed }, { ...seed }] }],
+  };
+  const scanned = [
+    { ...seed, filePath: seed.file, severity: "error", line: 18 },
+    { ...seed, filePath: seed.file, severity: "error", line: 19 },
   ];
-  const { missing, mismatched, extra } = reconcile(findings, entries);
-  assert.deepEqual(missing, []);
-  assert.deepEqual(mismatched, []);
-  assert.deepEqual(extra, []);
+  const { unlisted, resolved } = compareCounts(document, scanned);
+  assert.equal(unlisted.length, 0);
+  assert.equal(resolved.length, 0);
 });
 
-test("受け入れ一覧に無い指摘は missing として拒否する", () => {
-  const entries = accepted();
-  const unexpected = finding({
-    rule: "ai-slop/hallucinated-import",
+test("受け入れ一覧に無い指摘は unlisted として拒否する", () => {
+  const document = accepted();
+  const unexpected = {
+    ...finding({ file: "packages/unexpected.mjs", rule: "ai-slop/hallucinated-import" }),
     filePath: "packages/unexpected.mjs",
-    message: 'Imports "left-pad" but it\'s not declared in package.json',
-  });
-  const { missing, extra } = reconcile([...expand(entries), unexpected], entries);
-  assert.equal(missing.length, 1);
-  assert.equal(missing[0].filePath, "packages/unexpected.mjs");
-  assert.deepEqual(extra, []);
+    severity: "error",
+  };
+  const scanned = [...acceptedFindings(document).map((item) => ({ ...item, filePath: item.file, severity: "warning" })), unexpected];
+  const { unlisted } = compareCounts(document, scanned);
+  assert.equal(unlisted.length, 1);
+  assert.match(unlisted[0].key, /packages\/unexpected\.mjs/);
 });
 
-test("実際の scan に出ない登録は extra として検出する", () => {
-  const entries = accepted();
-  const { missing, extra } = reconcile(expand(entries.slice(1)), entries);
-  assert.deepEqual(missing, []);
-  assert.equal(extra.length, 1);
-  assert.equal(extra[0].filePath, entries[0].filePath);
+test("一覧にあるのに出ない指摘は resolved として検出する", () => {
+  const document = accepted();
+  const all = acceptedFindings(document);
+  const scanned = all
+    .slice(1)
+    .map((item) => ({ ...item, filePath: item.file, severity: "warning" }));
+  const { resolved } = compareCounts(document, scanned);
+  assert.equal(resolved.length, 1);
+  assert.ok(resolved[0].key.includes(all[0].file), resolved[0].key);
+});
+
+test("一覧の件数より多く出たら、超えた分を unlisted として拒否する", () => {
+  const document = {
+    engines: ["ai-slop"],
+    missingToolsAllowed: {},
+    accepted: [
+      {
+        reason: "CLI の出力が仕様",
+        findings: [{ ...finding(), file: "packages/x.mjs" }],
+      },
+    ],
+  };
+  const scanned = expand({ ...finding(), filePath: "packages/x.mjs", severity: "warning" }, 2);
+  const { unlisted } = compareCounts(document, scanned);
+  assert.equal(unlisted.length, 1);
+});
+
+test("info は合否判定の対象から外れる", () => {
+  const document = {
+    engines: ["code-quality"],
+    missingToolsAllowed: {},
+    accepted: [],
+  };
+  const scanned = [
+    { ...finding({ engine: "code-quality", rule: "code-quality/knip/skipped" }), filePath: "package.json", severity: "info" },
+  ];
+  const { unlisted, resolved } = compareCounts(document, scanned);
+  assert.deepEqual(unlisted, []);
+  assert.deepEqual(resolved, []);
 });
 
 test("除外は取り込み済みの 3 ディレクトリだけに一致する", () => {
@@ -168,38 +196,4 @@ test("除外は取り込み済みの 3 ディレクトリだけに一致する",
   for (const filePath of notExcluded) {
     assert.equal(isExcluded(filePath), false, filePath);
   }
-});
-
-test("info の指摘は合否判定の対象から外れる", () => {
-  const info = finding({ rule: "code-quality/knip/skipped", severity: "info" });
-  const error = finding({ rule: "ai-slop/hallucinated-import", severity: "error" });
-  const warning = finding({ severity: "warning" });
-  const accepted = acceptanceOf([info, error, warning], []);
-  assert.deepEqual(
-    accepted.map((group) => group.rule).sort(),
-    ["ai-slop/console-leftover", "ai-slop/hallucinated-import"],
-  );
-});
-
-test("severity を持たない診断は合否対象に含めず、error と warning と同じ判定を共有する", () => {
-  const withoutSeverity = finding({ rule: "ai-slop/console-leftover" });
-  const error = finding({ rule: "ai-slop/hallucinated-import", severity: "error" });
-  const info = finding({ rule: "code-quality/knip/skipped", severity: "info" });
-  const diagnostics = [withoutSeverity, error, info];
-  assert.deepEqual(
-    judgedOnly(diagnostics).map((item) => item.rule),
-    ["ai-slop/hallucinated-import"],
-  );
-  assert.deepEqual(
-    acceptanceOf(diagnostics, []).map((group) => group.rule),
-    ["ai-slop/hallucinated-import"],
-  );
-});
-
-test("scan の指摘は 4キーと行番号を別々に持つ", () => {
-  const item = finding({ line: 42 });
-  for (const key of REQUIRED_KEYS) {
-    assert.equal(typeof item[key], "string");
-  }
-  assert.equal(item.line, 42);
 });

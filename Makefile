@@ -76,7 +76,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
-        lint format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
+        lint aislop-check format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
@@ -104,7 +104,8 @@ help:
 	@echo "  lint           Run lint gates on our own code (vendor paths excluded)"
 	@echo "  format-check   Check formatting only (nixfmt, stylua)"
 	@echo "  commit-subject-check  Check that the commit subject names the cause"
-	@echo "  done           commit-subject-check, format-check, then check, test-activation, then lint"
+	@echo "  aislop-check   Run the aislop check from the pinned canonical script"
+	@echo "  done           commit-subject-check, format-check, then check, test-activation, lint, then aislop-check"
 	@echo "  hooks          Enable the commit-msg hook (.githooks)"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  host-info      Show detected host/config info only"
@@ -201,6 +202,19 @@ test: test-activation
 	$(MAKE) check
 
 # ============================================================
+# aislop
+# ============================================================
+
+# aislop は devDependencies で固定し、node_modules を npm ci で毎回そろえてから
+# 正本の起動役（scripts/aislop-check-bootstrap.mjs）経由で検査する。
+# 検査は check:aislop が devShell へ入ってから走らせ、呼び出し元 PATH の ruff の
+# 有無で合否が変わらないようにする（devShell の ruff で python の format/lint も見る）。
+# node_modules を作り直すのは、手元の状態と CI の差を残さないため。
+aislop-check:
+	npm ci --no-audit --no-fund
+	npm run check:aislop
+
+# ============================================================
 # lint
 # ============================================================
 
@@ -244,6 +258,7 @@ done: commit-subject-check format-check
 	$(MAKE) check
 	$(MAKE) test-activation
 	$(MAKE) lint
+	$(MAKE) aislop-check
 
 # ============================================================
 # Build (dry-run / test)

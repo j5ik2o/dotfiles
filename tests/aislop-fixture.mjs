@@ -4,84 +4,74 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 
 const ACCEPTED_PATH = "scripts/aislop-accepted.json";
+const PIN_PATH = "scripts/aislop-check-pin.json";
+const CONFIG_PATH = ".aislop/config.yml";
+const BOOTSTRAP_PATH = "scripts/aislop-check-bootstrap.mjs";
 const EXCLUDED_ROOTS = [".codex-corporate/", ".codex-personal/", "references/"];
 
-export const REQUIRED_KEYS = ["engine", "rule", "filePath", "message"];
+// 正本 check-aislop.mjs の compareFindings が突き合わせるキー。line は使わない。
+export const FINDING_KEYS = ["engine", "rule", "file", "message"];
 
-const ACCEPTED_KEYS = [...REQUIRED_KEYS, "count", "reason"];
-
-const keyOf = (item) => JSON.stringify([item.engine, item.rule, item.filePath, item.message]);
+const keyOfFinding = (item) => JSON.stringify([item.engine, item.rule, item.file, item.message]);
 
 export const finding = (overrides = {}) => {
   const base = {
-    filePath: "packages/example.mjs",
+    file: "packages/example.mjs",
     engine: "ai-slop",
     rule: "ai-slop/console-leftover",
-    severity: "warning",
     message: "console.log/debug/info statement left in production code",
-    help: "",
-    line: 1,
-    column: 1,
-    category: "AI Slop",
-    fixable: true,
     ...overrides,
   };
-  if (overrides.severity === undefined) delete base.severity;
   return base;
 };
 
 export const readAccepted = (root) => require(join(root, ACCEPTED_PATH));
 
-export const groupFindings = (findings) => {
+export const readPin = (root) => require(join(root, PIN_PATH));
+
+export const acceptedFindings = (document) =>
+  document.accepted.flatMap((group) => group.findings);
+
+// 一覧の findings をキーごとに数える。同じ 4キーが複数あれば件数として数える。
+export const countAccepted = (document) => {
   const counts = new Map();
-  for (const item of findings) {
-    const key = keyOf(item);
-    const group = counts.get(key) ?? {
-      engine: item.engine,
-      rule: item.rule,
-      filePath: item.filePath,
-      message: item.message,
-      count: 0,
-    };
-    group.count += 1;
-    counts.set(key, group);
+  for (const item of acceptedFindings(document)) {
+    const key = keyOfFinding(item);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return [...counts.values()];
+  return counts;
 };
 
-export const acceptedIndex = (entries) => new Map(entries.map((entry) => [keyOf(entry), entry]));
-
-export const reconcile = (findings, entries) => {
-  const index = acceptedIndex(entries);
-  const seen = new Set();
-  const missing = [];
-  const mismatched = [];
-  for (const group of groupFindings(findings)) {
-    const key = keyOf(group);
-    seen.add(key);
-    const entry = index.get(key);
-    if (!entry) {
-      missing.push(group);
-      continue;
-    }
-    if (entry.count !== group.count) mismatched.push({ group, entry });
+// scan の diagnostics（severity が error/warning のもの）を 4キーで数える。
+export const countDiagnostics = (diagnostics) => {
+  const counts = new Map();
+  for (const item of diagnostics) {
+    if (item.severity !== "error" && item.severity !== "warning") continue;
+    const key = keyOfFinding({ engine: item.engine, rule: item.rule, file: item.filePath, message: item.message });
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  const extra = entries.filter((entry) => !seen.has(keyOf(entry)));
-  return { missing, mismatched, extra };
+  return counts;
+};
+
+export const compareCounts = (document, diagnostics) => {
+  const accepted = countAccepted(document);
+  const scanned = countDiagnostics(diagnostics);
+  const unlisted = [];
+  for (const [key, count] of scanned) {
+    const remaining = (accepted.get(key) ?? 0) - count;
+    if (remaining < 0) unlisted.push({ key, count, accepted: accepted.get(key) ?? 0 });
+  }
+  const resolved = [];
+  for (const [key, count] of accepted) {
+    const remaining = count - (scanned.get(key) ?? 0);
+    if (remaining > 0) resolved.push({ key, accepted: count, scanned: scanned.get(key) ?? 0 });
+  }
+  return { unlisted, resolved };
 };
 
 export const isExcluded = (filePath) => EXCLUDED_ROOTS.some((root) => filePath.startsWith(root));
 
-// docs/aislop.md「合否の対象は error と warning のみ。info は合否に含めない」の唯一の判定。
-// severity を持たない診断は、実 scan（aislop 0.20.1, node_modules 有り）で全件 severity を
-// 持つことを確認済み。想定外の欠落は合否対象に含めず、呼び出し側の assertion（件数一致）で検出する。
-const isJudged = (item) => item.severity === "error" || item.severity === "warning";
+export const judgedOnly = (diagnostics) =>
+  diagnostics.filter((item) => item.severity === "error" || item.severity === "warning");
 
-export const judgedOnly = (diagnostics) => diagnostics.filter(isJudged);
-
-export const acceptanceOf = (diagnostics, entries) => {
-  const { missing, mismatched } = reconcile(judgedOnly(diagnostics), entries);
-  return [...missing, ...mismatched.map((item) => item.group)];
-};
-
-export const acceptedKeys = Object.freeze(ACCEPTED_KEYS.slice());
+export { ACCEPTED_PATH, PIN_PATH, CONFIG_PATH, BOOTSTRAP_PATH, EXCLUDED_ROOTS };
