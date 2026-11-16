@@ -49,7 +49,7 @@ in
       # マージ設定
       merge = {
         conflictstyle = "diff3";
-        ff = "only";
+        ff = "true";
       };
 
       # リベース設定
