@@ -27,3 +27,6 @@ result
 .codex*/*.sqlite
 .codex*/*.sqlite-shm
 .codex*/*.sqlite-wal
+
+# aislop scan history (appended by local `make done`; not a tracked artifact)
+/.aislop/history.jsonl

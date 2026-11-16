@@ -79,10 +79,10 @@ test("docs/aislop.md は受け入れ一覧の件数の合計を記録する", ()
 
 test("docs/aislop.md は除外前後の error と warning の件数を区分つきで記録する", () => {
   const doc = requireDoc(readDoc());
-  assert.match(doc, /error 9 件・warning 21 件/);
-  assert.match(doc, /error 33 \/ warning 207/);
+  assert.match(doc, /error 9 件・warning 22 件/);
+  assert.match(doc, /error 33 \/ warning 208/);
   assert.match(doc, /error 33 − 24 = 9/);
-  assert.match(doc, /warning 207 − 186 = 21/);
+  assert.match(doc, /warning 208 − 186 = 22/);
 });
 
 test("docs/aislop.md は hallucinated-import の再 scan を根拠にした理由を記録する", () => {
@@ -106,7 +106,7 @@ test("docs/aislop.md は info の件数を記録する", () => {
 
 test("docs/aislop.md は除外前後の件数の対応を記録する", () => {
   const doc = requireDoc(readDoc());
-  for (const count of [33, 207, 9, 21]) {
+  for (const count of [33, 208, 9, 22]) {
     assert.ok(new RegExp(`\\b${count}\\b`).test(doc), `${count} が記録されている`);
   }
   assert.match(doc, /除外/);
