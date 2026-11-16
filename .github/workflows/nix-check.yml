@@ -67,8 +67,36 @@ jobs:
       - name: Install node
         run: mise install node --cd config/mise
 
+      # install は node を置くだけで PATH を足さない。config/mise の bin を
+      # 後続 step へ引き継ぎ、runner 既定の Node で動かないようにする。
+      # stderr には trust の WARN が出るので捨て、空なら静かに進まず失敗させる。
+      - name: Add mise node to PATH
+        run: |
+          dirs=$(mise bin-paths --cd config/mise node 2>/dev/null)
+          if [ -z "$dirs" ]; then
+            echo "mise bin-paths が空を返した（config/mise の node を解決できない）" >&2
+            exit 1
+          fi
+          printf '%s\n' "$dirs" | while IFS= read -r dir; do
+            if [ -n "$dir" ]; then
+              printf '%s\n' "$dir" >> "$GITHUB_PATH"
+            fi
+          done
+
       - name: Install npm dependencies
         run: npm ci --no-audit --no-fund
+
+      # PATH の Node が config/mise/mise.toml の版と一致することをログと終了コードで示す。
+      - name: Show node version
+        run: |
+          expected=$(sed -nE 's/^[[:space:]]*node[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' config/mise/mise.toml)
+          if [ -z "$expected" ]; then
+            echo "config/mise/mise.toml に node の版がない" >&2
+            exit 1
+          fi
+          echo "node --version: $(node --version)"
+          echo "config/mise/mise.toml node: $expected"
+          node --version | sed -E 's/^v([0-9]+).*/\1/' | grep -qx "$expected"
 
       - name: Run aislop check
         run: npm run check:aislop
