@@ -284,6 +284,17 @@
           "message": "Python file is not formatted correctly"
         }
       ]
+    },
+    {
+      "reason": "j5ik2o/ci の正本の無編集の写しで 510 行。写しは正本とバイト一致させる決まりのためこのリポジトリでは分割できず、分割は正本側の判断",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/file-too-large",
+          "file": "scripts/aislop-check-bootstrap.mjs",
+          "message": "File too large (limit: 400, flagged above 441 lines)"
+        }
+      ]
     }
   ]
 }
