@@ -1,0 +1,48 @@
+[settings]
+activate_aggressive = true
+ruby.compile = false
+# python はプリコンパイル版のみ使う。CPython リリース直後はプリコンパイル版が
+# 未公開のことがあり、ソースビルドへのフォールバックは macOS (Nix 環境) で
+# 失敗する。false にするとバンプ対象もプリコンパイル版の一覧に限定される。
+python.compile = false
+# rust は手動 rustup で管理する。mise が rust-toolchain.toml を自動検出して
+# 既定 toolchain (stable) の bin を PATH に注入し、rustup proxy をバイパスする
+# 不具合があるため、rust プラグイン自体を無効化する
+disable_tools = ["rust"]
+
+# takt の複製（worktree クローン）は実行ごとに新しいパスへ作られるため、複製の置き場所を
+# 信頼済みにして、複製の中の mise.toml が未 trust で読み込みに失敗しないようにする（2026-11-14）。
+trusted_config_paths = ["/Users/j5ik2o/takt-worktrees", "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/takt-worktrees"]
+
+[settings.github]
+github_attestations = false
+# gh は token を keychain に保存するため、mise には明示的に取得方法を教える。
+credential_command = "gh auth token"
+
+[tools]
+java = "temurin-26.0.2"
+node = "24"
+python = "3.15.2"
+ruby = "4.0"
+claude = "2.1.322"
+# 行末の「# pin」マーカーが付いたツールは CI (mise-upgrade.yml) の自動バンプ対象外。
+# 固定を解除するときはマーカーを外す。
+#
+# pi: 2026-08-14 の AWS 公開パイプライン障害で @smithy の一部バージョンに provenance が
+# 欠落しているため、tarball 検証済みのバージョンのみ trust policy から除外。
+# 0.84.3 以降(2026-08-15 17:24 UTC の修正バッチ以降の公開)にバンプしたら除外は削除してよい
+"npm:@earendil-works/pi-coding-agent" = { version = "1.5.2", trust_policy_excludes = [ # pin
+  "@smithy/core@3.33.0",
+  "@smithy/node-http-handler@4.11.0",
+] }
+"npm:@openai/codex" = "0.167.2"
+"npm:@moonshot-ai/kimi-code" = "2.5.3"
+# takt: pin ではない。フレッシュインストール時の依存解決が pi と同じ provenance 欠落
+# バージョンに当たるため、検証済みの除外だけ共有する(2026-08-16 17:24 UTC 以降は不要)
+"npm:takt" = { version = "0.75.0", trust_policy_excludes = ["@smithy/core@3.33.0", "@smithy/node-http-handler@4.11.0"] }
+"npm:takt-sdd" = "2.3.0"
+"npm:takt-marp" = "0.5.0"
+"npm:happy-coder" = "1.1.9"
+"npm:npm-check-updates" = "23.1.1"
+"npm:@github/copilot" = "1.0.109"
+"npm:@owloops/claude-powerline" = "1.32.8"

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": [
+    "cliproxyapi",
+    "zai-coding-plan",
+    "lmstudio",
+    "ollama",
+    "dgx"
+  ],
+  "provider": {
+    "lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LM Studio",
+      "options": {
+        "baseURL": "http://localhost:1234/v1"
+      },
+      "models": {
+        "qwen/qwen3.6-35b-a3b": {
+          "name": "Qwen3.6 35B A3B",
+          "tools": true
+        },
+        "qwen/qwen3.6-27b": {
+          "name": "Qwen3.6 27B",
+          "tools": true
+        },
+        "google/gemma-4-e4b": {
+          "name": "Gemma4 E4B",
+          "tools": true
+        }
+      }
+    },
+    "cliproxyapi": {
+      "api": "openai",
+      "name": "CLIProxyAPI",
+      "options": {
+        "baseURL": "http://127.0.0.1:8317/v1",
+        "apiKey": "dummy-c3d4ee78f2909bc57fcc903fcb115e6fa23c8b6406b6492a8ce05bf78f48920e",
+        "reasoningEffort": "xhigh",
+        "reasoningSummary": "auto",
+        "textVerbosity": "medium",
+        "include": [
+          "reasoning.encrypted_content"
+        ],
+        "store": false
+      },
+      "models": {
+        "gemini-2.5-pro": {
+          "name": "Gemini 2.5 Pro"
+        },
+        "gemini-2.5-flash": {
+          "name": "Gemini 2.5 Flash"
+        },
+        "gpt-5.3-codex": {
+          "name": "GPT 5.3 Codex",
+          "limit": {
+            "context": 272000,
+            "output": 128000
+          }
+        },
+        "gpt-5.2-codex": {
+          "name": "GPT 5.2 Codex",
+          "limit": {
+            "context": 272000,
+            "output": 128000
+          }
+        }
+      }
+    },
+    "zai-coding-plan": {
+      "models": {
+        "glm-4.7-high": {
+          "id": "glm-4.7",
+          "name": "GLM 4.7 High",
+          "options": {
+            "reasoningEffort": "high"
+          }
+        }
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local proxy to Ollama Cloud)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "glm-5.3-flash:cloud": {
+          "name": "GLM 5.3 Flash (Ollama Cloud)",
+          "tools": true
+        },
+        "glm-5.3:cloud": {
+          "name": "GLM 5.3 (Ollama Cloud)",
+          "tools": true
+        },
+        "deepseek-v4.1-flash:cloud": {
+          "name": "DeepSeek V4.1 Flash (Ollama Cloud)",
+          "tools": true
+        },
+        "minimax-m3:cloud": {
+          "name": "MiniMax M3 (Ollama Cloud)",
+          "tools": true
+        },
+        "kimi-k3:cloud": {
+          "name": "Kimi K3 (Ollama Cloud)",
+          "tools": true
+        },
+        "kimi-k3.1-pro:cloud": {
+          "name": "Kimi K3.1 Pro (Ollama Cloud)",
+          "tools": true
+        },
+        "deepseek-v4-pro:cloud": {
+          "name": "DeepSeek V4 Pro (Ollama Cloud)",
+          "tools": true
+        }
+      }
+    },
+    "dgx": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "DGX Spark x4 (vLLM)",
+      "options": {
+        "baseURL": "http://10.0.1.60:8000/v1"
+      },
+      "models": {
+        "deepseek-v4.1-flash": {
+          "name": "DeepSeek V4.1 Flash 1017 (DGX Spark x4, vLLM)",
+          "tools": true,
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        },
+        "deepseek-v4.1-flash-high": {
+          "id": "deepseek-v4.1-flash",
+          "name": "DeepSeek V4.1 Flash 1017 High (DGX Spark x4, vLLM)",
+          "tools": true,
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          },
+          "options": {
+            "reasoningEffort": "high"
+          }
+        }
+      }
+    }
+  }
+}

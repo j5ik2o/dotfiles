@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# 主題が原因を語っていなければコミットを止める。有効化は make hooks。
+# 本当のゲートは CI が PR タイトルに対して回す make commit-subject-check。
+# フックはスキップできるので、これだけを根拠にしない。
+
+set -euo pipefail
+
+repo=$(git rev-parse --show-toplevel)
+exec bash "$repo/scripts/check-commit-subject.sh" --message-file "$1"

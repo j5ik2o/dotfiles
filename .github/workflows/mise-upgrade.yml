@@ -1,0 +1,91 @@
+name: mise-upgrade
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mise-upgrade
+  cancel-in-progress: true
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Trust mise config
+        run: mise trust --yes config/mise/mise.toml
+
+      # mise.toml で行末に「# pin」マーカーが付いたツールはバンプ対象から除外する
+      - name: Compute pinned tools
+        id: pins
+        run: |
+          excludes=""
+          while IFS= read -r tool; do
+            [ -n "${tool}" ] && excludes="${excludes} --exclude ${tool}"
+          done <<< "$(sed -nE 's/^"?([^"]+)"? *= .*# *pin( .*)?$/\1/p' config/mise/mise.toml)"
+          echo "pinned tools:${excludes:- (none)}"
+          echo "excludes=${excludes}" >> "$GITHUB_OUTPUT"
+
+      # npm 系ツールはインストール時に node への依存を解決するが、bump で選択された
+      # node のマイナーバージョンが未インストールだと npm ツール一括で失敗し、
+      # mise.toml への書き戻しまで到達しない。先に node をインストールしておく。
+      - name: Install node
+        run: mise install node --cd config/mise
+
+      # mise.toml の書き換え自体は成功しても、一部ツールの実インストールが
+      # CI の非対話環境で中断されてジョブが落ち、バンプが commit されないため
+      # 失敗を許容する。反映されたかどうかは後段の Detect changes で判断する。
+      - name: Upgrade tools with bump
+        continue-on-error: true
+        run: mise upgrade --yes --bump --exclude node${{ steps.pins.outputs.excludes }} --minimum-release-age 0s --cd config/mise
+
+      # claude / codex は mise のレジストリが上流より遅れることがあるため、
+      # CHANGELOG.md と GitHub Releases を一次情報として上書きする。
+      - name: Sync claude/codex to upstream sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/sync-upstream-versions.sh
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Git User
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git add -A
+          git commit -m "chore(mise): bump tool versions"
+
+      - name: Push changes
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
+          git push origin HEAD:${GITHUB_REF_NAME}

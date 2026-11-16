@@ -1,0 +1,32 @@
+.idea/
+result
+
+.tmp/
+
+# Agent session scratch: plans, decision trails, per-session notes
+/.audit/
+
+/.serena/cache/
+
+/.kiro/
+/openspec/
+/references/okite-ai/
+
+# API Keys and Tokens (security)
+*_api_key.sh
+*.env
+.anthropic_api_key.sh
+.glm_api_key.sh
+
+# Codex runtime data (login credentials, conversation history, logs, state)
+.codex*/auth.json
+.codex*/history.jsonl
+.codex*/installation_id
+.codex*/sessions/
+.codex*/log/
+.codex*/*.sqlite
+.codex*/*.sqlite-shm
+.codex*/*.sqlite-wal
+
+# aislop scan history (appended by local `make done`; not a tracked artifact)
+/.aislop/history.jsonl

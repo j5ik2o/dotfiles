@@ -1,0 +1,102 @@
+name: nix-check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # 検証するのはこれから入る 1 件だけで、過去のコミットは対象にしない。
+  commit-subject:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # 1 コミットの PR ではコミットの主題が入るので、その履歴も要る。
+      - name: Checkout the pull request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check the PR title and the single commit subject
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: make commit-subject-check-pr
+
+  flake-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run flake check
+        run: make check
+
+      # ローカルでしか走らないゲートはゲートではないので、make done と同じ順で回す。
+      # 外部コマンドはすべて PATH の偽物で差し替わるため Linux でも動く。
+      - name: Run activation tests
+        run: make test-activation
+
+      - name: Run lint gates
+        run: make lint
+
+      # aislop の検査は node と npm ci が要る。node の版は config/mise/mise.toml を
+      # 正本にするため、mise を setup して config/mise から node を導入する（版を直書きしない）。
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Trust mise config
+        run: mise trust --yes config/mise/mise.toml
+
+      - name: Install node
+        run: mise install node --cd config/mise
+
+      # install は node を置くだけで PATH を足さない。config/mise の bin を
+      # 後続 step へ引き継ぎ、runner 既定の Node で動かないようにする。
+      # stderr には trust の WARN が出るので捨て、空なら静かに進まず失敗させる。
+      - name: Add mise node to PATH
+        run: |
+          dirs=$(mise bin-paths --cd config/mise node 2>/dev/null)
+          if [ -z "$dirs" ]; then
+            echo "mise bin-paths が空を返した（config/mise の node を解決できない）" >&2
+            exit 1
+          fi
+          printf '%s\n' "$dirs" | while IFS= read -r dir; do
+            if [ -n "$dir" ]; then
+              printf '%s\n' "$dir" >> "$GITHUB_PATH"
+            fi
+          done
+
+      - name: Install npm dependencies
+        run: npm ci --no-audit --no-fund
+
+      # PATH の Node が config/mise/mise.toml の版と一致することをログと終了コードで示す。
+      - name: Show node version
+        run: |
+          expected=$(sed -nE 's/^[[:space:]]*node[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' config/mise/mise.toml)
+          if [ -z "$expected" ]; then
+            echo "config/mise/mise.toml に node の版がない" >&2
+            exit 1
+          fi
+          echo "node --version: $(node --version)"
+          echo "config/mise/mise.toml node: $expected"
+          node --version | sed -E 's/^v([0-9]+).*/\1/' | grep -qx "$expected"
+
+      - name: Run aislop check
+        run: npm run check:aislop

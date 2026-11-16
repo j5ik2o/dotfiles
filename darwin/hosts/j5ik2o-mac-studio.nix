@@ -1,0 +1,98 @@
+{ ... }:
+
+{
+  # ============================================================
+  # j5ik2o-mac-studio 固有設定
+  # ============================================================
+
+  # Homebrew casks (フルセット)
+  homebrew.casks = [
+    # ブラウザ
+    "google-chrome"
+    "firefox"
+    "arc"
+
+    # 開発ツール
+    "jetbrains-toolbox"
+    "visual-studio-code"
+    "zed"
+
+    "cursor"
+    "windsurf"
+    "antigravity"
+    "kiro"
+    "kiro-cli"
+
+    "iterm2"
+    "warp"
+    "wezterm"
+    "ghostty"
+    "cmux"
+
+    "docker-desktop"
+    "github"
+
+    # AI / ML
+    "lm-studio"
+    "chatgpt"
+    "claude"
+    "aionui"
+    "codex-app"
+    "grok-bot"
+    "t3-code"
+
+    # ユーティリティ
+    "coteditor"
+    "raycast"
+    "1password"
+    "1password-cli"
+    "karabiner-elements"
+    "rectangle"
+    "alt-tab"
+    "stats"
+    "monitorcontrol"
+    "cleanshot"
+    "angry-ip-scanner"
+    "openmtp"
+    "tailscale-app"
+    "geekbench"
+
+    # コミュニケーション
+    "slack"
+    "discord"
+    "gather"
+    "zoom"
+
+    # クラウドストレージ
+    "dropbox"
+    "google-drive"
+
+    # その他
+    "notion"
+    "obsidian"
+    "mactex"
+    "spotify"
+
+    "aionui"
+  ];
+
+  # Stripe CLI は nixpkgs の版が公式より古いため、Stripe 公式の tap から入れる。
+  # 完全名で書くと nix-darwin が trusted: true を付け、Homebrew の tap 信頼の確認を通る。
+  # Kapitsa (Apple シリコン向けのローカル推論サーバー) は nixpkgs にないため、Nace AI の tap から入れる。
+  homebrew.brews = [
+    "stripe/stripe-cli/stripe"
+    "nace-ai/tap/kapitsa"
+  ];
+
+  # Mac App Store アプリ
+  homebrew.masApps = {
+    "Amazon Kindle" = 302584613;
+    "LINE" = 539883307;
+    "Pages" = 361309726;
+  };
+
+  # Homebrew クリーンアップ戦略
+  # cmux 手動インストール運用中のため zap を一時停止（default の "none" にフォールバック）。
+  # cmux を casks に戻したら "zap" に復帰させる。
+  homebrew.onActivation.cleanup = "zap";
+}

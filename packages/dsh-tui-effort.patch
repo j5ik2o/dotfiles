@@ -1,0 +1,104 @@
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -956,6 +956,7 @@
+         }
+         // Local re-entrancy guard for `/compact`; a fresh session from `/clear` gets a fresh one.
+         let compacting = false;
++        let changingSelection = false;
+         const actions = {
+             send(text) {
+                 store.setNotice(undefined);
+@@ -1334,7 +1335,50 @@
+             closeModelPicker() {
+                 store.updateModelProfile({ view: 'list', picker: undefined, error: undefined });
+             },
++            async effort(value) {
++                if (changingSelection) {
++                    store.setNotice('モデル設定を変更中です。完了後にもう一度実行してください。');
++                    return;
++                }
++                changingSelection = true;
++                try {
++                    const llm = ctx.get('llm');
++                    if (llm === undefined)
++                        throw new Error('モデル情報を確認できません。');
++                    const current = selected.current;
++                    const info = await llm.resolveModelInfo(current.provider, current.model);
++                    const levels = info.reasoning?.efforts.map(effort => String(effort.id)) ?? [];
++                    const level = value.trim().toLowerCase();
++                    const available = [...levels, 'default'].join(', ');
++                    if (level === '') {
++                        store.setNotice(`推論強度: ${current.reasoningEffort ?? info.reasoning?.defaultEffort ?? 'default'}。使用可能: ${available}`);
++                        return;
++                    }
++                    if (level !== 'default' && !levels.includes(level))
++                        throw new Error(`「${level}」には対応していません。使用可能: ${available}`);
++                    const next = {
++                        provider: current.provider,
++                        model: current.model,
++                        ...(level === 'default' ? {} : { reasoningEffort: ReasoningEffortId(level) }),
++                    };
++                    await defaultModel.saveSelection(next);
++                    // installModelSelection の契約に従い、次の推論が読む選択ホルダーを更新する。
++                    selected.current = next;
++                    store.setNotice(`推論強度を ${level === 'default' ? `既定値（${info.reasoning?.defaultEffort ?? 'default'}）` : level} に変更しました。次の推論から反映されます。`);
++                }
++                catch (error) {
++                    store.setNotice(`推論強度を変更できませんでした: ${error instanceof Error ? error.message : String(error)}`);
++                }
++                finally {
++                    changingSelection = false;
++                }
++            },
+             setActiveModel(provider, model) {
++                if (changingSelection) {
++                    store.setNotice('モデル設定を変更中です。完了後にもう一度実行してください。');
++                    return;
++                }
++                changingSelection = true;
+                 void defaultModel
+                     .saveSelection({ provider, model })
+                     .then(() => {
+@@ -1345,7 +1389,8 @@
+                 })
+                     .catch((error) => {
+                     store.setNotice(`failed to set default model: ${error instanceof Error ? error.message : String(error)}`);
+-                });
++                })
++                    .finally(() => { changingSelection = false; });
+             },
+             openTrajectory() {
+                 store.openTrajectory();
+--- a/lib/tui/commands.js
++++ b/lib/tui/commands.js
+@@ -7,6 +7,7 @@
+ export const SLASH_COMMANDS = [
+     { command: '/help', description: 'Show help and available commands' },
+     { command: '/model', description: 'Manage LLM provider profiles' },
++    { command: '/effort', description: '推論強度を表示・変更: /effort <強度> | default' },
+     { command: '/trajectory', description: 'Browse the turn/step event ledger' },
+     { command: '/tools', description: 'Browse and expand tool cards' },
+     { command: '/context', description: 'Show context window usage' },
+@@ -120,6 +121,9 @@
+         case '/clear':
+             actions.clear();
+             return;
++        case '/effort':
++            actions.effort('');
++            return;
+         case '/model':
+             actions.openModelProfile();
+             return;
+--- a/lib/tui/CustomEditor.js
++++ b/lib/tui/CustomEditor.js
+@@ -104,6 +104,10 @@
+         }
+         // `/plan` takes a free-text argument (a message, or `off`), so it's
+         // parsed ahead of the whitespace-free command matching below.
++        if (/^\/effort(?:$|\s)/u.test(trimmed)) {
++            this.actions.effort(trimmed.slice('/effort'.length).trim());
++            return;
++        }
+         const planArgs = parsePlanCommand(trimmed);
+         if (planArgs !== undefined) {
+             this.actions.plan(planArgs);

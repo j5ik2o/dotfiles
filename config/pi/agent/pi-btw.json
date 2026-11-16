@@ -1,0 +1,5 @@
+{
+  "model": "dgx/deepseek-v4.1-flash",
+  "thinkingLevel": "low",
+  "rememberThinkingLevelChanges": true
+}

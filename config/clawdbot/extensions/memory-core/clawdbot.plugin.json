@@ -1,0 +1,15 @@
+{
+  "id": "memory-core",
+  "name": "Memory Core",
+  "description": "Register memory tools backed by the built-in memory index.",
+  "version": "0.1.0",
+  "kind": "memory",
+  "channels": [],
+  "providers": [],
+  "skills": [],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
