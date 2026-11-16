@@ -124,8 +124,13 @@ test("期限切れ以外の異常終了は従来どおり status で扱う", () 
   assert.equal(failOnDeadlineExpiry(result), result);
 });
 
+// 期限の期待値は、親プロセスの AISLOP_CHECK_RUN_TIMEOUT_MS に依存させない。
+// 親の環境で予算が変わっていると、既定値を確かめるテストが誤って落ちるため、
+// 既定値は空の環境の入力で計算し、予算を変えた場合も差だけを比べる。
+const defaultDeadlineMs = () => bootstrapDeadlineMs({});
+
 test("bootstrap の外側の期限は起動役の全体予算と猶予より後になる", () => {
-  const deadline = bootstrapDeadlineMs(aislopEnv);
+  const deadline = defaultDeadlineMs();
   assert.ok(
     deadline > RUN_TIMEOUT_MS + TREE_KILL_GRACE_MS,
     `${deadline} は ${RUN_TIMEOUT_MS} + ${TREE_KILL_GRACE_MS} より後`,
@@ -134,9 +139,8 @@ test("bootstrap の外側の期限は起動役の全体予算と猶予より後�
 
 test("AISLOP_CHECK_RUN_TIMEOUT_MS で予算を変えると外側の期限も追随する", () => {
   const budget = RUN_TIMEOUT_MS / 2;
-  const envWithBudget = { ...aislopEnv, AISLOP_CHECK_RUN_TIMEOUT_MS: String(budget) };
-  const deadline = bootstrapDeadlineMs(envWithBudget);
-  assert.equal(deadline, bootstrapDeadlineMs(aislopEnv) - budget);
+  const deadline = bootstrapDeadlineMs({ AISLOP_CHECK_RUN_TIMEOUT_MS: String(budget) });
+  assert.equal(deadline, defaultDeadlineMs() - (RUN_TIMEOUT_MS - budget));
   assert.ok(
     deadline > budget + TREE_KILL_GRACE_MS,
     `${deadline} は ${budget} + ${TREE_KILL_GRACE_MS} より後`,
