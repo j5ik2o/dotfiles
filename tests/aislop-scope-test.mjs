@@ -18,12 +18,12 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const readJson = (relativePath) => JSON.parse(readFileSync(join(repoRoot, relativePath), "utf8"));
 const readText = (relativePath) => readFileSync(join(repoRoot, relativePath), "utf8");
 
-// j5ik2o/ci aislop/bootstrap.mjs（aislop-check-v3）の SHA-256。AC1 の固定値。
+// j5ik2o/ci aislop/bootstrap.mjs（aislop-check-v5）の SHA-256。AC1 の固定値。
 const CANONICAL_BOOTSTRAP_SHA256 =
-  "04f58b167f7b94066f7afe294cd0289f160efa5a768818ef1aa343ab26ab54e5";
+  "58a6946d3eb48733e8e2536ef0c5b9a91545c5fac5dd5a87114cc982b49c4ae5";
 
 // j5ik2o/ci aislop/ の ref と2ファイルの SHA-256。AC2 の固定値。
-const CANONICAL_REF = "aislop-check-v3";
+const CANONICAL_REF = "aislop-check-v5";
 const CANONICAL_FILES = {
   "check-aislop.mjs": "c53e1b91dd45ead4bfdfd3dc4bbec794e2fd81b96857a90f7c5aaea414f8e30c",
   "check-aislop.test.mjs": "95dda876c46cea1ca3be454d82be31080ecf9ff1f387d0a06ea014e5bc1c9130",
