@@ -50,7 +50,15 @@ while (($# > 0)); do
 done
 
 case $mode in
-  git) subject=$(git log -1 --format=%s) ;;
+  git)
+    # タスクのコミットがまだ無く、検証できる件名が無いときだけ素通りする。
+    # 追跡ファイルの変更だけを見て、TAKT が置く未追跡ファイルで判定が揺れないようにする。
+    if [[ -n $(git status --porcelain --untracked-files=no) ]]; then
+      echo "未コミットの変更があるため、HEAD の件名の検査はスキップします" >&2
+      exit 0
+    fi
+    subject=$(git log -1 --format=%s)
+    ;;
   subject) subject=$value ;;
   message-file)
     [[ -f $value ]] || {
