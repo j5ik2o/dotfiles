@@ -197,6 +197,7 @@ check-update:
 # scripts/ 配下のシェルをテストする。ネットワークも $HOME も触らない。
 test-activation:
 	bash tests/install-muse-test.sh
+	bash tests/nix-check-node-test.sh
 
 test: test-activation
 	$(MAKE) check
