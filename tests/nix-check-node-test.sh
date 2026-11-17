@@ -33,8 +33,11 @@ bin="$root/bin"
 mkdir -p "$bin"
 
 # mise bin-paths の出力を MISE_TEST_BIN_PATHS で与える。stderr には WARN を出す。
+# 偽の mise は引数を MISE_TEST_ARGS に記録する。呼び出し側が `--cd config/mise node`
+# を渡しているかを確かめられるようにし、設定の取り違えをテストで検出する。
 cat >"$bin/mise" <<'EOF'
 #!/usr/bin/env bash
+printf '%s' "$*" >"${MISE_TEST_ARGS:?}"
 printf 'mise: WARN untrusted config\n' >&2
 printf '%s' "${MISE_TEST_BIN_PATHS:-}"
 EOF
@@ -71,11 +74,14 @@ path_status=0
     MISE_TEST_BIN_PATHS='/home/u/.local/share/mise/installs/node/24/bin
 
 /home/u/.local/share/mise/installs/node/24/libexec' \
+    MISE_TEST_ARGS="$case_dir/mise-args" \
     GITHUB_PATH="$github_path" \
     bash "$path_script"
 ) >"$case_dir/path-multi.log" 2>&1 || path_status=$?
 
 check "PATH 追加: 複数行は exit 0" test "$path_status" -eq 0
+check "PATH 追加: mise bin-paths に --cd config/mise node を渡す" \
+  test "$(cat "$case_dir/mise-args")" = "bin-paths --cd config/mise node"
 check "PATH 追加: 空行を飛ばして 2 行追記する" \
   test "$(wc -l <"$github_path" | tr -d ' ')" -eq 2
 check "PATH 追加: 1 行目を書く" \
@@ -97,6 +103,7 @@ path_status=0
   cd "$repo" || exit 1
   PATH="$bin:$PATH" \
     MISE_TEST_BIN_PATHS='' \
+    MISE_TEST_ARGS="$case_dir/mise-args" \
     GITHUB_PATH="$github_path" \
     bash "$path_script"
 ) >"$case_dir/path-empty.log" 2>&1 || path_status=$?
