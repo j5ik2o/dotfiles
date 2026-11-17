@@ -198,6 +198,7 @@ check-update:
 test-activation:
 	bash tests/install-muse-test.sh
 	bash tests/commit-subject-check-test.sh
+	bash tests/nix-check-node-test.sh
 
 test: test-activation
 	$(MAKE) check
