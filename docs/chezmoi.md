@@ -39,6 +39,14 @@ dotfiles/chezmoi/
 
 ホストを追加するときは `private_config.tmpl` を編集します。鍵を追加するときは 1Password に `SSH <ファイル名>` の項目を作り、秘密鍵と公開鍵のテンプレートを追加します。
 
+### 新しい端末から `minecraft-server` に接続する
+
+`minecraft-server` はホスト鍵を厳密に検証します。初めて接続する端末では、接続先のホスト鍵を事前に登録してください。
+
+1. サーバーの管理コンソールで `/etc/ssh/ssh_host_ed25519_key.pub` を確認します。
+2. 接続元の `~/.ssh/known_hosts` に `10.0.1.53 ssh-ed25519 <公開鍵の本体>` の形式で登録します。`10.0.1.53` に別の鍵が登録済みの場合は、鍵が変わった理由をサーバーの管理コンソールで確認してください。
+3. サーバー側の `j5ik2o` アカウントに LAN 用公開鍵が登録されていることを確認し、`ssh -o BatchMode=yes minecraft-server 'id -un; hostname'` で接続を試します。
+
 ## ~/.ssh の整理方針
 
 - 鍵ファイル名は `id_<種別>_<用途>` に統一する（例: `id_ed25519_dgx`, `id_rsa_github`）。
