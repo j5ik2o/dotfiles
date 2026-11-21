@@ -16,37 +16,99 @@ permissions:
   id-token: write
 
 jobs:
-  # 検証するのはこれから入る 1 件だけで、過去のコミットは対象にしない。
-  commit-subject:
+  pr-test-merge:
+    # 本文だけの編集では、検証対象のコード・タイトル・ベースが変わらない。
     if: >-
       ${{ github.event_name == 'pull_request' &&
       !(github.event.action == 'edited' && github.event.changes.body &&
       !github.event.changes.title && !github.event.changes.base) }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Resolve and verify the PR test merge
+        id: resolve
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { number, base, head } = context.payload.pull_request ?? {};
+            const isSha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
+            if (!Number.isSafeInteger(number) || number < 1 || !isSha(base?.sha) || !isSha(head?.sha)) {
+              return core.setFailed('Missing PR number, base SHA or head SHA');
+            }
+            core.info(`Expected event parents: ${base.sha} ${head.sha}`);
+
+            // A base edit can launch this run before GitHub refreshes refs/pull/N/merge.
+            for (let attempt = 1; attempt <= 6; attempt++) {
+              try {
+                const { data: ref } = await github.rest.git.getRef({
+                  ...context.repo,
+                  ref: `pull/${number}/merge`,
+                });
+                if (ref.object?.type === 'commit' && isSha(ref.object.sha)) {
+                  const { data: merge } = await github.rest.git.getCommit({
+                    ...context.repo,
+                    commit_sha: ref.object.sha,
+                  });
+                  const parents = merge.parents?.map((parent) => parent.sha) ?? [];
+                  core.info(`Merge candidate: ${merge.sha} (${parents.join(' ')})`);
+                  if (merge.sha === ref.object.sha && parents.length === 2 &&
+                      parents[0] === base.sha && parents[1] === head.sha) {
+                    return core.setOutput('sha', merge.sha);
+                  }
+                }
+              } catch (error) {
+                if (![404, 409, 422].includes(error.status)) throw error;
+                core.info(`Merge ref unavailable (HTTP ${error.status})`);
+              }
+              if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 5000));
+            }
+            core.setFailed('No test merge matched the event base and head SHAs');
+
+  # 検証するのはこれから入る 1 件だけで、過去のコミットは対象にしない。
+  commit-subject:
+    needs: pr-test-merge
+    if: ${{ needs.pr-test-merge.outputs.sha != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       # 1 コミットの PR ではコミットの主題が入るので、その履歴も要る。
-      - name: Checkout the pull request head
+      - name: Checkout the verified test merge
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ needs.pr-test-merge.outputs.sha }}
           fetch-depth: 0
+
+      - name: Show checkout SHA and parents
+        run: git show --no-patch --format='%H %P' HEAD
 
       - name: Check the PR title and the single commit subject
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BASE_REF: ${{ github.base_ref == 'main' && github.event.pull_request.base.sha || 'origin/main' }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: make commit-subject-check-pr
 
   flake-check:
-    # 本文だけの編集では、検証対象のコード・タイトル・ベースが変わらない。
+    needs: pr-test-merge
     if: >-
-      ${{ !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) }}
+      ${{ !cancelled() && (github.event_name == 'push' ||
+      (needs.pr-test-merge.result == 'success' && needs.pr-test-merge.outputs.sha != '')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.pr-test-merge.outputs.sha || github.sha }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
+
+      - name: Show checkout SHA and parents
+        if: github.event_name == 'pull_request'
+        run: git show --no-patch --format='%H %P' HEAD
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -107,26 +169,28 @@ jobs:
       ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' &&
       !(github.event.action == 'edited' && github.event.changes.body &&
       !github.event.changes.title && !github.event.changes.base) }}
-    needs: [commit-subject, flake-check]
+    needs: [pr-test-merge, commit-subject, flake-check]
     permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require both jobs to succeed
+      - name: Require the test merge and both checks to succeed
         if: ${{ always() }}
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GATE_STATUS: ${{ job.status }}
+          PR_TEST_MERGE_RESULT: ${{ needs.pr-test-merge.result }}
           COMMIT_SUBJECT_RESULT: ${{ needs.commit-subject.result }}
           FLAKE_CHECK_RESULT: ${{ needs.flake-check.result }}
         with:
           script: |
             const results = {
               gate: process.env.GATE_STATUS ?? 'missing',
+              'pr-test-merge': process.env.PR_TEST_MERGE_RESULT ?? 'missing',
               'commit-subject': process.env.COMMIT_SUBJECT_RESULT ?? 'missing',
               'flake-check': process.env.FLAKE_CHECK_RESULT ?? 'missing',
             };
             core.info(JSON.stringify(results));
             if (Object.values(results).some((result) => result !== 'success')) {
-              core.setFailed('Both required jobs and the gate must succeed');
+              core.setFailed('The test merge, both required checks, and the gate must succeed');
             }
