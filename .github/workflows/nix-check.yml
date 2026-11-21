@@ -2,6 +2,8 @@ name: nix-check
 
 on:
   pull_request:
+    # PR タイトルとベースの変更でも検証し直す。
+    types: [opened, synchronize, reopened, edited]
   push:
     branches:
       - main
@@ -82,3 +84,18 @@ jobs:
 
       - name: Run aislop check
         run: npm run check:aislop
+
+  required-pr-ci:
+    name: Required PR CI
+    # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
+    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
+    needs: [commit-subject, flake-check]
+    permissions: {}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require both jobs to succeed in a run that has not been cancelled
+        if: ${{ always() }}
+        env:
+          REQUIRED_JOBS_PASSED: ${{ !cancelled() && needs.commit-subject.result == 'success' && needs.flake-check.result == 'success' }}
+        run: test "$REQUIRED_JOBS_PASSED" = true
