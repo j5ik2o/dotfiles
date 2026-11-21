@@ -38,6 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Fixture failure before the Nix build
+        run: exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 
