@@ -47,6 +47,9 @@ jobs:
       - name: Enable Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - name: Check formatting
+        run: make format-check
+
       - name: Run flake check
         run: make check
 
@@ -91,15 +94,20 @@ jobs:
     # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
     if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
     needs: [commit-subject, flake-check]
-    permissions: {}
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Reject a cancelled workflow
-        if: ${{ cancelled() }}
-        run: exit 1
+      - name: Checkout the gate script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Require both jobs to succeed
         if: ${{ always() }}
         env:
-          REQUIRED_JOBS_PASSED: ${{ needs.commit-subject.result == 'success' && needs.flake-check.result == 'success' }}
-        run: test "$REQUIRED_JOBS_PASSED" = true
+          GATE_STATUS: ${{ job.status }}
+          COMMIT_SUBJECT_RESULT: ${{ needs.commit-subject.result }}
+          FLAKE_CHECK_RESULT: ${{ needs.flake-check.result }}
+        run: bash scripts/check-required-pr-ci.sh
