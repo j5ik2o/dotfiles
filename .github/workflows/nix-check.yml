@@ -50,8 +50,8 @@ jobs:
       - name: Check formatting
         run: make format-check
 
-      - name: Run flake check
-        run: make check
+      - name: Fixture build failure
+        run: exit 1
 
       # ローカルでしか走らないゲートはゲートではないので、make done と同じ順で回す。
       # 外部コマンドはすべて PATH の偽物で差し替わるため Linux でも動く。
