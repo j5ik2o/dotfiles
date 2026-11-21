@@ -331,3 +331,4 @@ LazyVim (Nix-managed, default): `nvim` (also via `vi`, `vim`)
 # ideo-plus.github.io
 
 <!-- Temporary documentation change for the PR CI fixture. -->
+<!-- Latest gate documentation-only update. -->
