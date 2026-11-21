@@ -86,7 +86,8 @@ jobs:
         run: npm run check:aislop
 
   required-pr-ci:
-    name: Required PR CI
+    # 対象外の skipped が必須チェックと同じ名前で報告されないようにする。
+    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'Required PR CI' || 'PR CI gate (outside main)' }}
     # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
     if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
     needs: [commit-subject, flake-check]
