@@ -20,8 +20,8 @@ jobs:
   commit-subject:
     if: >-
       ${{ github.event_name == 'pull_request' &&
-          !(github.event.action == 'edited' && github.event.changes.body &&
-            !github.event.changes.title && !github.event.changes.base) }}
+      !(github.event.action == 'edited' && github.event.changes.body &&
+      !github.event.changes.title && !github.event.changes.base) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -41,7 +41,7 @@ jobs:
     # 本文だけの編集では、検証対象のコード・タイトル・ベースが変わらない。
     if: >-
       ${{ !(github.event.action == 'edited' && github.event.changes.body &&
-            !github.event.changes.title && !github.event.changes.base) }}
+      !github.event.changes.title && !github.event.changes.base) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -99,29 +99,34 @@ jobs:
     # 対象外の skipped が必須チェックと同じ名前で報告されないようにする。
     name: >-
       ${{ github.event_name == 'pull_request' && github.base_ref == 'main' &&
-          !(github.event.action == 'edited' && github.event.changes.body &&
-            !github.event.changes.title && !github.event.changes.base) &&
-          'Required PR CI' || 'PR CI gate (outside scope)' }}
+      !(github.event.action == 'edited' && github.event.changes.body &&
+      !github.event.changes.title && !github.event.changes.base) &&
+      'Required PR CI' || 'PR CI gate (outside scope)' }}
     # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
     if: >-
       ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' &&
-          !(github.event.action == 'edited' && github.event.changes.body &&
-            !github.event.changes.title && !github.event.changes.base) }}
+      !(github.event.action == 'edited' && github.event.changes.body &&
+      !github.event.changes.title && !github.event.changes.base) }}
     needs: [commit-subject, flake-check]
-    permissions:
-      contents: read
+    permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout the gate script
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
       - name: Require both jobs to succeed
         if: ${{ always() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GATE_STATUS: ${{ job.status }}
           COMMIT_SUBJECT_RESULT: ${{ needs.commit-subject.result }}
           FLAKE_CHECK_RESULT: ${{ needs.flake-check.result }}
-        run: bash scripts/check-required-pr-ci.sh
+        with:
+          script: |
+            const results = {
+              gate: process.env.GATE_STATUS ?? 'missing',
+              'commit-subject': process.env.COMMIT_SUBJECT_RESULT ?? 'missing',
+              'flake-check': process.env.FLAKE_CHECK_RESULT ?? 'missing',
+            };
+            core.info(JSON.stringify(results));
+            if (Object.values(results).some((result) => result !== 'success')) {
+              core.setFailed('Both required jobs and the gate must succeed');
+            }
