@@ -32,6 +32,13 @@ Host reg9phak.github.com
   IdentityFile ~/.ssh/id_ed25519_reg9phak
 
 # --- 自宅 LAN / 検証機 ---
+Host minecraft-server
+  HostName 10.0.1.53
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+  StrictHostKeyChecking yes
+
 Host softether-vpn
   HostName 10.0.1.54
   User j5ik2o
