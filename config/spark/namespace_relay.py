@@ -156,9 +156,12 @@ def rewrite_request(body: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tup
                 namespace = item.pop("namespace")
                 if isinstance(namespace, str) and namespace and isinstance(item.get("name"), str):
                     item["name"] = flat_name(namespace, item["name"])
-            elif isinstance(item, dict) and item.get("type") == "function_call_output":
-                if "namespace" in item:
-                    item = {k: v for k, v in item.items() if k != "namespace"}
+            elif (
+                isinstance(item, dict)
+                and item.get("type") == "function_call_output"
+                and "namespace" in item
+            ):
+                item = {k: v for k, v in item.items() if k != "namespace"}
             out_items.append(item)
         new["input"] = out_items
 
