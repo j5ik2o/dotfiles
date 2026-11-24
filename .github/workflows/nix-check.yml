@@ -2,7 +2,7 @@ name: nix-check
 
 on:
   pull_request:
-    # PR タイトルとベースの変更でも検証し直す。
+    # 本文だけの編集でも、最新の実行に必須チェックを発行する。
     types: [opened, synchronize, reopened, edited]
   push:
     branches:
@@ -17,17 +17,14 @@ permissions:
 
 jobs:
   pr-test-merge:
-    # 本文だけの編集では、検証対象のコード・タイトル・ベースが変わらない。
-    if: >-
-      ${{ github.event_name == 'pull_request' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) }}
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
+      base-sha: ${{ steps.resolve.outputs.base-sha }}
     steps:
       - name: Resolve and verify the PR test merge
         id: resolve
@@ -36,13 +33,22 @@ jobs:
           script: |
             const { number, base, head } = context.payload.pull_request ?? {};
             const isSha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
-            if (!Number.isSafeInteger(number) || number < 1 || !isSha(base?.sha) || !isSha(head?.sha)) {
-              return core.setFailed('Missing PR number, base SHA or head SHA');
+            if (!Number.isSafeInteger(number) || number < 1 || !base?.ref || !isSha(head?.sha)) {
+              return core.setFailed('Missing PR number, base ref or head SHA');
             }
-            core.info(`Expected event parents: ${base.sha} ${head.sha}`);
+            core.info(`Event PR parents: ${base.ref}@${base.sha} ${head.sha}`);
 
-            // A base edit can launch this run before GitHub refreshes refs/pull/N/merge.
+            const readPull = async () => (await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: number,
+            })).data;
+            const matchesEvent = (pull) => pull.base?.ref === base.ref && pull.head?.sha === head.sha;
+
+            // Reading the PR requests a refresh of the test merge when its refs have changed.
             for (let attempt = 1; attempt <= 6; attempt++) {
+              if (!matchesEvent(await readPull())) {
+                return core.setFailed('PR head or base ref changed since this event');
+              }
               try {
                 const { data: ref } = await github.rest.git.getRef({
                   ...context.repo,
@@ -56,8 +62,22 @@ jobs:
                   const parents = merge.parents?.map((parent) => parent.sha) ?? [];
                   core.info(`Merge candidate: ${merge.sha} (${parents.join(' ')})`);
                   if (merge.sha === ref.object.sha && parents.length === 2 &&
-                      parents[0] === base.sha && parents[1] === head.sha) {
-                    return core.setOutput('sha', merge.sha);
+                      parents[1] === head.sha) {
+                    const pull = await readPull();
+                    if (!matchesEvent(pull)) {
+                      return core.setFailed('PR head or base ref changed since this event');
+                    }
+                    // The event and PR response can both carry an older base SHA.
+                    const { data: tip } = await github.rest.git.getRef({
+                      ...context.repo,
+                      ref: `heads/${pull.base.ref}`,
+                    });
+                    const baseSha = tip.object?.sha;
+                    core.info(`Current PR parents: ${pull.base.ref}@${baseSha} ${pull.head.sha}`);
+                    if (tip.object?.type === 'commit' && isSha(baseSha) && parents[0] === baseSha) {
+                      core.setOutput('base-sha', baseSha);
+                      return core.setOutput('sha', merge.sha);
+                    }
                   }
                 }
               } catch (error) {
@@ -66,7 +86,7 @@ jobs:
               }
               if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 5000));
             }
-            core.setFailed('No test merge matched the event base and head SHAs');
+            core.setFailed('No test merge matched the current base and head SHAs');
 
   # 検証するのはこれから入る 1 件だけで、過去のコミットは対象にしない。
   commit-subject:
@@ -88,7 +108,7 @@ jobs:
       - name: Check the PR title and the single commit subject
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BASE_REF: ${{ github.base_ref == 'main' && github.event.pull_request.base.sha || 'origin/main' }}
+          PR_BASE_REF: ${{ github.base_ref == 'main' && needs.pr-test-merge.outputs.base-sha || 'origin/main' }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.sha }}
         run: make commit-subject-check-pr
 
@@ -154,6 +174,9 @@ jobs:
       - name: Show node version
         run: bash scripts/nix-check-assert-node-version.sh
 
+      - name: Test the PR test merge resolver
+        run: node --test tests/nix-check-pr-test-merge-test.mjs
+
       - name: Run aislop check
         run: npm run check:aislop
 
@@ -161,14 +184,9 @@ jobs:
     # 対象外の skipped が必須チェックと同じ名前で報告されないようにする。
     name: >-
       ${{ github.event_name == 'pull_request' && github.base_ref == 'main' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) &&
       'Required PR CI' || 'PR CI gate (outside scope)' }}
     # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
-    if: >-
-      ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) }}
+    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
     needs: [pr-test-merge, commit-subject, flake-check]
     permissions: {}
     runs-on: ubuntu-latest
