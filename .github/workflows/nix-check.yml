@@ -2,7 +2,7 @@ name: nix-check
 
 on:
   pull_request:
-    # PR タイトルとベースの変更でも検証し直す。
+    # 本文だけの編集でも、最新の実行に必須チェックを発行する。
     types: [opened, synchronize, reopened, edited]
   push:
     branches:
@@ -17,11 +17,7 @@ permissions:
 
 jobs:
   pr-test-merge:
-    # 本文だけの編集では、検証対象のコード・タイトル・ベースが変わらない。
-    if: >-
-      ${{ github.event_name == 'pull_request' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) }}
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -161,14 +157,9 @@ jobs:
     # 対象外の skipped が必須チェックと同じ名前で報告されないようにする。
     name: >-
       ${{ github.event_name == 'pull_request' && github.base_ref == 'main' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) &&
       'Required PR CI' || 'PR CI gate (outside scope)' }}
     # 依存ジョブが失敗・キャンセル・スキップしてもゲートを評価する。
-    if: >-
-      ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' &&
-      !(github.event.action == 'edited' && github.event.changes.body &&
-      !github.event.changes.title && !github.event.changes.base) }}
+    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
     needs: [pr-test-merge, commit-subject, flake-check]
     permissions: {}
     runs-on: ubuntu-latest
