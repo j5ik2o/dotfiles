@@ -243,12 +243,13 @@ commit-subject-check:
 commit-subject-check-pr:
 	@test -n "$${PR_TITLE:-}" || { echo "エラー: PR_TITLE が未設定です" >&2; exit 2; }
 	@bash scripts/check-commit-subject.sh --subject "$$PR_TITLE"
-	@count=$$(git rev-list --count origin/main..HEAD) || { \
-	  echo "エラー: origin/main からのコミット数を数えられません" >&2; exit 2; \
+	@base=$${PR_BASE_REF:-origin/main}; head=$${PR_HEAD_REF:-HEAD}; \
+	count=$$(git rev-list --count "$$base..$$head") || { \
+	  echo "エラー: $$base から $$head までのコミット数を数えられません" >&2; exit 2; \
 	}; \
 	if [ "$$count" = 1 ]; then \
 	  echo "1 コミットの PR なので、そのコミットの主題も検証します"; \
-	  bash scripts/check-commit-subject.sh --subject "$$(git log -1 --format=%s)"; \
+	  bash scripts/check-commit-subject.sh --subject "$$(git log -1 --format=%s "$$head")"; \
 	fi
 
 # core.hooksPath はディレクトリごと差し替えるので、.git/hooks は使われなくなる。
