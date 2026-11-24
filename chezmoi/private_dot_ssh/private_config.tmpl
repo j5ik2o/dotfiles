@@ -95,8 +95,15 @@ Host studio j5ik2o-mac-studio
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519_lan
 
-Host mini j5ik2o-mac-mini
+# mini は自宅 LAN の Wi-Fi 側 IP（有線 10.0.1.42 は未使用）。LAN 外からは Tailscale 名の j5ik2o-mac-mini を使う
+Host mini
   HostName 10.0.1.43
+  User j5ik2o
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/id_ed25519_lan
+
+Host j5ik2o-mac-mini
+  HostName j5ik2o-mac-mini
   User j5ik2o
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519_lan
