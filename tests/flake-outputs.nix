@@ -1,4 +1,4 @@
-{ lib, flake }:
+{ lib,      flake }:
 
 lib.runTests {
   testDevelopmentShellPlatforms = {
