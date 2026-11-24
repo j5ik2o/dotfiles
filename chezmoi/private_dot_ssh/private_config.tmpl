@@ -102,8 +102,11 @@ Host studio j5ik2o-mac-studio
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519_lan
 
+# mini は自宅 LAN の名前（IP はルーターの静的リースが決める）。LAN 外からは Tailscale 名の j5ik2o-mac-mini を使う
+Host mini
+  HostName j5ik2o-mac-mini.lan
+
 Host mini j5ik2o-mac-mini
-  HostName j5ik2o-mac-mini
   User j5ik2o
   IdentitiesOnly yes
   IdentityFile ~/.ssh/id_ed25519_lan
