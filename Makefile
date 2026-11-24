@@ -199,6 +199,7 @@ test-activation:
 	bash tests/install-muse-test.sh
 	bash tests/commit-subject-check-test.sh
 	bash tests/nix-check-node-test.sh
+	bash tests/publish-update-pr-test.sh
 
 test: test-activation
 	$(MAKE) check

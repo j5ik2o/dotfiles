@@ -91,20 +91,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           BASE: ${{ github.event.repository.default_branch }}
-          BRANCH: automation/mise-upgrade
-          TITLE: "chore(mise): bump tool versions"
         run: |
-          # 開いた PR の中身が同じなら push しない（同じ更新で CI を何度も起動しない）。
-          if git rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null &&
-            git diff --quiet "origin/${BRANCH}" HEAD; then
-            echo "origin/${BRANCH} already has this update"
-          else
-            git push --force origin "HEAD:refs/heads/${BRANCH}"
-          fi
-          pr="$(gh pr list --head "${BRANCH}" --base "${BASE}" --state open --json url --jq '.[0].url // empty')"
-          if [ -n "${pr}" ]; then
-            echo "updated ${pr}"
-          else
-            gh pr create --base "${BASE}" --head "${BRANCH}" --title "${TITLE}" \
-              --body "Opened by the ${GITHUB_WORKFLOW} workflow (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). Merge after the required checks pass."
-          fi
+          ./scripts/publish-update-pr.sh automation/mise-upgrade "${BASE}" "chore(mise): bump tool versions"
