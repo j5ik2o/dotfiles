@@ -59,10 +59,12 @@ update_tool() {
 }
 
 # --- claude: CHANGELOG.md の先頭バージョン ---
-claude_version="$(
-  gh api repos/anthropics/claude-code/contents/CHANGELOG.md \
-    --jq '.content' | base64 -d | sed -nE 's/^## ([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' | head -1
+# contents API の JSON は 1MB を超えるファイルの中身を返さないので、raw で取る。
+# 全文を変数に受けてから読む (途中で読み手が閉じると pipefail で落ちるため)。
+changelog="$(
+  gh api -H 'Accept: application/vnd.github.raw' repos/anthropics/claude-code/contents/CHANGELOG.md
 )"
+claude_version="$(awk '/^## [0-9]+\.[0-9]+\.[0-9]+$/ { print $2; exit }' <<<"${changelog}")"
 
 if [[ -z "${claude_version}" ]]; then
   echo "error: failed to resolve claude version from CHANGELOG.md" >&2
