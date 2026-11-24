@@ -20,6 +20,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # 手動起動でも、更新は既定の枝の上に作る。
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: true
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -82,10 +84,12 @@ jobs:
           git add -A
           git commit -m "chore(mise): bump tool versions"
 
-      - name: Push changes
+      # main は必須チェックで守られていて直接 push できないので、枝に載せて PR にする。
+      # PAT で作るのは、GITHUB_TOKEN で作った PR では pull_request の CI が起動しないため。
+      - name: Open or update the pull request
         if: steps.changes.outputs.changed == 'true'
         env:
-          PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          BASE: ${{ github.event.repository.default_branch }}
         run: |
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
-          git push origin HEAD:${GITHUB_REF_NAME}
+          ./scripts/publish-update-pr.sh automation/mise-upgrade "${BASE}" "chore(mise): bump tool versions"
