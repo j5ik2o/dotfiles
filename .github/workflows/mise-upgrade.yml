@@ -20,6 +20,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # 手動起動でも、更新は既定の枝の上に作る。
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: true
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -82,10 +84,27 @@ jobs:
           git add -A
           git commit -m "chore(mise): bump tool versions"
 
-      - name: Push changes
+      # main は必須チェックで守られていて直接 push できないので、枝に載せて PR にする。
+      # PAT で作るのは、GITHUB_TOKEN で作った PR では pull_request の CI が起動しないため。
+      - name: Open or update the pull request
         if: steps.changes.outputs.changed == 'true'
         env:
-          PAT: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          BASE: ${{ github.event.repository.default_branch }}
+          BRANCH: automation/mise-upgrade
+          TITLE: "chore(mise): bump tool versions"
         run: |
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}.git
-          git push origin HEAD:${GITHUB_REF_NAME}
+          # 開いた PR の中身が同じなら push しない（同じ更新で CI を何度も起動しない）。
+          if git rev-parse --verify --quiet "origin/${BRANCH}" >/dev/null &&
+            git diff --quiet "origin/${BRANCH}" HEAD; then
+            echo "origin/${BRANCH} already has this update"
+          else
+            git push --force origin "HEAD:refs/heads/${BRANCH}"
+          fi
+          pr="$(gh pr list --head "${BRANCH}" --base "${BASE}" --state open --json url --jq '.[0].url // empty')"
+          if [ -n "${pr}" ]; then
+            echo "updated ${pr}"
+          else
+            gh pr create --base "${BASE}" --head "${BRANCH}" --title "${TITLE}" \
+              --body "Opened by the ${GITHUB_WORKFLOW} workflow (run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). Merge after the required checks pass."
+          fi
