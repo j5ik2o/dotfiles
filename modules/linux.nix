@@ -29,6 +29,12 @@ in
   # ============================================================
   fonts.fontconfig.enable = true;
 
+  # Home Manager は conf.d の生成ファイルを force = true（mkDefault）で置く。
+  # 衝突したファイルは backupFileExtension で退避されるので、force で上書きしない。
+  xdg.configFile = lib.mapAttrs' (
+    _: file: lib.nameValuePair "fontconfig/conf.d/${file.target}" { force = false; }
+  ) config.fonts.fontconfig.configFile;
+
   # ============================================================
   # Linux 固有パッケージ
   # ============================================================
