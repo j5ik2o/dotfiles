@@ -200,6 +200,7 @@ test-activation:
 	bash tests/commit-subject-check-test.sh
 	bash tests/nix-check-node-test.sh
 	bash tests/publish-update-pr-test.sh
+	bash tests/sync-upstream-versions-test.sh
 
 test: test-activation
 	$(MAKE) check
