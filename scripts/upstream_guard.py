@@ -9,6 +9,7 @@ PreToolUse から呼ばれる入口で、Orca が起動したセッション（O
 
 from __future__ import annotations
 
+import contextlib
 import itertools
 import json
 import os
@@ -52,6 +53,16 @@ class RepoInfo:
 class Verdict:
     allowed: bool
     reason: str = ""
+    # 通すが、宛先を判定できなかったことを知らせる 1 行（allow と warn を分ける）
+    warning: str = ""
+    # 拒否のうち、宛先を決められなかったもの（「何の、なぜ」）。禁止の宛先の語が見当たらなければ warn にする
+    unresolved: str = ""
+
+    @property
+    def kind(self) -> str:
+        if not self.allowed:
+            return "deny"
+        return "warn" if self.warning else "allow"
 
 
 ALLOW = Verdict(True)
@@ -617,15 +628,18 @@ def decide(
     呼び出し側が読んで渡す。読めなければ None。
     """
     blocked = normalize_blocked(blocked)
-    ctx = Ctx(cwd=cwd, env=dict(env), vars={}, blocked=blocked, repos=repos)
-    ctx.files = files or {}
+    seen_repos, seen_files = _Seen(repos), _Seen(files or {})
+    ctx = Ctx(cwd=cwd, env=dict(env), vars={}, blocked=blocked, repos=seen_repos)
+    ctx.files = seen_files
     ctx.script_text = command
     try:
-        return _decide_script(command, ctx)
+        verdict = _decide_script(command, ctx)
     except ParseError as e:
-        return _unparsed(command, ctx, f"コマンドを解析できない（{e}）")
+        verdict = _unparsed(command, ctx, f"コマンドを解析できない（{e}）")
     except RecursionError:
-        return _unparsed(command, ctx, "入れ子が深すぎる")
+        verdict = _unparsed(command, ctx, "入れ子が深すぎる")
+    ctx.cwd = cwd
+    return settle(verdict, _evidence(ctx, command, seen_repos, seen_files), blocked)
 
 
 def _deny(op: str, repo: str, entry: str) -> Verdict:
@@ -638,9 +652,80 @@ def _deny(op: str, repo: str, entry: str) -> Verdict:
 def _deny_unresolved(op: str, why: str) -> Verdict:
     return Verdict(
         False,
-        f"upstream-guard: {op}を実行前に止めました。{why}ため、宛先が禁止の宛先でないと確かめられません。\n"
+        f"upstream-guard: {op}を実行前に止めました。{why}ため宛先を判定できず、"
+        "コマンドか作業ディレクトリの remote か環境変数に禁止の宛先の語があります。\n"
         f"宛先を明示して（-R owner/repo や remote 名など）実行し直してください。{ADVICE}",
+        unresolved=f"{op}の宛先を判定できませんでした（{why}）",
     )
+
+
+def blocked_terms(blocked: tuple[str, ...]) -> set[str]:
+    """「語が出てくるか」を見る語。owner/repo は、全体と owner と repo のどれでも当てる（見逃しを減らす）。"""
+    terms: set[str] = set()
+    for entry in blocked:
+        terms.add(entry.lower())
+        terms.update(part.lower() for part in entry.split("/") if part)
+    return terms
+
+
+def mentions_blocked(text: str, blocked: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(term in lowered for term in blocked_terms(blocked))
+
+
+def settle(verdict: Verdict, evidence: str, blocked: tuple[str, ...]) -> Verdict:
+    """宛先を決められなかった拒否を、禁止の宛先の語がどこにも無ければ警告つきの許可にする。"""
+    if verdict.allowed or not verdict.unresolved or mentions_blocked(evidence, blocked):
+        return verdict
+    return Verdict(
+        True,
+        warning=f"upstream-guard（警告）: {verdict.unresolved}。禁止の宛先の語が見当たらないので、止めずに通します。",
+        unresolved=verdict.unresolved,
+    )
+
+
+class _Seen(Mapping):
+    """判定の中で引いた値を覚える表（警告にするかを決める手掛かりに使う）。"""
+
+    def __init__(self, inner: Mapping) -> None:
+        self.inner = inner
+        self.seen: dict = {}
+
+    def get(self, key, default=None):
+        value = self.inner.get(key, default)
+        self.seen[key] = value
+        return value
+
+    def __getitem__(self, key):
+        value = self.inner[key]
+        self.seen[key] = value
+        return value
+
+    def __iter__(self):
+        return iter(self.inner)
+
+    def __len__(self) -> int:
+        return len(self.inner)
+
+
+def _evidence(ctx: Ctx, command: str, repos: _Seen, files: _Seen) -> str:
+    """禁止の宛先の語を探す範囲: コマンドの全文、値の決まらない変数の代入の元、引いた作業ディレクトリと
+    作業ディレクトリの remote（fetch と push の URL は insteadOf を通した後の形）、GH_ と GIT_ の環境変数、
+    読んだファイル。"""
+    parts = [command, *ctx.opaque.values()]
+    if ctx.cwd is not None:
+        repos.get(ctx.cwd)
+    for info in repos.seen.values():
+        if info is None:
+            continue
+        for remote in info.remotes.values():
+            parts += [*remote.fetch_urls, *remote.push_urls, remote.gh_resolved or ""]
+        parts += list(info.git_aliases.values())
+        parts.append(info.default_push_remote or "")
+    for scope in (ctx.env, ctx.vars):
+        parts += [v for k, v in scope.items() if k.startswith(("GH_", "GIT_"))]
+    parts += [v for v in files.seen.values() if v]
+    return "\n".join(parts)
 
 
 def _opaque(text: str, ctx: Ctx, why: str) -> Verdict:
@@ -703,6 +788,7 @@ def _decide_script(script: str, ctx: Ctx) -> Verdict:
     cur_words: list[Word] = []
     cur_redirects: list[Redirect] = []
     piped = False
+    pending: Verdict | None = None  # 宛先を決められなかった最初の拒否
     for tok in tokens + [Op("\n")]:
         if isinstance(tok, Word):
             cur_words.append(tok)
@@ -721,7 +807,9 @@ def _decide_script(script: str, ctx: Ctx) -> Verdict:
             cmd.in_pipeline = len(pipeline) > 1
             cmd.background = tok.value == "&"
             v = _decide_cmd(cmd, ctx)
-            if not v.allowed:
+            if not v.allowed and v.unresolved:
+                pending = pending or v
+            elif not v.allowed:
                 return v
         pipeline, piped = [], False
         if tok.value == "(":
@@ -730,7 +818,7 @@ def _decide_script(script: str, ctx: Ctx) -> Verdict:
         elif tok.value == ")" and cwd_stack:
             ctx.cwd = cwd_stack.pop()
             ctx.vars = vars_stack.pop()
-    return ALLOW
+    return pending or ALLOW
 
 
 def _expand(
@@ -2128,11 +2216,68 @@ def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
     try:
         return decide(command, cwd, environ, blocked, LazyRepos(), LazyFiles())
     except Exception:  # noqa: BLE001  判定の失敗でマージと push を通さない
-        return _fallback(command)
+        return settle(_fallback(command), command, blocked)
+
+
+def _log_verdict(
+    verdict: Verdict, command: str, cwd: str | None, environ: Mapping[str, str]
+) -> None:
+    """警告と拒否を 1 行 1 件で追記する。コマンドの全文は残さない（本文に秘密が入りうる）。"""
+    import time
+
+    if verdict.kind == "allow":
+        return
+    state = environ.get("UPSTREAM_GUARD_STATE") or os.path.join(
+        environ.get("HOME", os.path.expanduser("~")),
+        ".local",
+        "state",
+        "upstream-guard",
+    )
+    words = command.split()
+    looks = (
+        "merge"
+        if re.search(r"merge|マージ", verdict.unresolved or verdict.reason)
+        else "push"
+    )
+    if not re.search(
+        r"merge|マージ|push|ref|書き込み|GraphQL", verdict.unresolved or verdict.reason
+    ):
+        looks = "other"
+    record = {
+        "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "session": environ.get("ORCA_AGENT_SESSION_ID", ""),
+        "cwd": cwd or "",
+        "verdict": verdict.kind,
+        "reason": (verdict.unresolved or verdict.reason.splitlines()[0])[:300],
+        "head": words[0][:60] if words else "",
+        "length": len(command),
+        "looks_like": looks,
+    }
+    name = "warnings.log" if verdict.kind == "warn" else "denials.log"
+    with contextlib.suppress(OSError):
+        os.makedirs(state, exist_ok=True)
+        with open(os.path.join(state, name), "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _warning_output(text: str) -> str:
+    return json.dumps(
+        {
+            "systemMessage": text,
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "additionalContext": text,
+            },
+        },
+        ensure_ascii=False,
+    )
 
 
 def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
-    """PreToolUse の入口。(終了コード, stderr) を返す。2 で拒否。"""
+    """PreToolUse の入口。(終了コード, 出力) を返す。
+
+    0 で許可（警告のときは出力が stdout へ出す JSON）、2 で拒否（出力は stderr へ出す理由）。
+    """
     if not environ.get("ORCA_AGENT_SESSION_ID"):
         return 0, ""  # オーナーの対話のセッションでは何もしない
     try:
@@ -2144,7 +2289,11 @@ def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     if not isinstance(command, str):
         return 0, ""
-    verdict = check(command, payload.get("cwd") or None, environ)
+    cwd = payload.get("cwd") or None
+    verdict = check(command, cwd, environ)
+    _log_verdict(verdict, command, cwd, environ)
+    if verdict.kind == "warn":
+        return 0, _warning_output(verdict.warning)
     if verdict.allowed:
         return 0, ""
     return 2, verdict.reason
@@ -2367,7 +2516,7 @@ def main(argv: list[str]) -> int:
     if len(argv) >= 2 and argv[1] == "hook":
         code, message = hook_main(sys.stdin.read(), os.environ)
         if message:
-            print(message, file=sys.stderr)
+            print(message, file=sys.stderr if code == 2 else sys.stdout)
         return code
     if len(argv) >= 3 and argv[1] == "check":
         # 判定だけを返す入口。コマンドは実行せず、読むのは作業ディレクトリの git の設定だけ。
@@ -2385,7 +2534,8 @@ def main(argv: list[str]) -> int:
             )
             return 64
         verdict = check(rest[0], cwd, os.environ)
-        print("allow" if verdict.allowed else "deny\n" + verdict.reason)
+        detail = verdict.warning if verdict.kind == "warn" else verdict.reason
+        print(verdict.kind + ("\n" + detail if detail else ""))
         return 0 if verdict.allowed else 2
     if len(argv) == 2 and argv[1] in ("install", "uninstall"):
         import time

@@ -32,6 +32,17 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 - 実行ファイルの名前が変数で決まるとき（`"${ORCA_CLI_COMMAND:-orca}"` など）は、引数の語の位置に `push` や `merge` があるときと、変数の中身が git や gh の push・マージに見えるときだけ止める。
 - 解析できないときは、git・gh・hub・curl がコマンドの位置に現れ、その後ろに push・merge・api があるときだけ止める。
 
+### 宛先を判定できないとき（2026-11-25 から）
+
+宛先を決められないマージや push（変数で決まる宛先、git のリポジトリでない場所、中身の見えない GraphQL、解析できないコマンドなど）は、禁止の宛先の語がどこかに出てくるかで扱いを分ける。
+
+- 出てこない: 止めずに通し、何を判定できなかったかを 1 行の警告（`additionalContext` と `systemMessage`）でモデルに渡す。`check` の入口は 1 行目に `warn` を出して 0 で終える。
+- 出てくる: これまでどおり止める。
+- 語を探す範囲は、コマンドの全文、値の決まらない変数の代入の元、作業ディレクトリと判定の中で引いた場所の remote（fetch と push の URL。insteadOf を通した後の形）、`GH_` と `GIT_` で始まる環境変数、読んだクエリのファイル。大文字小文字は区別しない。禁止の宛先が `owner/repo` の形なら、全体と owner と repo のどれが出てきても当てる。
+- 宛先が禁止の宛先と決まったものは、これまでどおり止める。GraphQL の、宛先に関係なく止めていた mutation も、同じ考え方で扱う。
+
+警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
+
 `gh pr create`、`comment`、`view`、`review --approve`、issue の操作、読み取り、禁止でない宛先への操作は止めない。
 
 ## 禁止の宛先
@@ -57,7 +68,7 @@ upstream-guard uninstall    # 足した項目だけを消す
 
 登録するシェルの 1 行は `scripts/upstream-guard-hook.sh` に置き、`make lint` の ShellCheck を通す。Python の `HOOK_COMMAND` と同じであることは単体テストで確かめる。Orca が `~/.codex/hooks.json` を書き直して並びが変わると、Codex の信頼の値が合わなくなってフックが動かなくなる。そのときは `install` をもう一度実行する。
 
-手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定だけを出す。
+手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定（`allow`、`warn`、`deny`）だけを出す。終了コードは `deny` だけが 2。
 
 ### 実行ファイルの作り直し
 
@@ -77,6 +88,7 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 - Orca の外のセッションと、Orca の端末のペインで動くエージェント（どちらも `ORCA_AGENT_SESSION_ID` がない）。オーナーの対話と見分けられないため、対象にしない
 - 登録の項目そのものが消えたとき（`settings.json` や `hooks.json` の書き直しなど）。警告も出ない。実行ファイルが無い・壊れたときは、コマンドを止めずに警告だけを出す
 - 実行ファイルの差し替えの間は、判定が働かない瞬間がありうる。`scripts/upstream-guard-refresh.sh` は rename で付け替えるので、ほぼ無くなる。`make apply` での置き換えは Home Manager の手順による
+- 宛先を決められず、禁止の宛先の語も現れない形は、警告だけで通る。たとえば、別名の remote を insteadOf 以外の方法で差し替える（`~/.ssh/config` の Host の別名、`GIT_SSH_COMMAND`、資格情報の仕掛け）、変数やファイルに入れた URL（`git push "$(cat url.txt)"`）、スクリプトの中で組み立てた宛先、ブレース展開などで語を割ったもの（`nrsli{b..b}`）、GraphQL のノード ID だけで指すマージ
 - GraphQL のクエリを、読めないファイルや決まらない変数で渡し、その中身をこのコマンドの外で作ったもの。中身を読めるファイルと、同じコマンドの中で作ったクエリは、マージや ref の書き換えの mutation の名前を探して止める
 - Codex の信頼の値と `hooks.json` の並びがずれたとき（Orca が項目の順を変えたなど）。Codex は黙ってフックを動かさなくなる。`upstream-guard install` を再実行すると直る
 - インタープリタのコードで、子プロセスの起動や HTTP の形を名前で書かないもの（`getattr(os, "sys" + "tem")`、`__import__` に組み立てた名前を渡す、`new Function`、別のモジュールに起動を任せるなど）
@@ -89,9 +101,7 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 
 誤って止める側に倒れるものもある。
 
-- git のリポジトリでない場所（`/tmp` など）での、宛先を書かない `git push` と、`-R` のない `gh pr merge`。宛先を決められないので止める
-- 実行ファイルの名前や宛先が、決まらない変数で決まるもの（`cd "$WT" && git push`、`git push "$REMOTE"` など）。宛先を明示すれば通る
-- GraphQL のマージや ref の書き換えの mutation は、宛先に関係なく止める。自分のリポジトリでは `gh pr merge -R owner/repo` を使う
+- 宛先を決められないもののうち、禁止の宛先の語がどこかに出てくるもの（`nrslib` の remote がある場所での宛先なしの push、`GH_REPO` に `nrslib` がある変数の宛先など）。宛先を明示すれば通る
 - 二重引用符の中のバッククォート（`--body "… \`git push\` …"`）は、シェルが実際に実行するので判定する。文として書くときは単一引用符か、ヒアドキュメントの区切りを引用符で囲む
 
 ## 試験のしかた

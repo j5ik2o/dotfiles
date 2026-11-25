@@ -111,6 +111,14 @@ REPOS: dict[str, ug.RepoInfo | None] = {
         default_push_remote=None,
     ),
     "/w/notrepo": None,
+    "/w/up-nodefault": ug.RepoInfo(
+        remotes={
+            "up": R(
+                ("https://github.com/NrsLib/takt",), ("https://github.com/NrsLib/takt",)
+            )
+        },
+        default_push_remote=None,
+    ),
     "--git-dir=/w/takt-unresolved/.git": None,
     "--git-dir=/w/clone/.git": ug.RepoInfo(
         remotes={
@@ -139,7 +147,11 @@ class Repos(dict):
 
 ENV = {"HOME": "/home/u", "PATH": "/usr/bin"}
 
-D, A = "deny", "allow"
+D, A, W = (
+    "deny",
+    "allow",
+    "warn",
+)  # W: 宛先を判定できず、禁止の宛先の語も無いので警告して通す
 
 # (期待, コマンド, 作業ディレクトリ, 追加の環境変数)
 CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
@@ -233,7 +245,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         {},
     ),
     (D, "gh api -X PUT 'repos/{owner}/{repo}/pulls/1/merge'", "/w/clone", {}),
-    (D, "gh api -X PUT repos/$OWNER/takt/pulls/1/merge", "/w/mine", {}),
+    (W, "gh api -X PUT repos/$OWNER/takt/pulls/1/merge", "/w/mine", {}),
     (
         D,
         "gh api -X PUT repos/nrslib/takt/pulls/1/merge --input body.json",
@@ -259,19 +271,19 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (A, "gh api repos/nrslib/takt/pulls/1/reviews -f event=APPROVE", "/w/mine", {}),
     # --- gh api graphql ----------------------------------------------------
     (
-        D,
+        W,
         "gh api graphql -f query='mutation { enablePullRequestAutoMerge(input:{pullRequestId:\"PR_x\"}) { clientMutationId } }'",
         "/w/mine",
         {},
     ),
     (
-        D,
+        W,
         "gh api graphql -f query='mutation($id:ID!){ mergePullRequest(input:{pullRequestId:$id}){ clientMutationId } }' -f id=PR_x",
         "/w/mine",
         {},
     ),
     (
-        D,
+        W,
         "gh api graphql -f query='mutation { enqueuePullRequest(input:{pullRequestId:\"PR_x\"}) { clientMutationId } }'",
         "/w/mine",
         {},
@@ -280,7 +292,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     # 読めるファイルの中に mutation があれば止める（Hook.test_graphql_query_file_is_read）
     (A, "gh api graphql -F query=@merge.graphql", "/w/mine", {}),
     (A, 'gh api graphql -f query="$(cat q.graphql)"', "/w/mine", {}),
-    (D, 'gh api graphql -f query="$(echo mutation{mergePullRequest})"', "/w/mine", {}),
+    (W, 'gh api graphql -f query="$(echo mutation{mergePullRequest})"', "/w/mine", {}),
     (
         A,
         'gh api graphql -f query=\'{ repository(owner:"nrslib", name:"takt") { pullRequest(number:1) { mergeable } } }\'',
@@ -433,7 +445,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         {},
     ),
     (
-        D,
+        W,
         'curl -d \'{"query":"mutation{mergePullRequest(input:{pullRequestId:\\"x\\"}){clientMutationId}}"}\' https://api.github.com/graphql',
         None,
         {},
@@ -467,18 +479,18 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (A, "echo 'unterminated", "/w/mine", {}),  # 解析できないが push/merge でない
     (D, "git push $REMOTE main", "/w/takt", {}),  # 変数が決まらない
     (D, 'git push "$(git remote | head -1)"', "/w/takt", {}),
-    (D, "$GIT push origin", "/w/mine", {}),  # 実行ファイルが決まらない
-    (D, "gh pr merge 1 -R $R", "/w/mine", {}),
-    (D, "gh pr merge 1", "/w/notrepo", {}),  # git の設定を読めない
-    (D, "gh pr merge 1", None, {}),  # 作業ディレクトリが分からない
-    (D, "git push", "/w/notrepo", {}),
-    (D, "git push", "/w/nodefault", {}),  # 既定の push 先が決まらない
+    (W, "$GIT push origin", "/w/mine", {}),  # 実行ファイルが決まらない
+    (W, "gh pr merge 1 -R $R", "/w/mine", {}),
+    (W, "gh pr merge 1", "/w/notrepo", {}),  # git の設定を読めない
+    (W, "gh pr merge 1", None, {}),  # 作業ディレクトリが分からない
+    (W, "git push", "/w/notrepo", {}),
+    (W, "git push", "/w/nodefault", {}),  # 既定の push 先が決まらない
     (D, "git push nosuchremote main", "/w/takt", {}),
-    (D, "git -C $DIR push", "/w/mine", {}),
-    (D, "cd $DIR && git push", "/w/mine", {}),
+    (W, "git -C $DIR push", "/w/mine", {}),
+    (W, "cd $DIR && git push", "/w/mine", {}),
     (D, "git $SUB upstream", "/w/takt", {}),
-    (D, "gh $CMD merge 1", "/w/mine", {}),
-    (D, "git --git-dir=/w/takt-unresolved/.git push", "/w/mine", {}),
+    (W, "gh $CMD merge 1", "/w/mine", {}),
+    (W, "git --git-dir=/w/takt-unresolved/.git push", "/w/mine", {}),
     (A, "$EDITOR notes.txt", "/w/mine", {}),
     (A, "cd $DIR && ls", "/w/mine", {}),
     (A, "git status", "/w/notrepo", {}),
@@ -502,7 +514,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     ),
     (D, "git -c remote.pushDefault=upstream push", "/w/takt-unresolved", {}),
     (D, "git -c branch.main.pushRemote=upstream push", "/w/takt-unresolved", {}),
-    (D, 'git -c "remote.origin.pushurl=$U" push origin', "/w/mine", {}),
+    (W, 'git -c "remote.origin.pushurl=$U" push origin', "/w/mine", {}),
     (
         D,
         "git -c url.https://github.com/nrslib/.insteadOf=https://github.com/j5ik2o/ push https://github.com/j5ik2o/takt",
@@ -516,7 +528,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         {},
     ),
     (
-        D,
+        W,
         "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=x git push origin",
         "/w/mine",
         {},
@@ -565,14 +577,14 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (D, "cat <<EOF\n$(git push origin)\nEOF", "/w/clone", {}),
     (D, "echo $(( $(git push origin) ))", "/w/clone", {}),
     (D, "echo ${u:-$(git push origin)}", "/w/clone", {}),
-    (D, "git push https://github.com/nrsli{b..b}/takt", "/w/mine", {}),
-    (D, "gh pr merge 1 -R nrsli{b..b}/takt", "/w/mine", {}),
+    (W, "git push https://github.com/nrsli{b..b}/takt", "/w/mine", {}),
+    (W, "gh pr merge 1 -R nrsli{b..b}/takt", "/w/mine", {}),
     (D, "gh pr merge 1 -R{x,nrslib}/takt", "/w/mine", {}),
     (D, "R=nrs; R+=lib/takt; gh pr merge 1 -R $R", "/w/mine", {}),
     (D, "export GH_REPO=nrs; GH_REPO+=lib/takt; gh pr merge 1", "/w/mine", {}),
     (D, "export GIT_DIR=/w/clone/.git; git push origin", "/w/mine", {}),
     (D, "hub api -X PUT repos/nrslib/takt/pulls/1/merge", "/w/mine", {}),
-    (D, "gh api -X PUT repositories/123456/pulls/1/merge", "/w/mine", {}),
+    (W, "gh api -X PUT repositories/123456/pulls/1/merge", "/w/mine", {}),
     (D, "gh api -X PUT repos/nrslib/takt/pulls/1/%6Derge", "/w/mine", {}),
     (D, "uv run gh pr merge 1 -R nrslib/takt", "/w/mine", {}),
     (D, "nix develop -c gh pr merge 1 -R nrslib/takt", "/w/mine", {}),
@@ -886,7 +898,7 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         "/w/mine",
         {},
     ),
-    (D, "gh api -X PUT repos/$O/takt/pulls/1/merge", "/w/mine", {}),
+    (W, "gh api -X PUT repos/$O/takt/pulls/1/merge", "/w/mine", {}),
     (
         A,
         'q=$(python3 -c "print(\'mutation{r0: resolveReviewThread(input:{threadId:\\"T\\"}){thread{isResolved}}}\')"); gh api graphql -f query="$q"',
@@ -900,17 +912,72 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         {},
     ),
     (
-        D,
+        W,
         'q=$(python3 -c "print(\'mutation{mergePullRequest(input:{pullRequestId:1}){clientMutationId}}\')"); gh api graphql -f query="$q"',
         "/w/mine",
         {},
     ),
     (
-        D,
+        W,
         "python3 -c \"open('/tmp/m.graphql','w').write('mutation{enablePullRequestAutoMerge(input:{pullRequestId:1}){clientMutationId}}')\"; gh api graphql -F query=@/tmp/m.graphql",
         "/w/mine",
         {},
     ),
+    # --- 宛先を判定できないときの倒し方（2026-11-25 元帥の判断） ----------------
+    # 禁止の宛先の語が、コマンド・作業ディレクトリの remote・GH_ と GIT_ の環境変数のどこにも無ければ、警告して通す
+    (W, 'cd "$WT" && git push origin HEAD', "/w/mine", {}),
+    (W, 'git push "$REMOTE" HEAD', "/w/mine", {}),
+    (W, "for r in a b; do git push $r; done", "/w/mine", {}),
+    (
+        W,
+        "git push",
+        "/w/notrepo",
+        {},
+    ),  # リポジトリでない場所（どのみち git が失敗する）
+    (W, "gh pr merge 3 --squash", "/w/notrepo", {}),
+    (
+        W,
+        "gh api graphql -f query='mutation{mergePullRequest(input:{pullRequestId:\"PR_kwDO1\"}){clientMutationId}}'",
+        "/w/mine",
+        {},
+    ),
+    (
+        W,
+        'gh api graphql -f query=\'mutation{updateRef(input:{refId:"REF_1",oid:"abc"}){clientMutationId}}\'',
+        "/w/corp",
+        {},
+    ),
+    # 中身の見えないクエリで、マージや ref の mutation の名前も無いものは、これまでどおり通す（スレッドの解決など）
+    (A, 'gh api graphql -F query=@"$Q"', "/w/mine", {}),
+    # 禁止の宛先の語がどこかにあれば、これまでどおり拒否する
+    (
+        D,
+        "gh pr merge 1 -R $R",
+        "/w/mine",
+        {"GH_REPO": "nrslib/takt"},
+    ),  # 変数の宛先＋ GH_REPO に nrslib
+    (D, 'cd "$WT" && gh pr merge 3', "/w/mine", {"GH_REPO": "NRSLIB/takt"}),
+    (
+        D,
+        "git push",
+        "/w/up-nodefault",
+        {},
+    ),  # remote に nrslib がある場所での宛先なしの push
+    (D, 'git push "$R" main', "/w/takt", {}),  # takt の upstream は nrslib
+    (
+        D,
+        'gh api graphql -f query=\'query{repository(owner:"nrslib",name:"takt"){id}} mutation{mergePullRequest(input:{pullRequestId:"x"}){clientMutationId}}\'',
+        "/w/mine",
+        {},
+    ),
+    (D, "git push $(echo https://github.com/nrslib/takt) main", "/w/mine", {}),
+    (D, 'U=https://github.com/NRSLIB/takt; git push "$U"', "/w/mine", {}),
+    (
+        D,
+        "git push $R; git -C /w/clone push origin",
+        "/w/mine",
+        {},
+    ),  # 決まらない拒否の後ろの、決まった拒否を見逃さない
     # D-3: 拒否の例と同じ起動の形で、宛先だけが禁止でないもの
     (
         A,
@@ -934,10 +1001,14 @@ class DecideTable(unittest.TestCase):
             verdict = ug.decide(
                 command, cwd, {**ENV, **extra}, ("nrslib",), Repos(REPOS)
             )
-            got = A if verdict.allowed else D
+            got = verdict.kind
             if got != expected:
                 failures.append(
                     f"{expected} を期待して {got}: {command!r} (cwd={cwd})\n    {verdict.reason}"
+                )
+            if got == W and (not verdict.warning or "\n" in verdict.warning):
+                failures.append(
+                    f"警告の形が違う（1 行で書く）: {command!r}: {verdict.warning!r}"
                 )
             if not verdict.allowed:
                 lines = verdict.reason.splitlines()
@@ -1085,20 +1156,69 @@ class Hook(unittest.TestCase):
         self.assertTrue(ug._fallback("ls -la").allowed)
 
     def test_graphql_query_file_is_read(self):
-        # F-2: 読めるクエリのファイルに、マージの mutation があれば止める
+        # F-2 と、宛先を判定できないときの倒し方: 読めるクエリのファイルにマージの mutation があり、
+        # 禁止の宛先の語もあれば止める。語が無ければ警告して通す
         files = {
             "/w/mine/merge.graphql": "mutation{mergePullRequest(input:{pullRequestId:1}){clientMutationId}}",
+            "/w/mine/up.graphql": 'query{repository(owner:"NRSLIB",name:"takt"){id}} mutation{mergePullRequest(input:{pullRequestId:1}){clientMutationId}}',
             "/w/mine/resolve.graphql": "mutation{resolveReviewThread(input:{threadId:1}){thread{isResolved}}}",
         }
         repos = Repos(REPOS)
         for command, expected in (
-            ("gh api graphql -F query=@merge.graphql", False),
-            ("gh api graphql --input merge.graphql", False),
-            ("gh api graphql -F query=@resolve.graphql", True),
-            ("gh api graphql -F query=@/w/mine/resolve.graphql", True),
+            ("gh api graphql -F query=@merge.graphql", "warn"),
+            ("gh api graphql --input merge.graphql", "warn"),
+            ("gh api graphql -F query=@up.graphql", "deny"),
+            ("gh api graphql --input up.graphql", "deny"),
+            ("gh api graphql -F query=@resolve.graphql", "allow"),
+            ("gh api graphql -F query=@/w/mine/resolve.graphql", "allow"),
         ):
             v = ug.decide(command, "/w/mine", ENV, ("nrslib",), repos, files)
-            self.assertEqual(v.allowed, expected, command)
+            self.assertEqual(v.kind, expected, command)
+
+    def test_warn_reaches_the_model_and_both_kinds_are_logged_without_the_command(self):
+        # 1 と 7: 警告は additionalContext と systemMessage で返し、警告と拒否を 1 行 1 件で残す
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "sess-1",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        secret = "SECRET-TOKEN-123"
+        code, out = ug.hook_main(
+            self.payload(f'git push "$REMOTE" HEAD # {secret}', "/nonexistent"), env
+        )
+        self.assertEqual(code, 0)
+        warning = json.loads(out)
+        self.assertIn(
+            "判定できませんでした", warning["hookSpecificOutput"]["additionalContext"]
+        )
+        self.assertEqual(
+            warning["systemMessage"], warning["hookSpecificOutput"]["additionalContext"]
+        )
+        code, _ = ug.hook_main(
+            self.payload(f"gh pr merge 1 -R nrslib/takt # {secret}"), env
+        )
+        self.assertEqual(code, 2)
+        self.assertEqual(ug.hook_main(self.payload("ls -la"), env), (0, ""))
+        with open(os.path.join(state, "warnings.log")) as f:
+            warns = [json.loads(line) for line in f]
+        with open(os.path.join(state, "denials.log")) as f:
+            denials = [json.loads(line) for line in f]
+        self.assertEqual((len(warns), len(denials)), (1, 1))
+        for record, kind in ((warns[0], "warn"), (denials[0], "deny")):
+            self.assertEqual(record["verdict"], kind)
+            self.assertEqual(record["session"], "sess-1")
+            self.assertIn(record["head"], ("git", "gh"))
+            self.assertIn(record["looks_like"], ("push", "merge"))
+            self.assertTrue(record["time"] and record["reason"])
+        self.assertEqual(denials[0]["looks_like"], "merge")
+        with (
+            open(os.path.join(state, "warnings.log")) as f1,
+            open(os.path.join(state, "denials.log")) as f2,
+        ):
+            self.assertNotIn(secret, f1.read() + f2.read())
 
     def test_hook_command_matches_the_shellchecked_script(self):
         # D-1: 登録するシェルの行は scripts/upstream-guard-hook.sh と同じ（そちらに shellcheck が掛かる）
@@ -1221,13 +1341,42 @@ class RealGitConfig(unittest.TestCase):
         ug._git = flaky
         try:
             info = ug.read_repo_info(mine)
+            self.assertFalse(info.remotes["origin"].readable)
             v = ug.decide("git push origin", mine, {}, ("nrslib",), {mine: info})
-            self.assertFalse(v.allowed)
+            self.assertEqual(v.kind, "warn")  # 決まらないが、禁止の宛先の語は無い
+            up = self.repo(
+                ("remote", "add", "origin", "https://github.com/nrslib/takt")
+            )
+            info = ug.read_repo_info(up)
+            v = ug.decide("git push origin", up, {}, ("nrslib",), {up: info})
+            self.assertEqual(v.kind, "deny")  # fetch の URL に禁止の宛先の語がある
         finally:
             ug._git = original
 
 
 class CheckCommand(unittest.TestCase):
+    def test_check_entry_returns_warn_with_exit_zero(self):
+        # 9: 宛先を判定できず、禁止の宛先の語も無いときは、1 行目が warn で終了コードは 0
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = ug.main(
+                [
+                    "upstream-guard",
+                    "check",
+                    "--cwd",
+                    "/nonexistent",
+                    "--",
+                    'git push "$REMOTE"',
+                ]
+            )
+        self.assertEqual(code, 0)
+        lines = out.getvalue().splitlines()
+        self.assertEqual(lines[0], "warn")
+        self.assertIn("判定できませんでした", lines[1])
+
     def test_check_entry_returns_verdict_without_running(self):
         import contextlib
         import io
