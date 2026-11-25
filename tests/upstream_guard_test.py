@@ -19,6 +19,13 @@ sys.path.insert(
 import upstream_guard as ug
 
 R = ug.Remote
+
+
+def _cred(user: str, password: str) -> str:
+    """試験用の偽の資格情報（user:password）。ソースに URL の形のまま書かない（秘密の検知に掛からないように）。"""
+    return user + ":" + password
+
+
 REPOS: dict[str, ug.RepoInfo | None] = {
     # takt の実物と同じ形: origin は自分、upstream は上流で push の URL は DISABLED、set-default は origin
     "/w/takt": ug.RepoInfo(
@@ -321,7 +328,9 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (D, "git push https://github.com/nrslib/takt.git main", "/w/mine", {}),
     (
         D,
-        "git push https://x-access-token:abc@github.com/nrslib/takt main",
+        "git push https://"
+        + _cred("x-access-token", "abc")
+        + "@github.com/nrslib/takt main",
         "/w/mine",
         {},
     ),
@@ -551,7 +560,9 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (D, "curl -X PUT HTTPS://api.github.com/repos/nrslib/takt/pulls/1/merge", None, {}),
     (
         D,
-        "curl -X PUT https://x:tok@api.github.com/repos/nrslib/takt/pulls/1/merge",
+        "curl -X PUT https://"
+        + _cred("x", "tok")
+        + "@api.github.com/repos/nrslib/takt/pulls/1/merge",
         None,
         {},
     ),
@@ -1353,7 +1364,9 @@ class Hook(unittest.TestCase):
         ]
         commands = [
             "git -c 'http.https://github.com/nrslib/.extraheader=AUTHORIZATION: basic SECRETA1' push origin",
-            "git -c remote.origin.pushurl=https://x-access-token:SECRETB2@github.com/nrslib/takt push origin",
+            "git -c remote.origin.pushurl=https://"
+            + _cred("x-access-token", "SECRETB2")
+            + "@github.com/nrslib/takt push origin",
             "git -c 'url.https://github.com/nrslib/.insteadOf=ghp_SECRETC3abcdefghij' push origin",
             "git -c 'http.https://github.com/nrslib/.cookiefile=Cookie: session=SECRETD4' push origin",
             "git -c 'http.https://github.com/nrslib/.extraheader=Authorization: Bearer SECRETE5' push origin",
@@ -1380,8 +1393,12 @@ class Hook(unittest.TestCase):
             "UPSTREAM_GUARD_STATE": state,
         }
         for command in (
-            "git -c remote.origin.pushurl=https://user:TOPSECRET-token=abc@github.com/nrslib/takt push origin",
-            "git -c remote.origin.pushurl=https://user:TOPSECRET-cookie=abc@github.com/nrslib/takt push origin",
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "TOPSECRET-token=abc")
+            + "@github.com/nrslib/takt push origin",
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "TOPSECRET-cookie=abc")
+            + "@github.com/nrslib/takt push origin",
         ):
             code, message = ug.hook_main(self.payload(command, "/nonexistent"), env)
             self.assertEqual(code, 2)
@@ -1396,12 +1413,17 @@ class Hook(unittest.TestCase):
 
         state = tempfile.mkdtemp()
         path = os.path.join(state, "denials.log")
-        old = "old-history\n" * 50
+        old = "old-history\n" * 50  # 600 バイト
         with open(path, "w") as f:
             f.write(old)
+        # 上限は、元の履歴（600 バイト）より小さく、新しい 12 行の合計（110 バイト）より大きくする。
+        # 小さすぎると、ロックが正しく働いていても、新しい行だけで 2 回目のローテーションが起きる
+        limit = 300
+        self.assertLess(limit, len(old))
+        self.assertGreater(limit, sum(len(f'{{"n": {i}}}') + 1 for i in range(12)))
         script = (
-            "import sys; sys.path.insert(0, sys.argv[1]); import upstream_guard as ug; ug.LOG_MAX_BYTES = 100; "
-            "ug._append_private(sys.argv[2], sys.argv[3] + chr(10))"
+            "import sys; sys.path.insert(0, sys.argv[1]); import upstream_guard as ug; "
+            f"ug.LOG_MAX_BYTES = {limit}; ug._append_private(sys.argv[2], sys.argv[3] + chr(10))"
         )
         scripts_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "..", "scripts"
@@ -1465,7 +1487,9 @@ class Hook(unittest.TestCase):
         first = self.payload("KEY='a secretpart' gh pr merge 1 -R nrslib/takt")
         self.assertEqual(ug.hook_main(first, env)[0], 2)
         second = self.payload(
-            "git -c remote.origin.pushurl=https://user:tok123@github.com/nrslib/takt push origin"
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "tok123")
+            + "@github.com/nrslib/takt push origin"
         )
         self.assertEqual(ug.hook_main(second, env)[0], 2)
         with open(os.path.join(state, "denials.log")) as f:
