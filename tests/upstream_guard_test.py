@@ -1255,6 +1255,19 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
             "GIT_CONFIG_VALUE_0": "push upstream",
         },
     ),
+    # 組み込みコマンドと同名の alias.push は Git が無視するため、push の検査を迂回できない
+    (
+        D,
+        "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.push GIT_CONFIG_VALUE_0=status git push origin",
+        "/w/clone",
+        {},
+    ),
+    (
+        D,
+        "git -c alias.push=status push upstream main",
+        "/w/takt",
+        {},
+    ),
     (
         D,
         "git push origin main",
@@ -1887,7 +1900,10 @@ class RealGitConfig(unittest.TestCase):
         # A-7: git のフックの中などで走らせても別のリポジトリに触れないよう、引き継いだ GIT_* を外す
         names = (
             "GIT_CONFIG_GLOBAL",
+            "GIT_CONFIG_SYSTEM",
             "GIT_CONFIG_NOSYSTEM",
+            "GIT_CONFIG_COUNT",
+            "GIT_CONFIG_PARAMETERS",
             "GIT_DIR",
             "GIT_COMMON_DIR",
             "GIT_WORK_TREE",
@@ -1920,7 +1936,13 @@ class RealGitConfig(unittest.TestCase):
     def verdict(
         self, command: str, cwd: str, extra: dict[str, str] | None = None
     ) -> str:
-        env = {"HOME": self.dir, "PATH": os.environ.get("PATH", ""), **(extra or {})}
+        env = {
+            "HOME": self.dir,
+            "PATH": os.environ.get("PATH", ""),
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            **(extra or {}),
+        }
         return ug.check(command, cwd, env).kind  # C-8: warn を allow に丸めない
 
     def test_push_targets_come_from_the_real_config(self):
@@ -2031,6 +2053,88 @@ class RealGitConfig(unittest.TestCase):
         )
         self.assertEqual(self.verdict("git push", wt, benign_env), "deny")
         self.assertEqual(self.verdict("git push origin", wt, benign_env), "allow")
+
+    def test_include_if_worktree_config_system_config_and_url_reset(self):
+        import subprocess
+
+        # 1) includeIf (onbranch:) による pushurl / pushDefault の切替
+        inc_push = os.path.join(self.dir, "inc-push.gitconfig")
+        with open(inc_push, "w", encoding="utf-8") as f:
+            f.write('[remote "origin"]\n\tpushurl = https://github.com/nrslib/takt\n')
+        repo_inc = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("config", "includeIf.onbranch:main.path", inc_push),
+        )
+        self.assertEqual(self.verdict("git push origin", repo_inc), "deny")
+
+        inc_fork = os.path.join(self.dir, "inc-fork.gitconfig")
+        with open(inc_fork, "w", encoding="utf-8") as f:
+            f.write("[remote]\n\tpushDefault = fork\n")
+        repo_branch = self.repo(
+            ("remote", "add", "origin", "https://github.com/nrslib/takt"),
+            ("remote", "add", "fork", "https://github.com/j5ik2o/takt"),
+            ("config", "includeIf.onbranch:work/**.path", inc_fork),
+        )
+        self.assertEqual(self.verdict("git push", repo_branch), "deny")
+        subprocess.run(
+            ["git", "-C", repo_branch, "symbolic-ref", "HEAD", "refs/heads/work/topic"],
+            check=True,
+        )
+        self.assertEqual(self.verdict("git push", repo_branch), "allow")
+
+        # 2) メイン worktree の config.worktree（extensions.worktreeConfig = true）
+        repo_wt_cfg = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("config", "extensions.worktreeConfig", "true"),
+            (
+                "config",
+                "--worktree",
+                "remote.origin.pushurl",
+                "https://github.com/nrslib/takt",
+            ),
+        )
+        self.assertEqual(self.verdict("git push origin", repo_wt_cfg), "deny")
+
+        # 3) 空の pushurl で継承した pushurl をリセットする
+        global_cfg = os.path.join(self.dir, "global.gitconfig")
+        with open(global_cfg, "w", encoding="utf-8") as f:
+            f.write('[remote "origin"]\n\tpushurl = https://github.com/nrslib/takt\n')
+        repo_reset = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+        )
+        with open(
+            os.path.join(repo_reset, ".git", "config"), "a", encoding="utf-8"
+        ) as f:
+            f.write(
+                '[remote "origin"]\n\tpushurl =\n\tpushurl = https://github.com/j5ik2o/takt\n'
+            )
+        self.assertEqual(
+            self.verdict("git push origin", repo_reset, {"GIT_CONFIG_GLOBAL": global_cfg}),
+            "allow",
+        )
+
+        # 4) システム設定（GIT_CONFIG_SYSTEM）の pushInsteadOf
+        sys_cfg = os.path.join(self.dir, "system.gitconfig")
+        with open(sys_cfg, "w", encoding="utf-8") as f:
+            f.write(
+                '[url "https://github.com/nrslib/"]\n\tpushInsteadOf = https://github.com/j5ik2o/\n'
+            )
+        mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
+        self.assertEqual(
+            self.verdict(
+                "git push origin",
+                mine,
+                {"GIT_CONFIG_NOSYSTEM": "0", "GIT_CONFIG_SYSTEM": sys_cfg},
+            ),
+            "deny",
+        )
+
+        # 5) 空文字の insteadOf プレフィックス
+        empty_prefix = self.repo(
+            ("config", "url.https://github.com/nrslib/.insteadOf", ""),
+            ("remote", "add", "origin", "takt"),
+        )
+        self.assertEqual(self.verdict("git push origin", empty_prefix), "deny")
 
     def test_gh_default_repo_follows_set_default(self):
         both = (

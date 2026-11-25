@@ -1455,8 +1455,14 @@ def _alias_ctx(call: GitCall, ctx: Ctx) -> Ctx:
     return _child(ctx, cwd=call.location)
 
 
+_GIT_BUILTIN_CMDS = {"push", "send-pack", "subtree", "lfs", "config", "remote"}
+
+
 def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Verdict:
-    """git のエイリアスを展開する（設定、-c alias.x=...、GIT_CONFIG_*、同じコマンドの中での定義）。"""
+    """git のエイリアスを展開する（設定、-c alias.x=...、GIT_CONFIG_*、同じコマンドの中での定義）。
+
+    Git と同じく、組み込みコマンド（push など）と同名のエイリアスは展開しない。
+    """
     aliases = {**(call.info.git_aliases if call.info else {}), **ctx.git_aliases}
     env_entries, _ = _parse_git_env_config({**ctx.env, **ctx.vars, **call.cmd_env})
     for k, val in env_entries:
@@ -1468,7 +1474,11 @@ def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Ve
             aliases[k[6:]] = val
     seen = set()
     while (
-        sub and sub[0].resolved and sub[0].value in aliases and sub[0].value not in seen
+        sub
+        and sub[0].resolved
+        and sub[0].value not in _GIT_BUILTIN_CMDS
+        and sub[0].value in aliases
+        and sub[0].value not in seen
     ):
         seen.add(sub[0].value)
         expansion = aliases[sub[0].value]
@@ -2485,8 +2495,91 @@ def _parse_git_config_text(text: str) -> list[tuple[str, str | None, str, str]] 
     return entries
 
 
+@dataclass
+class _GitConfigCtx:
+    home: str
+    git_dir: str
+    branch: str | None
+    known_remote_urls: set[str] = field(default_factory=set)
+
+
+def _git_glob_match(pattern: str, text: str, *, ignore_case: bool = False) -> bool:
+    """Git の wildmatch 相当（** / * / ? / [...]）で文字列に一致するかを返す。"""
+    parts: list[str] = ["^"]
+    i = 0
+    n = len(pattern)
+    while i < n:
+        ch = pattern[i]
+        if pattern.startswith("**/", i):
+            parts.append("(?:.*/)?")
+            i += 3
+        elif pattern.startswith("**", i):
+            parts.append(".*")
+            i += 2
+        elif ch == "*":
+            parts.append("[^/]*")
+            i += 1
+        elif ch == "?":
+            parts.append("[^/]")
+            i += 1
+        elif ch == "[":
+            j = i + 1
+            if j < n and pattern[j] in "!^":
+                j += 1
+            if j < n and pattern[j] == "]":
+                j += 1
+            while j < n and pattern[j] != "]":
+                j += 1
+            if j >= n:
+                parts.append(re.escape(ch))
+                i += 1
+            else:
+                inner = pattern[i + 1 : j]
+                if inner.startswith("!"):
+                    inner = "^" + inner[1:]
+                parts.append("[" + inner + "]")
+                i = j + 1
+        else:
+            parts.append(re.escape(ch))
+            i += 1
+    parts.append("$")
+    flags = re.IGNORECASE if ignore_case else 0
+    return bool(re.match("".join(parts), text, flags))
+
+
+def _include_if_matches(condition: str, base_dir: str, ctx: _GitConfigCtx) -> bool:
+    """includeIf の条件（onbranch / gitdir / gitdir/i / hasconfig:remote.*.url）を評価する。"""
+    if condition.startswith("onbranch:"):
+        if ctx.branch is None:
+            return False
+        pat = condition[len("onbranch:") :]
+        if pat.endswith("/"):
+            pat += "**"
+        return _git_glob_match(pat, ctx.branch)
+    if condition.startswith(("gitdir:", "gitdir/i:")):
+        ignore_case = condition.startswith("gitdir/i:")
+        prefix = "gitdir/i:" if ignore_case else "gitdir:"
+        pat = condition[len(prefix) :]
+        if pat.startswith("~/"):
+            pat = os.path.join(ctx.home, pat[2:])
+        elif pat.startswith("./"):
+            pat = os.path.join(base_dir, pat[2:])
+        elif not pat.startswith(("/", "**/")):
+            pat = "**/" + pat
+        if pat.endswith("/"):
+            pat += "**"
+        candidates = {os.path.abspath(ctx.git_dir), os.path.realpath(ctx.git_dir)}
+        return any(
+            _git_glob_match(pat, cand, ignore_case=ignore_case) for cand in candidates
+        )
+    if condition.startswith("hasconfig:remote.*.url:"):
+        pat = condition[len("hasconfig:remote.*.url:") :]
+        return any(_git_glob_match(pat, u) for u in ctx.known_remote_urls)
+    return False
+
+
 def _load_git_config_file(
-    path: str, home: str, *, required: bool, depth: int = 0
+    path: str, ctx: _GitConfigCtx, *, required: bool, depth: int = 0
 ) -> list[tuple[str, str | None, str, str]] | None:
     if depth > 10:
         return None if required else []
@@ -2503,46 +2596,74 @@ def _load_git_config_file(
     for entry in entries:
         out.append(entry)
         sec, sub, key, val = entry
-        if sec == "include" and sub is None and key == "path" and val:
+        if sec == "remote" and sub is not None and key == "url" and val:
+            ctx.known_remote_urls.add(val)
+        should_include = (
+            sec == "include" and sub is None and key == "path" and bool(val)
+        ) or (
+            sec == "includeif"
+            and sub is not None
+            and key == "path"
+            and bool(val)
+            and _include_if_matches(sub, base_dir, ctx)
+        )
+        if should_include:
             inc = val
             if inc.startswith("~/"):
-                inc = os.path.join(home, inc[2:])
+                inc = os.path.join(ctx.home, inc[2:])
             elif not os.path.isabs(inc):
                 inc = os.path.join(base_dir, inc)
-            included = _load_git_config_file(inc, home, required=False, depth=depth + 1)
+            included = _load_git_config_file(inc, ctx, required=False, depth=depth + 1)
             if included:
                 out.extend(included)
     return out
 
 
 def _rewrite_git_url(url: str, rules: list[tuple[str, str]]) -> tuple[str, bool]:
-    """url.<base>.insteadOf / pushInsteadOf の最長一致で URL を書き換える。"""
-    best_prefix = ""
+    """url.<base>.insteadOf / pushInsteadOf の最長一致で URL を書き換える（空文字も候補に含める）。"""
+    best_len = -1
     best_base: str | None = None
     for prefix, base in rules:
-        if prefix and url.startswith(prefix) and len(prefix) > len(best_prefix):
-            best_prefix = prefix
+        if url.startswith(prefix) and len(prefix) > best_len:
+            best_len = len(prefix)
             best_base = base
     if best_base is None:
         return url, False
-    return best_base + url[len(best_prefix) :], True
+    return best_base + url[best_len:], True
+
+
+def _git_env_bool(value: str | None) -> bool:
+    return value is not None and value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _read_system_git_config(
+    env: Mapping[str, str], ctx: _GitConfigCtx
+) -> list[tuple[str, str | None, str, str]]:
+    if _git_env_bool(env.get("GIT_CONFIG_NOSYSTEM")):
+        return []
+    if "GIT_CONFIG_SYSTEM" in env:
+        system_path = env["GIT_CONFIG_SYSTEM"]
+        if not system_path or system_path == os.devnull:
+            return []
+        return _load_git_config_file(system_path, ctx, required=False) or []
+    return _load_git_config_file("/etc/gitconfig", ctx, required=False) or []
 
 
 def _read_global_git_config(
-    env: Mapping[str, str], home: str
+    env: Mapping[str, str], ctx: _GitConfigCtx
 ) -> list[tuple[str, str | None, str, str]]:
     if "GIT_CONFIG_GLOBAL" in env:
         global_path = env["GIT_CONFIG_GLOBAL"]
         if not global_path or global_path == os.devnull:
             return []
-        return _load_git_config_file(global_path, home, required=False) or []
-    xdg = env.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
+        return _load_git_config_file(global_path, ctx, required=False) or []
+    xdg = env.get("XDG_CONFIG_HOME") or os.path.join(ctx.home, ".config")
     out: list[tuple[str, str | None, str, str]] = []
     for path in (
         os.path.join(xdg, "git", "config"),
-        os.path.join(home, ".gitconfig"),
+        os.path.join(ctx.home, ".gitconfig"),
     ):
-        out.extend(_load_git_config_file(path, home, required=False) or [])
+        out.extend(_load_git_config_file(path, ctx, required=False) or [])
     return out
 
 
@@ -2586,7 +2707,7 @@ def _resolve_remotes(
 
 
 def _build_repo_info(
-    entries: list[tuple[str, str | None, str, str]], git_dir: str
+    entries: list[tuple[str, str | None, str, str]], branch: str | None
 ) -> RepoInfo:
     remote_names: list[str] = []
     remote_urls: dict[str, list[str]] = {}
@@ -2614,9 +2735,15 @@ def _build_repo_info(
                 remote_urls[sub] = []
                 remote_pushurls[sub] = []
             if key == "url":
-                remote_urls[sub].append(val)
+                if val == "":
+                    remote_urls[sub].clear()
+                else:
+                    remote_urls[sub].append(val)
             elif key == "pushurl":
-                remote_pushurls[sub].append(val)
+                if val == "":
+                    remote_pushurls[sub].clear()
+                else:
+                    remote_pushurls[sub].append(val)
             elif key == "gh-resolved":
                 gh_resolved[sub] = val
         elif sec == "branch" and sub is not None:
@@ -2632,7 +2759,6 @@ def _build_repo_info(
         instead_of,
         push_instead_of,
     )
-    branch = _read_head_branch(git_dir)
     default = (
         (branch_push_remote.get(branch) if branch else None)
         or push_default
@@ -2655,27 +2781,37 @@ def read_repo_info(
     git_dir, common_dir = dirs
     env = os.environ if environ is None else environ
     home = env.get("HOME", os.path.expanduser("~"))
-    repo_entries = _load_git_config_file(
-        os.path.join(common_dir, "config"), home, required=True
+    branch = _read_head_branch(git_dir)
+    config_path = os.path.join(common_dir, "config")
+    # hasconfig:remote.*.url 向けに、先にリポジトリ設定の remote URL を集める
+    seed_ctx = _GitConfigCtx(home=home, git_dir=git_dir, branch=branch)
+    repo_seed = _load_git_config_file(config_path, seed_ctx, required=True)
+    if repo_seed is None:
+        return None
+    cfg_ctx = _GitConfigCtx(
+        home=home,
+        git_dir=git_dir,
+        branch=branch,
+        known_remote_urls=set(seed_ctx.known_remote_urls),
     )
+    entries = _read_system_git_config(env, cfg_ctx) + _read_global_git_config(
+        env, cfg_ctx
+    )
+    repo_entries = _load_git_config_file(config_path, cfg_ctx, required=True)
     if repo_entries is None:
         return None
-    entries = _read_global_git_config(env, home) + repo_entries
+    entries.extend(repo_entries)
     worktree_config_enabled = False
     for sec, sub, key, val in repo_entries:
         if sec == "extensions" and sub is None and key == "worktreeconfig":
             worktree_config_enabled = val.lower() in ("true", "yes", "on", "1")
     worktree_config = os.path.join(git_dir, "config.worktree")
-    if (
-        worktree_config_enabled
-        and git_dir != common_dir
-        and os.path.isfile(worktree_config)
-    ):
-        wt_entries = _load_git_config_file(worktree_config, home, required=True)
+    if worktree_config_enabled and os.path.isfile(worktree_config):
+        wt_entries = _load_git_config_file(worktree_config, cfg_ctx, required=True)
         if wt_entries is None:
             return None
         entries.extend(wt_entries)
-    return _build_repo_info(entries, git_dir)
+    return _build_repo_info(entries, branch)
 
 
 class LazyFiles(Mapping):
