@@ -13,6 +13,7 @@ pi が起動中に書き換えるファイルは Nix の読み取り専用リン
 | `models.json` | Nix リンク | pi は読むだけ |
 | `agents/*.md` | Nix リンク | pi は読むだけ |
 | `extensions/content-guard.ts` | Nix リンク | pi は読むだけ |
+| `extensions/upstream-guard.ts` | Nix リンク | pi は読むだけ |
 | `content-guard-roots.json` | Nix リンク | pi は読むだけ |
 | `settings.json` | activation でコピー | モデル切替・テーマ・パッケージ導入で pi が保存する |
 | `pi-btw.json` | activation でコピー | プラグインが保存する |
@@ -66,6 +67,26 @@ curl -s http://10.0.1.60:8000/v1/models | jq -r '.data[].id'
 
 新しい作業ディレクトリでガードを使うときは、このファイルにルートを足して
 `make apply` する。`~` はホームディレクトリに展開される。
+
+## upstream-guard を Pi でも動かす
+
+`extensions/upstream-guard.ts` は、Pi の bash ツールの実行前に
+`upstream-guard check --cwd <cwd> -- '<command>'` を spawn する。判定は既存の実行ファイル
+（`~/.local/bin/upstream-guard`、Home Manager が置く）に任せ、拡張の側では判定を書かない。
+Claude Code と Codex の PreToolUse フックと同じ止めになる。
+
+- 終了コード 2（拒否）のときだけ bash を止め、ガードが返した文面をモデルへ渡す。
+- 終了コード 0 で警告（`warn`）が返ったときは通し、警告を TUI とツール結果の本文へ出す。
+- 拡張の側の失敗（PATH に実行ファイルが無い・時間切れ・想定外の終了コード）は、
+  コマンドを通して 1 行の警告を出す。ここで閉じると全ボットの bash が止まるため。
+- 判定するのは `ORCA_AGENT_SESSION_ID` があるセッションだけ。オーナーの対話では何もしない
+  （フックと同じ線引き）。
+- 実行ファイルは PATH から探すので、`~/.local/bin` が PATH にあること。無いときは
+  止めずに警告だけを出す。
+
+緊急時に拡張ごと止めるときは `PI_UPSTREAM_GUARD_DISABLED=1` を渡す（`0` と `false` は止めない）。
+配布はほかの設定と同じく `make apply`。`upstream-guard install` は Claude Code と Codex の
+設定ファイルだけを触るので、Pi には要らない。
 
 ## tensorfold から dgx への移行
 

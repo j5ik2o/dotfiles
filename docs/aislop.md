@@ -65,14 +65,14 @@ devShell の採用環境では導入されるが、devShell を使わずに直�
 `references/` に該当する指摘は無かった。結果として error 33 − 24 = 9、warning 208 − 186 = 22、info 5 − 4 = 1 になる。
 除外する 3 ディレクトリにも Python があるため、devShell の ruff は除外前の scan でそこにも format/lint の指摘を出す。
 issue の記載（error 13 / warning 33 / info 6）は ruff を入れない環境の測定で、採用環境の値ではない。
-残る error 9 件と warning 22 件の合計 31 件は、すべて `scripts/aislop-accepted.json` に理由付きで登録した。
+残る error 9 件と warning 22 件の合計 31 件は、すべて `scripts/aislop-accepted.json` に理由付きで登録した（下の表は、その後に加わった分も含む）。
 その場で修正した指摘は無い。
 
 | 分類 | 実際の指摘件数 | 登録した受け入れ件数 | 扱い | 理由 |
 |------|----------------|----------------------|------|------|
 | `.codex-corporate/` 配下の指摘 | 94（error 11・warning 81・info 2） | 0 | 除外 | 取り込み済みの上流コンテンツ。`lint/vendored-paths.txt` の `root:` に合わせて scan 対象から除外 |
 | `.codex-personal/` 配下の指摘 | 120（error 13・warning 105・info 2） | 0 | 除外 | 取り込み済みの実行時状態。同上 |
-| `config/pi/agent/extensions/content-guard.ts` の hallucinated-import | 2（error 2） | 2（findings 2 件） | 受け入れ | Pi 実行時環境が提供する `@earendil-works/pi-coding-agent` を import する拡張。2 行の同一 4 キーを findings 2 件で受理 |
+| `config/pi/agent/extensions/{content-guard,upstream-guard}.ts` の hallucinated-import | 2（error 2、初回）→ 3（`upstream-guard.ts` を足した後） | 3（findings 3 件） | 受け入れ | Pi 実行時環境が提供する `@earendil-works/pi-coding-agent` を import する拡張。同じ 4 キーでもファイルが違えば別に数え、findings 3 件で受理 |
 | `packages/dsh-tui-login.mjs` / `dsh-tui-models.mjs` の hallucinated-import | 7（error 7） | 7（7 エントリ各 findings 1 件） | 受け入れ | dsh と pi の実行時環境が提供するモジュールを import する接着コード。root の `package.json` へ依存を宣言せず実行時に解決する設計 |
 | `packages/dsh-tui-login.mjs` の console-leftover | 10（warning 10） | 10（findings 10 件） | 受け入れ | CLI 接着コードが利用者へ出力するための `console.log/debug/info` が仕様。10 行の同一 4 キーを findings 10 件で受理 |
 | `packages/*-check.mjs` の console-leftover | 4（warning 4） | 4（4 エントリ各 findings 1 件） | 受け入れ | `*_check.mjs` は確認スクリプトで、結果を標準出力へ出すのが役割。検査対象には含めたまま受け入れる |
@@ -80,10 +80,13 @@ issue の記載（error 13 / warning 33 / info 6）は ruff を入れない環�
 | `config/spark/namespace_relay.py` の complexity | 3（warning 3） | 3（3 エントリ各 findings 1 件） | 受け入れ | 今回の変更対象外の既存スクリプト。行数・ネストだけを理由に振る舞いを変えない |
 | `packages/dsh-tui-models.mjs` の function-too-long | 1（warning 1） | 1 | 受け入れ | 実行時環境に依存する接着コードの一連の処理。範囲外の分割をしない |
 | `scripts/aislop-check-bootstrap.mjs` の file-too-large | 1（warning 1） | 1 | 受け入れ | j5ik2o/ci の正本の無編集の写しで 510 行。写しは正本とバイト一致させる決まりのためこのリポジトリでは分割できず、分割は正本側の判断 |
+| `scripts/upstream_guard.py` の file-too-large | 1（warning 1） | 1 | 受け入れ | `packages/upstream-guard.nix` が 1 ファイルとして配る Python。分けると配り方（モジュールの探索パス）が変わる（#229） |
 | `config/spark/namespace_relay.py` / `scripts/clean-commit-msg.py` の python-formatting | 2（warning 2） | 2（findings 2 件） | 受け入れ | devShell の ruff が見る既存の Python。裁定により今回の整形は変更対象外。整形したら一覧から消す |
 | `package.json` の knip/skipped（info） | 1（info 1） | 0 | 合否対象外 | `info` は合否に含めない。knip を導入しない判断は下記 |
 
-受け入れ一覧の登録件数は合計 31 件（20 エントリ）。実際の error/warning も 31 件で一致する。
+受け入れ一覧の登録件数は合計 33 件（21 エントリ）。実際の error/warning も 33 件で一致する。
+初回の scan は 31 件だった。`scripts/upstream_guard.py` の file-too-large（#229）と、Pi の拡張を 2 本にしたときの
+`upstream-guard.ts` の hallucinated-import 1 件が加わって 33 件になった。
 
 ### hallucinated-import の再 scan
 
@@ -94,8 +97,8 @@ hallucinated-import は `node_modules` の有無で結果が変わる。`npm ci`
 
 aislop 0.20.1 を `npm ci` した状態で除外 3 種（`.codex-corporate/`・`.codex-personal/`・`references/`）により
 scan した実測は、hallucinated-import が `config/pi/agent/extensions/content-guard.ts` 2 件、
-`packages/dsh-tui-login.mjs` 4 件、`packages/dsh-tui-models.mjs` 3 件で計 9 件、
-severity 別では error 9・warning 22・info 1 だった。warning 22 件のうち 2 件は、devShell の ruff が
+`config/pi/agent/extensions/upstream-guard.ts` 1 件、`packages/dsh-tui-login.mjs` 4 件、
+`packages/dsh-tui-models.mjs` 3 件で計 10 件、severity 別では error 10・warning 22・info 1 だった。warning 22 件のうち 2 件は、devShell の ruff が
 `config/spark/namespace_relay.py` と `scripts/clean-commit-msg.py` に出す `python-formatting` である。
 
 ## ruff と knip の判断

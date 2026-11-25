@@ -76,7 +76,7 @@ CLIPROXYAPI_API_KEY ?=
 
 .PHONY: help check check-update build build-hm build-darwin apply apply-hm apply-darwin \
         rollback rollback-hm rollback-darwin clean nvim-clean zsh-clean update fmt sheldon-lock gc test \
-        lint aislop-check format-check done test-activation commit-subject-check commit-subject-check-pr hooks \
+        lint aislop-check format-check done test-activation test-pi-guard commit-subject-check commit-subject-check-pr hooks \
         secrets secrets-diff secrets-apply plan plan-darwin plan-hm host-info check-host \
         pi-collect \
         cliproxyapi-start cliproxyapi-stop cliproxyapi-restart cliproxyapi-status cliproxyapi-test \
@@ -105,13 +105,14 @@ help:
 	@echo "  format-check   Check formatting only (nixfmt, stylua)"
 	@echo "  commit-subject-check  Check that the commit subject names the cause"
 	@echo "  aislop-check   Run the aislop check from the pinned canonical script"
-	@echo "  done           commit-subject-check, format-check, then check, test-activation, lint, then aislop-check"
+	@echo "  done           commit-subject-check, format-check, then check, test-activation, test-pi-guard, lint, then aislop-check"
 	@echo "  hooks          Enable the commit-msg hook (.githooks)"
 	@echo "  check-update   Check package-level updates (no lockfile change)"
 	@echo "  host-info      Show detected host/config info only"
 	@echo "  check-host     Fail if host config file is missing"
 	@echo "  test           test-activation, then check"
 	@echo "  test-activation  Run scripts/install-muse.sh tests (no network, no \$$HOME)"
+	@echo "  test-pi-guard  Test the Pi upstream-guard extension (needs node)"
 	@echo "  update         Update flake inputs"
 	@echo "  fmt            Format nix files"
 	@echo "  clean          Remove build artifacts"
@@ -204,6 +205,11 @@ test-activation:
 	python3 tests/upstream_guard_test.py
 	bash tests/upstream-guard-refresh-test.sh
 
+# Pi の拡張は Node の型の除去だけで読める（import type しか持たない）。
+# node は mise の版を使う（config/mise/mise.toml）。
+test-pi-guard:
+	node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/pi-upstream-guard-test.mjs
+
 test: test-activation
 	$(MAKE) check
 
@@ -264,6 +270,7 @@ hooks:
 done: commit-subject-check format-check
 	$(MAKE) check
 	$(MAKE) test-activation
+	$(MAKE) test-pi-guard
 	$(MAKE) lint
 	$(MAKE) aislop-check
 
