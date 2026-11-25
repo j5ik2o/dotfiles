@@ -202,6 +202,7 @@ test-activation:
 	bash tests/publish-update-pr-test.sh
 	bash tests/sync-upstream-versions-test.sh
 	python3 tests/upstream_guard_test.py
+	bash tests/upstream-guard-refresh-test.sh
 
 test: test-activation
 	$(MAKE) check

@@ -59,12 +59,25 @@ upstream-guard uninstall    # 足した項目だけを消す
 
 手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定だけを出す。
 
+### 実行ファイルの作り直し
+
+PR のマージと `make apply` の前に、手元の実行ファイルだけを作り直すときは `scripts/upstream-guard-refresh.sh` を使う。新しい版は、いま使っていない側の out-link（`~/.local/state/upstream-guard/slot-a` か `slot-b`）に作り、単体テストと `check` の入口（禁止の宛先へのマージは拒否、読み取りは許可）が通ってから、`result` のリンクを 1 回の rename で付け替える。前の版は、もう片方の out-link に残る。どこかで失敗したら `result` は変えない。作業の途中の版は、別のパスに作って `check` の入口で試す。全ボットに掛かっている実行ファイルには入れない。
+
+### 表示の読み方
+
+Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録のコマンド>]: <理由>` の形で出す。登録のコマンドの中には警告の文も書いてあるので、判定の結果は `]: ` の後ろを読む。警告は 2 種類あり、どちらもコマンドは止めない。
+
+- `実行ファイルが無いため…`: `~/.local/bin/upstream-guard` が無いか、リンクが切れている
+- `判定が終了コード N で失敗したため…`: 実行ファイルが 0（許可）と 2（拒否）以外で終わった
+
 完全に外すときは、`upstream-guard uninstall` のあと、`modules/common.nix` の `.local/bin/upstream-guard` の項目を消して `make apply` する。
 
 ## 掛からない経路
 
 - Orca の外のセッションと、Orca の端末のペインで動くエージェント（どちらも `ORCA_AGENT_SESSION_ID` がない）。オーナーの対話と見分けられないため、対象にしない
 - 登録の項目そのものが消えたとき（`settings.json` や `hooks.json` の書き直しなど）。警告も出ない。実行ファイルが無い・壊れたときは、コマンドを止めずに警告だけを出す
+- 実行ファイルの差し替えの間は、判定が働かない瞬間がありうる。`scripts/upstream-guard-refresh.sh` は rename で付け替えるので、ほぼ無くなる。`make apply` での置き換えは Home Manager の手順による
+- GraphQL のクエリを、読めないファイルや決まらない変数で渡し、その中身をこのコマンドの外で作ったもの。中身を読めるファイルと、同じコマンドの中で作ったクエリは、マージや ref の書き換えの mutation の名前を探して止める
 - Codex の信頼の値と `hooks.json` の並びがずれたとき（Orca が項目の順を変えたなど）。Codex は黙ってフックを動かさなくなる。`upstream-guard install` を再実行すると直る
 - インタープリタのコードで、子プロセスの起動や HTTP の形を名前で書かないもの（`getattr(os, "sys" + "tem")`、`__import__` に組み立てた名前を渡す、`new Function`、別のモジュールに起動を任せるなど）
 - シェルを通らない経路: ブラウザの操作（Orca のブラウザ、Codex の browser・chrome・computer-use）、Codex の `node_repl` のような MCP のコード実行、Codex の GitHub のプラグイン（コネクタ）

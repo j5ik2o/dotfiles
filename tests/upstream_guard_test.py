@@ -276,8 +276,11 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         "/w/mine",
         {},
     ),
-    (D, "gh api graphql -F query=@merge.graphql", "/w/mine", {}),
-    (D, 'gh api graphql -f query="$(cat q.graphql)"', "/w/mine", {}),
+    # 中身を読めないクエリは、コマンドの中に mutation の名前が無ければ通す（ボットのスレッドの解決を止めない）。
+    # 読めるファイルの中に mutation があれば止める（Hook.test_graphql_query_file_is_read）
+    (A, "gh api graphql -F query=@merge.graphql", "/w/mine", {}),
+    (A, 'gh api graphql -f query="$(cat q.graphql)"', "/w/mine", {}),
+    (D, 'gh api graphql -f query="$(echo mutation{mergePullRequest})"', "/w/mine", {}),
     (
         A,
         'gh api graphql -f query=\'{ repository(owner:"nrslib", name:"takt") { pullRequest(number:1) { mergeable } } }\'',
@@ -870,6 +873,44 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     # A-11: ヒアドキュメントが 2 つあると、シェルが読むのは最後
     (D, "bash <<'A' <<'B'\nls\nA\ngit push origin\nB", "/w/clone", {}),
     (A, "bash <<'A' <<'B'\ngit push origin\nA\nls\nB", "/w/clone", {}),
+    # F-1、F-2: 2026-11-25 11:04 の誤った拒否（ほかのボットのレビューへの返信と解決）
+    (
+        A,
+        "for id in 1 2; do gh api -X POST repos/j5ik2o/takt/pulls/1025/comments/$id/replies -F body=@$d/$id --jq .id; done",
+        "/w/mine",
+        {},
+    ),
+    (
+        D,
+        "for n in 1; do gh api -X PUT repos/nrslib/takt/pulls/$n/merge; done",
+        "/w/mine",
+        {},
+    ),
+    (D, "gh api -X PUT repos/$O/takt/pulls/1/merge", "/w/mine", {}),
+    (
+        A,
+        'q=$(python3 -c "print(\'mutation{r0: resolveReviewThread(input:{threadId:\\"T\\"}){thread{isResolved}}}\')"); gh api graphql -f query="$q"',
+        "/w/mine",
+        {},
+    ),
+    (
+        A,
+        "python3 -c \"open('/tmp/r.graphql','w').write('mutation{resolveReviewThread(input:{threadId:1}){thread{isResolved}}}')\"; gh api graphql -F query=@/tmp/r.graphql --jq '[.data[]] | length'",
+        "/w/mine",
+        {},
+    ),
+    (
+        D,
+        'q=$(python3 -c "print(\'mutation{mergePullRequest(input:{pullRequestId:1}){clientMutationId}}\')"); gh api graphql -f query="$q"',
+        "/w/mine",
+        {},
+    ),
+    (
+        D,
+        "python3 -c \"open('/tmp/m.graphql','w').write('mutation{enablePullRequestAutoMerge(input:{pullRequestId:1}){clientMutationId}}')\"; gh api graphql -F query=@/tmp/m.graphql",
+        "/w/mine",
+        {},
+    ),
     # D-3: 拒否の例と同じ起動の形で、宛先だけが禁止でないもの
     (
         A,
@@ -1012,10 +1053,18 @@ class Hook(unittest.TestCase):
         os.chmod(broken, 0o755)
         dangling = os.path.join(tmp, "dangling")
         os.symlink(os.path.join(tmp, "gone"), dangling)
-        for target in (os.path.join(tmp, "missing"), dangling, broken):
+        # 無いときと、0・2 以外で終わったとき（終了コードつき）は、別の文にする
+        for target, expected in (
+            (os.path.join(tmp, "missing"), "実行ファイルが無いため"),
+            (dangling, "実行ファイルが無いため"),
+            (broken, "判定が終了コード 1 で失敗したため"),
+        ):
             r = self.run_wrapper(target, {"ORCA_AGENT_SESSION_ID": "s"})
             self.assertEqual(r.returncode, 0, target)
-            context = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+            out = json.loads(r.stdout)
+            context = out["hookSpecificOutput"]["additionalContext"]
+            self.assertIn(expected, context)
+            self.assertIn(expected, out["systemMessage"])
             self.assertIn("判定をしていません", context)
             owner = self.run_wrapper(target, {})
             self.assertEqual((owner.returncode, owner.stdout), (0, ""))
@@ -1034,6 +1083,22 @@ class Hook(unittest.TestCase):
     def test_internal_error_fails_closed_for_push(self):
         self.assertFalse(ug._fallback("git push upstream").allowed)
         self.assertTrue(ug._fallback("ls -la").allowed)
+
+    def test_graphql_query_file_is_read(self):
+        # F-2: 読めるクエリのファイルに、マージの mutation があれば止める
+        files = {
+            "/w/mine/merge.graphql": "mutation{mergePullRequest(input:{pullRequestId:1}){clientMutationId}}",
+            "/w/mine/resolve.graphql": "mutation{resolveReviewThread(input:{threadId:1}){thread{isResolved}}}",
+        }
+        repos = Repos(REPOS)
+        for command, expected in (
+            ("gh api graphql -F query=@merge.graphql", False),
+            ("gh api graphql --input merge.graphql", False),
+            ("gh api graphql -F query=@resolve.graphql", True),
+            ("gh api graphql -F query=@/w/mine/resolve.graphql", True),
+        ):
+            v = ug.decide(command, "/w/mine", ENV, ("nrslib",), repos, files)
+            self.assertEqual(v.allowed, expected, command)
 
     def test_hook_command_matches_the_shellchecked_script(self):
         # D-1: 登録するシェルの行は scripts/upstream-guard-hook.sh と同じ（そちらに shellcheck が掛かる）

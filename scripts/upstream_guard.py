@@ -569,6 +569,10 @@ class Ctx:
     git_aliases: dict[str, str] = field(
         default_factory=dict
     )  # 同じコマンドの中で定義したもの
+    files: Mapping[str, str | None] = field(default_factory=dict)
+    script_text: str = (
+        ""  # 判定するコマンドの全文（中身の見えない GraphQL のクエリの手掛かり）
+    )
 
 
 def _child(ctx: Ctx, **changes) -> Ctx:
@@ -605,10 +609,17 @@ def decide(
     env: Mapping[str, str],
     blocked: tuple[str, ...],
     repos: Mapping[str, RepoInfo | None],
+    files: Mapping[str, str | None] | None = None,
 ) -> Verdict:
-    """コマンドの文字列を見て、禁止の宛先へのマージと push なら拒否する。"""
+    """コマンドの文字列を見て、禁止の宛先へのマージと push なら拒否する。
+
+    files は、GraphQL のクエリのファイル（-F query=@path、--input）の中身を引く表。
+    呼び出し側が読んで渡す。読めなければ None。
+    """
     blocked = normalize_blocked(blocked)
     ctx = Ctx(cwd=cwd, env=dict(env), vars={}, blocked=blocked, repos=repos)
+    ctx.files = files or {}
+    ctx.script_text = command
     try:
         return _decide_script(command, ctx)
     except ParseError as e:
@@ -1719,6 +1730,20 @@ def _decide_gh(
     return ALLOW
 
 
+def _hidden_query_evidence(paths: list[str | None], ctx: Ctx) -> str:
+    """中身の見えない GraphQL のクエリの手掛かり。
+
+    読めるファイルの中身、コマンドの全文（同じコマンドの中で作ったクエリ）、値の決まらない
+    変数の代入の元を合わせる。ここにマージや ref の書き換えの mutation の名前があれば止める。
+    """
+    parts = [ctx.script_text, *ctx.opaque.values()]
+    for path in paths:
+        if path and path != "-":
+            full = _join(ctx.cwd, path) if not path.startswith("/") else path
+            parts.append((ctx.files.get(full) if full else None) or "")
+    return "\n".join(parts)
+
+
 def _decide_gh_api(p: GhArgs, ctx: Ctx, cmd_env: dict[str, str]) -> Verdict:
     if len(p.positional) < 2:
         return ALLOW
@@ -1735,22 +1760,30 @@ def _decide_gh_api(p: GhArgs, ctx: Ctx, cmd_env: dict[str, str]) -> Verdict:
     if not endpoint.resolved:
         if method in _READ_METHODS:
             return ALLOW
-        return _deny_unresolved(
-            "gh api の書き込み", "エンドポイントが変数やコマンド置換で決まる"
-        )
+        # owner と repo が書いてあれば、番号などが変数でも宛先は決まる
+        path = _api_path(endpoint.value.replace(UNKNOWN, "_unknown_"))
+        m = re.match(r"^repos/([^/]+)/([^/]+)", path)
+        if not m or "_unknown_" in m.group(1) + m.group(2):
+            return _deny_unresolved(
+                "gh api の書き込み", "エンドポイントが変数やコマンド置換で決まる"
+            )
+        return _check_rest_write(path, method, ctx, cmd_env, "gh api")
     path = _api_path(endpoint.value)
     if path == "graphql":
         query_fields = [a for a in fields if a.value.startswith("query=")]
-        if "--input" in p.flags or not query_fields:
-            return _deny_unresolved(
-                "gh api graphql", "クエリが入力ファイルから渡され中身を見られない"
-            )
+        hidden: list[str | None] = [a.value for a in p.flags.get("--input", [])]
+        texts: list[str] = []
         for q in query_fields:
             text = q.value[len("query=") :]
-            if not q.resolved or text.startswith("@"):
-                return _deny_unresolved(
-                    "gh api graphql", "クエリが変数やファイルで渡され中身を見られない"
-                )
+            if not q.resolved:
+                hidden.append(None)
+            elif text.startswith("@"):
+                hidden.append(text[1:])
+            else:
+                texts.append(text)
+        if hidden or not query_fields:
+            texts.append(_hidden_query_evidence(hidden, ctx))
+        for text in texts:
             m = _GRAPHQL_WRITES.search(text)
             if m:
                 return _deny_unresolved(
@@ -2042,6 +2075,28 @@ def read_repo_info(location: str) -> RepoInfo | None:
     return RepoInfo(remotes=remotes, default_push_remote=default, git_aliases=aliases)
 
 
+class LazyFiles(Mapping):
+    """GraphQL のクエリのファイルを、頼まれたときだけ読む（1 MB まで）。"""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, str | None] = {}
+
+    def __getitem__(self, key: str) -> str | None:
+        if key not in self._cache:
+            try:
+                with open(key, encoding="utf-8", errors="replace") as f:
+                    self._cache[key] = f.read(1 << 20)
+            except OSError:
+                self._cache[key] = None
+        return self._cache[key]
+
+    def __iter__(self):
+        return iter(self._cache)
+
+    def __len__(self) -> int:
+        return len(self._cache)
+
+
 class LazyRepos(Mapping):
     def __init__(self, reader: Callable[[str], RepoInfo | None] = read_repo_info):
         self._reader = reader
@@ -2071,7 +2126,7 @@ def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
     except Exception:  # noqa: BLE001  追加の一覧を読めなくても、既定の一覧で判定する
         blocked = DEFAULT_BLOCKED
     try:
-        return decide(command, cwd, environ, blocked, LazyRepos())
+        return decide(command, cwd, environ, blocked, LazyRepos(), LazyFiles())
     except Exception:  # noqa: BLE001  判定の失敗でマージと push を通さない
         return _fallback(command)
 
@@ -2101,26 +2156,36 @@ def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
 
 HOOK_BIN = "$HOME/.local/bin/upstream-guard"
 _MISSING_WARNING = (
-    "upstream-guard: 実行ファイルが無いため、このコマンドのマージと push の判定をしていません。"
-    "副元帥へ知らせてください。"
+    "upstream-guard（警告）: 実行ファイルが無いため、このコマンドのマージと push の判定をしていません。"
+    "コマンドは止めていません。副元帥へ知らせてください。"
 )
-# オーナーの対話のセッションでは Python を起動せずに終える。実行ファイルが無い・壊れた
-# （リンク切れ、GC、make apply の途中）ときは、コマンドを止めずに警告だけを渡す。
-HOOK_COMMAND = (
-    f'G="{HOOK_BIN}"; [ -z "${{ORCA_AGENT_SESSION_ID-}}" ] && exit 0; '
-    'if [ -x "$G" ]; then "$G" hook; c=$?; case $c in 0|2) exit $c;; esac; fi; '
-    "printf '%s\\n' '"
-    + json.dumps(
+_FAILED_WARNING = (
+    "upstream-guard（警告）: 判定が終了コード %s で失敗したため、このコマンドのマージと push の判定をしていません。"
+    "コマンドは止めていません。副元帥へ知らせてください。"
+)
+
+
+def _warning_json(text: str) -> str:
+    return json.dumps(
         {
-            "systemMessage": _MISSING_WARNING,
+            "systemMessage": text,
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "additionalContext": _MISSING_WARNING,
+                "additionalContext": text,
             },
         },
         ensure_ascii=False,
     )
-    + "'"
+
+
+# オーナーの対話のセッションでは Python を起動せずに終える。実行ファイルが無い（リンク切れ、GC、
+# make apply の途中）ときと、0（許可）と 2（拒否）以外で終わったときは、コマンドを止めずに、
+# それぞれ別の警告を渡す。同じ行を scripts/upstream-guard-hook.sh に置き、ShellCheck を通す。
+HOOK_COMMAND = (
+    f'G="{HOOK_BIN}"; [ -z "${{ORCA_AGENT_SESSION_ID-}}" ] && exit 0; '
+    'if [ -x "$G" ]; then "$G" hook; c=$?; case $c in 0|2) exit $c;; esac; '
+    f'printf \'{_warning_json(_FAILED_WARNING)}\\n\' "$c" "$c"; exit 0; fi; '
+    f"printf '%s\\n' '{_warning_json(_MISSING_WARNING)}'"
 )
 HOOK_TIMEOUT = 10
 TOML_MARK = "# upstream-guard: managed block"
