@@ -241,6 +241,11 @@
   home.file.".local/bin/claudecodex" = {
     source = "${pkgs.claudecodex}/bin/claudecodex";
   };
+  # Orca のボットとワーカーが禁止の宛先へマージ・push するのを止めるフック。
+  # ~/.claude/settings.json と ~/.codex/hooks.json からこのパスを呼ぶ（docs/upstream-guard.md）
+  home.file.".local/bin/upstream-guard" = {
+    source = "${pkgs.upstream-guard}/bin/upstream-guard";
+  };
   # Claude Code ステータスライン（identity 表示用）
   home.file.".claude/statusline.sh" = {
     source = "${self}/config/claude-code/statusline.sh";

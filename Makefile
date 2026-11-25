@@ -201,6 +201,7 @@ test-activation:
 	bash tests/nix-check-node-test.sh
 	bash tests/publish-update-pr-test.sh
 	bash tests/sync-upstream-versions-test.sh
+	python3 tests/upstream_guard_test.py
 
 test: test-activation
 	$(MAKE) check

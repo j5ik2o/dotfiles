@@ -363,6 +363,7 @@
               cliproxyapi
               coderabbit
               herdr
+              upstream-guard
               ;
             copilot-chat = systemPkgs.callPackage ./packages/copilot-chat.nix { };
           }
