@@ -64,6 +64,10 @@ in
     ".pi/agent/extensions/content-guard.ts" = {
       source = "${piConfigDir}/extensions/content-guard.ts";
     };
+    # upstream-guard を Pi の bash 実行前にも掛ける (判定は ~/.local/bin/upstream-guard)。
+    ".pi/agent/extensions/upstream-guard.ts" = {
+      source = "${piConfigDir}/extensions/upstream-guard.ts";
+    };
     # content-guard がリポジトリ内のスクリプトを実行してよいルート。
     ".pi/agent/content-guard-roots.json" = {
       source = "${piConfigDir}/content-guard-roots.json";

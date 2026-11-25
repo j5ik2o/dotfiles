@@ -177,6 +177,11 @@ jobs:
       - name: Test the PR test merge resolver
         run: node --test tests/nix-check-pr-test-merge-test.mjs
 
+      # Pi の拡張は Node の型の除去だけで読める（import type しか持たない）。
+      # ローカルの `make done` と同じコマンドで回す。
+      - name: Test the Pi upstream-guard extension
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/pi-upstream-guard-test.mjs
+
       - name: Run aislop check
         run: npm run check:aislop
 

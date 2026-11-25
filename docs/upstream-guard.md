@@ -11,14 +11,17 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 
 ## 掛かる範囲
 
-フックは Claude Code と Codex の両方に登録する。ただし判定するのは、環境変数 `ORCA_AGENT_SESSION_ID` があるセッションだけ。Orca は、ボットとワーカー（構造化セッション）を起動するときにこの変数を渡し、端末のペインで手で起動したエージェントには渡さない。オーナーの対話のセッションでは、フックは何もせずに終わる。オーナーが手で打つ gh と git には何も挟まない。
+フックは Claude Code と Codex に登録し、Pi へは拡張として配る。どれも判定するのは、環境変数 `ORCA_AGENT_SESSION_ID` があるセッションだけ。Orca は、ボットとワーカー（構造化セッション）を起動するときにこの変数を渡し、端末のペインで手で起動したエージェントには渡さない。オーナーの対話のセッションでは、フックも拡張も何もせずに終わる。オーナーが手で打つ gh と git には何も挟まない。
 
 | 対象 | 登録先 | 見るツール |
 | --- | --- | --- |
 | Claude Code | `~/.claude/settings.json` の `hooks.PreToolUse` | `Bash`、`Monitor` |
 | Codex | `~/.codex/hooks.json` の `PreToolUse` と、`~/.codex/config.toml` の `hooks.state`（信頼の値） | `Bash` |
+| Pi | `~/.pi/agent/extensions/upstream-guard.ts`（Home Manager が置く） | `bash`、`powershell` |
 
-どちらも `"$HOME/.local/bin/upstream-guard" hook` を呼ぶ。この実行ファイルは Home Manager が置く（`modules/common.nix`、`packages/upstream-guard.nix`）。
+Claude Code と Codex は `"$HOME/.local/bin/upstream-guard" hook` を呼び、Pi の拡張は `upstream-guard check --cwd <cwd> -- '<command>'` を PATH から spawn する。どちらも同じ実行ファイル（Home Manager が置く。`modules/common.nix`、`packages/upstream-guard.nix`）と判定（`scripts/upstream_guard.py`）を使う。
+
+Pi の拡張は、終了コード 2（拒否）のときだけ bash を止め、0 で警告（`warn`）が返ったときは通して文面を TUI とツール結果の本文へ出す。拡張の側の失敗（PATH に実行ファイルが無い・時間切れ・想定外の終了コード）は、コマンドを通して 1 行の警告を出す。ここで閉じると全ボットの bash が止まるため。振る舞いは `tests/pi-upstream-guard-test.mjs` と `make test-pi-guard` で固定する。
 
 ## 止めるもの
 
@@ -62,10 +65,14 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 ## 設置と外し方
 
 ```sh
-make apply                  # ~/.local/bin/upstream-guard を置く
+make apply                  # ~/.local/bin/upstream-guard と Pi の拡張を置く
 upstream-guard install      # Claude と Codex の設定に 1 項目ずつ足す
 upstream-guard uninstall    # 足した項目だけを消す
 ```
+
+Pi は `~/.pi/agent/extensions/upstream-guard.ts` を `make apply` が置くので、`install` を呼ばない（呼んでも Claude Code と Codex の設定しか触らない）。`make apply` の後に `~/.pi/agent/extensions/upstream-guard.ts` が Nix のパッケージを指していることを確かめる。
+
+拡張ごと緊急に止めるときは、ボットの起動環境へ `PI_UPSTREAM_GUARD_DISABLED=1` を渡す（`0` と `false` は止めない）。実行ファイルを外すと Claude Code・Codex・Pi のすべてが警告だけで通すようになるので、止めるより先にこちらを使う。
 
 ### 手で作ったリンクから make apply へ移るとき
 
@@ -122,6 +129,7 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 - `pushd` と `popd`、関数の定義の中の `cd` など、作業場所を間接に変える形は、実行の順を追わない（`popd` で戻った場所や、呼んでいない関数の中の `cd` を、そのとおりには扱わない）
 - Orca の外のセッションと、Orca の端末のペインで動くエージェント（どちらも `ORCA_AGENT_SESSION_ID` がない）。オーナーの対話と見分けられないため、対象にしない
 - 登録の項目そのものが消えたとき（`settings.json` や `hooks.json` の書き直しなど）。警告も出ない。実行ファイルが無い・壊れたときは、コマンドを止めずに警告だけを出す
+- Pi の拡張が、PATH から `upstream-guard` を見つけられないとき（`~/.local/bin` が PATH に無いなど）。拡張は止めずに警告だけを出す。同じく、拡張が時間切れか想定外の終了コードを見たときも警告だけで通す（拡張で閉じると全ボットの bash が止まるため）。`PI_UPSTREAM_GUARD_DISABLED=1` を渡したセッションも対象外
 - 実行ファイルの差し替えの間は、判定が働かない瞬間がありうる。`scripts/upstream-guard-refresh.sh` は rename で付け替えるので、ほぼ無くなる。`make apply` での置き換えは Home Manager の手順による
 - 宛先を決められず、禁止の宛先の語も現れない形は、警告だけで通る。たとえば、別名の remote を insteadOf 以外の方法で差し替える（`~/.ssh/config` の Host の別名、`GIT_SSH_COMMAND`、資格情報の仕掛け）、変数やファイルに入れた URL（`git push "$(cat url.txt)"`）、スクリプトの中で組み立てた宛先、ブレース展開などで語を割ったもの（`nrsli{b..b}`）、GraphQL のノード ID だけで指すマージ
 - GraphQL のクエリを、読めないファイルや決まらない変数で渡し、その中身をこのコマンドの外で作ったもの。中身を読めるファイルと、同じコマンドの中で作ったクエリは、マージや ref の書き換えの mutation の名前を探し、禁止の宛先の語があれば止め、無ければ警告して通す

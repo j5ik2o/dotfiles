@@ -24,6 +24,12 @@
           "rule": "ai-slop/hallucinated-import",
           "file": "config/pi/agent/extensions/content-guard.ts",
           "message": "Imports \"@earendil-works/pi-coding-agent\" but it's not declared in package.json"
+        },
+        {
+          "engine": "ai-slop",
+          "rule": "ai-slop/hallucinated-import",
+          "file": "config/pi/agent/extensions/upstream-guard.ts",
+          "message": "Imports \"@earendil-works/pi-coding-agent\" but it's not declared in package.json"
         }
       ]
     },
