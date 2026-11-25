@@ -49,7 +49,13 @@ upstream-guard install      # Claude と Codex の設定に 1 項目ずつ足す
 upstream-guard uninstall    # 足した項目だけを消す
 ```
 
-`install` と `uninstall` は何度実行しても同じ結果になる。書き換える前のファイルは `<ファイル>.bak-upstream-guard-<日時>` に残す。Orca が `~/.codex/hooks.json` を書き直して並びが変わると、Codex の信頼の値が合わなくなってフックが動かなくなる。そのときは `install` をもう一度実行する。
+`install` と `uninstall` は何度実行しても同じ結果になる。書き換える前のファイルは `<ファイル>.bak-upstream-guard-<日時>` に残す。
+
+- 設定ファイル（`settings.json`、`hooks.json`、`config.toml`）が無ければ、`install` が作る。置き場のディレクトリ（`~/.claude`、`~/.codex`）が無いときは、そのエージェントは入っていないとみなして登録せず、登録できなかった対象を表示して 0 以外で終える。
+- 外すときは、フックの単位で自分の項目だけを外す。同じグループにほかのフックがあれば残し、空になったグループだけを消す。
+- Codex の `hooks.json` と `config.toml` は一組で書く。途中で書き込みに失敗したら、書いた分を元に戻してから失敗で終える。戻せなかったときは、そのファイルと写しの場所を表示する。
+
+登録するシェルの 1 行は `scripts/upstream-guard-hook.sh` に置き、`make lint` の ShellCheck を通す。Python の `HOOK_COMMAND` と同じであることは単体テストで確かめる。Orca が `~/.codex/hooks.json` を書き直して並びが変わると、Codex の信頼の値が合わなくなってフックが動かなくなる。そのときは `install` をもう一度実行する。
 
 手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定だけを出す。
 

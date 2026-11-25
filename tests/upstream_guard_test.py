@@ -120,6 +120,15 @@ REPOS: dict[str, ug.RepoInfo | None] = {
         },
         default_push_remote="origin",
     ),
+    "--git-dir=/w/mine/.git": ug.RepoInfo(
+        remotes={
+            "origin": R(
+                ("https://github.com/j5ik2o/dotfiles.git",),
+                ("https://github.com/j5ik2o/dotfiles.git",),
+            )
+        },
+        default_push_remote="origin",
+    ),
 }
 
 
@@ -797,6 +806,83 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (A, "gh release view -R nrslib/takt v1 | python3 -c 'print(1)'", "/w/mine", {}),
     (A, "gh pr merge feature/foo", "/w/mine", {}),
     (A, "git config --get remote.origin.url && git push origin", "/w/mine", {}),
+    # --- PR #229 のレビューの指摘（入力は指摘のまま） ------------------------
+    # B-1: gh repo rename の引数は新しい名前で、宛先は -R か既定のリポジトリ
+    (A, "gh repo rename nrslib-fork", "/w/mine", {}),
+    (A, "gh repo rename takt2 -R j5ik2o/takt", "/w/clone", {}),
+    (D, "gh repo rename x -R nrslib/takt", "/w/mine", {}),
+    (D, "gh repo rename x", "/w/clone", {}),
+    # B-2: HEAD は読み取り
+    (A, "gh api --method HEAD repos/nrslib/takt/contents/README.md", "/w/mine", {}),
+    (A, "gh api -X HEAD repos/nrslib/takt/pulls/1/merge", "/w/mine", {}),
+    # A-1: eval は同じシェルの cd を引き継ぐ。bash -c は引き継がない
+    (D, "eval 'cd /w/clone'; git push origin", "/w/mine", {}),
+    (D, "eval cd /w/clone && git push origin", "/w/mine", {}),
+    (A, "bash -c 'cd /w/clone'; git push origin", "/w/mine", {}),
+    # A-2: 引用されていない変数の展開は、コマンドの位置で単語に分かれる
+    (D, "X='git push origin'; $X", "/w/clone", {}),
+    (D, "P='gh pr merge'; $P 1 -R nrslib/takt", "/w/mine", {}),
+    (A, "X='echo hi'; $X", "/w/clone", {}),
+    (A, 'X="git push origin"; echo "$X"', "/w/clone", {}),
+    (A, "X='git push origin'; $X", "/w/mine", {}),
+    # A-3: env -u と env -i で消した環境変数は、判定でも消す
+    (D, "env -u GH_REPO gh pr merge 1", "/w/clone", {"GH_REPO": "j5ik2o/x"}),
+    (D, "env -i gh pr merge 1", "/w/clone", {"GH_REPO": "j5ik2o/x"}),
+    (D, "env -u GIT_DIR git push", "/w/clone", {"GIT_DIR": "/w/mine/.git"}),
+    (A, "git push", "/w/clone", {"GIT_DIR": "/w/mine/.git"}),
+    # A-4: curl の -O は値を取らない
+    (
+        D,
+        "curl -X PUT -O https://api.github.com/repos/nrslib/takt/pulls/1/merge",
+        None,
+        {},
+    ),
+    # A-5: {owner} と {repo} は片方ずつ置き換える
+    (D, "gh api -X PUT repos/nrslib/{repo}/pulls/1/merge", "/w/mine", {}),
+    (A, "gh api -X PUT repos/j5ik2o/{repo}/pulls/1/merge", "/w/clone", {}),
+    # A-6: gh は :owner と :repo も置き換える（gh 2.105.0 の正規表現で確認）
+    (D, "gh api -X PUT repos/:owner/:repo/pulls/1/merge", "/w/clone", {}),
+    (D, "gh api -X PUT repos/nrslib/:repo/pulls/1/merge", "/w/mine", {}),
+    (A, "gh api -X PUT repos/j5ik2o/:repo/pulls/1/merge", "/w/clone", {}),
+    # A-7: -R と --repo が両方あれば、どれか 1 つでも禁止の宛先なら止める
+    (D, "gh pr merge 1 --repo nrslib/takt -R j5ik2o/takt", "/w/mine", {}),
+    (D, "gh pr merge 1 -R nrslib/takt -R j5ik2o/takt", "/w/mine", {}),
+    # A-8: curl --next は転送ごとにメソッドと本文を分ける
+    (
+        D,
+        "curl -X GET https://api.github.com/repos/nrslib/takt --next -d x https://api.github.com/repos/nrslib/takt/git/refs",
+        None,
+        {},
+    ),
+    (
+        A,
+        "curl -X PUT https://api.github.com/repos/j5ik2o/x/pulls/1/merge --next https://api.github.com/repos/nrslib/takt/pulls/1/merge",
+        None,
+        {},
+    ),
+    # A-9: 相対の --git-dir と GIT_DIR は、-C の後の場所で解決する
+    (D, "git --git-dir=.git -C /w/clone push origin", "/w/mine", {}),
+    (D, "GIT_DIR=.git git -C /w/clone push origin", "/w/mine", {}),
+    (D, "git -C /w/clone --git-dir=.git push origin", "/w/mine", {}),
+    # A-10: busybox sh -c の中も見る
+    (D, "busybox sh -c 'git push origin'", "/w/clone", {}),
+    (A, "busybox sh -c 'git push origin'", "/w/mine", {}),
+    # A-11: ヒアドキュメントが 2 つあると、シェルが読むのは最後
+    (D, "bash <<'A' <<'B'\nls\nA\ngit push origin\nB", "/w/clone", {}),
+    (A, "bash <<'A' <<'B'\ngit push origin\nA\nls\nB", "/w/clone", {}),
+    # D-3: 拒否の例と同じ起動の形で、宛先だけが禁止でないもの
+    (
+        A,
+        "python3 -c \"import subprocess; subprocess.run(['gh','pr','merge','1','-R','j5ik2o/takt'])\"",
+        "/w/mine",
+        {},
+    ),
+    (
+        A,
+        "node -e \"require('child_process').execSync('git push https://github.com/j5ik2o/takt.git main')\"",
+        "/w/mine",
+        {},
+    ),
 ]
 
 
@@ -949,6 +1035,132 @@ class Hook(unittest.TestCase):
         self.assertFalse(ug._fallback("git push upstream").allowed)
         self.assertTrue(ug._fallback("ls -la").allowed)
 
+    def test_hook_command_matches_the_shellchecked_script(self):
+        # D-1: 登録するシェルの行は scripts/upstream-guard-hook.sh と同じ（そちらに shellcheck が掛かる）
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "scripts",
+            "upstream-guard-hook.sh",
+        )
+        with open(path, encoding="utf-8") as f:
+            lines = [
+                line.rstrip("\n")
+                for line in f
+                if line.strip() and not line.startswith("#")
+            ]
+        self.assertEqual(lines, [ug.HOOK_COMMAND])
+
+    def test_failing_extra_blocked_list_still_uses_the_default_list(self):
+        # A-13 と D-4: 追加の一覧を読めなくても、既定の一覧で decide() まで通す
+        env = {"HOME": "/x", "ORCA_AGENT_SESSION_ID": "s"}
+        original = ug.load_blocked
+
+        def broken(*_args):
+            raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "壊れた一覧")
+
+        ug.load_blocked = broken
+        try:
+            push = self.payload("git push https://github.com/nrslib/takt main")
+            self.assertEqual(ug.hook_main(push, env)[0], 2)
+            # 推測だけの _fallback では通ってしまい、decide() なら止まる形
+            merge = self.payload("G=gh; $G pr merge 1 -R nrslib/takt")
+            self.assertTrue(ug._fallback("G=gh; $G pr merge 1 -R nrslib/takt").allowed)
+            self.assertEqual(ug.hook_main(merge, env)[0], 2)
+            read = self.payload("gh pr view 1 -R nrslib/takt")
+            self.assertEqual(ug.hook_main(read, env), (0, ""))
+            note = self.payload(
+                "orca bot reply --text 'git push と gh pr merge は使わない'"
+            )
+            self.assertEqual(ug.hook_main(note, env), (0, ""))
+        finally:
+            ug.load_blocked = original
+
+
+class RealGitConfig(unittest.TestCase):
+    """D-2: 一時リポジトリの実際の git の設定を読む。git は手元の設定だけを読み、ネットワークに出ない。"""
+
+    def setUp(self):
+        import tempfile
+
+        self.saved = {
+            k: os.environ.get(k) for k in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
+        }
+        os.environ["GIT_CONFIG_GLOBAL"] = os.devnull
+        os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def repo(self, *configs: tuple[str, ...]) -> str:
+        import subprocess
+        import tempfile
+
+        path = tempfile.mkdtemp(dir=self.dir)
+        subprocess.run(["git", "init", "-q", "-b", "main", path], check=True)
+        for args in configs:
+            subprocess.run(["git", "-C", path, *args], check=True)
+        return path
+
+    def verdict(self, command: str, cwd: str) -> str:
+        env = {"HOME": self.dir, "PATH": os.environ.get("PATH", "")}
+        return "allow" if ug.check(command, cwd, env).allowed else "deny"
+
+    def test_push_targets_come_from_the_real_config(self):
+        mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
+        self.assertEqual(self.verdict("git push", mine), "allow")
+        self.assertEqual(self.verdict("git push origin main", mine), "allow")
+        pushurl = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("remote", "set-url", "--push", "origin", "git@github.com:nrslib/takt.git"),
+        )
+        self.assertEqual(self.verdict("git push origin", pushurl), "deny")
+        rewritten = self.repo(
+            ("config", "url.https://github.com/nrslib/.insteadOf", "up:"),
+            ("remote", "add", "origin", "up:takt"),
+        )
+        self.assertEqual(self.verdict("git push origin", rewritten), "deny")
+        push_remote = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("remote", "add", "up", "https://github.com/nrslib/takt"),
+            ("config", "branch.main.pushRemote", "up"),
+        )
+        self.assertEqual(self.verdict("git push", push_remote), "deny")
+        self.assertEqual(self.verdict("git push origin", push_remote), "allow")
+
+    def test_gh_default_repo_follows_set_default(self):
+        both = (
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("remote", "add", "upstream", "https://github.com/nrslib/takt.git"),
+        )
+        unresolved = self.repo(*both)
+        self.assertEqual(self.verdict("gh pr merge 3", unresolved), "deny")
+        resolved = self.repo(*both, ("config", "remote.origin.gh-resolved", "base"))
+        self.assertEqual(self.verdict("gh pr merge 3", resolved), "allow")
+
+    def test_unreadable_push_urls_make_the_target_unknown(self):
+        # A-12: push の URL を読めなかった remote は、空の一覧ではなく「決まらない」
+        mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
+        original = ug._git
+
+        def flaky(location, *args):
+            if args[:3] == ("remote", "get-url", "--push"):
+                return None
+            return original(location, *args)
+
+        ug._git = flaky
+        try:
+            info = ug.read_repo_info(mine)
+            v = ug.decide("git push origin", mine, {}, ("nrslib",), {mine: info})
+            self.assertFalse(v.allowed)
+        finally:
+            ug._git = original
+
 
 class CheckCommand(unittest.TestCase):
     def test_check_entry_returns_verdict_without_running(self):
@@ -1037,6 +1249,71 @@ class Install(unittest.TestCase):
             os.path.exists(
                 os.path.join(self.home, ".claude/settings.json.bak-upstream-guard-t1")
             )
+        )
+
+    def test_install_creates_missing_settings_and_reports_missing_agents(self):
+        # C-1: 設定ファイルが無ければ作り、エージェントの置き場が無ければ登録できなかったと返す
+        import shutil
+        import tempfile
+
+        os.remove(os.path.join(self.home, ".claude/settings.json"))
+        result = ug.apply_install(self.home, True, "t1")
+        settings = json.loads(self.read(".claude/settings.json"))
+        self.assertEqual(
+            settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"], ug.HOOK_COMMAND
+        )
+        self.assertEqual(result.skipped, [])
+        bare = tempfile.mkdtemp()
+        os.makedirs(os.path.join(bare, ".claude"))
+        result = ug.apply_install(bare, True, "t1")
+        self.assertEqual(len(result.skipped), 1)
+        self.assertIn("Codex", result.skipped[0])
+        shutil.rmtree(bare)
+
+    def test_uninstall_keeps_other_hooks_in_the_same_group(self):
+        # C-2: 同じグループにあるほかのフックは消さない
+        other = {"type": "command", "command": "other-hook", "timeout": 5}
+        group = {
+            "matcher": "Bash",
+            "hooks": [other, ug._hook_group("Bash")["hooks"][0]],
+        }
+        path = os.path.join(self.home, ".claude/settings.json")
+        with open(path, "w") as f:
+            json.dump({"hooks": {"PreToolUse": [group]}}, f)
+        ug.apply_install(self.home, False, "t1")
+        groups = json.loads(self.read(".claude/settings.json"))["hooks"]["PreToolUse"]
+        self.assertEqual(groups, [{"matcher": "Bash", "hooks": [other]}])
+
+    def test_trust_key_escapes_the_path(self):
+        # C-3: パスに " や \\ があっても config.toml が読める
+        import tempfile
+        import tomllib
+
+        home = os.path.join(tempfile.mkdtemp(), 'we"ird\\home')
+        os.makedirs(os.path.join(home, ".codex"))
+        os.makedirs(os.path.join(home, ".claude"))
+        ug.apply_install(home, True, "t1")
+        with open(os.path.join(home, ".codex/config.toml"), "rb") as f:
+            state = tomllib.load(f)["hooks"]["state"]
+        real = os.path.join(
+            os.path.realpath(os.path.join(home, ".codex")), "hooks.json"
+        )
+        self.assertIn(f"{real}:pre_tool_use:0:0", state)
+
+    def test_codex_files_are_written_together_or_not_at_all(self):
+        # C-4: config.toml を書けなければ、hooks.json も元のまま
+        config = os.path.join(self.home, ".codex/config.toml")
+        os.chmod(config, 0o444)
+        try:
+            with self.assertRaises(OSError):
+                ug.apply_install(self.home, True, "t1")
+        finally:
+            os.chmod(config, 0o644)
+        self.assertEqual(
+            self.read(".codex/hooks.json"), self.files[".codex/hooks.json"]
+        )
+        self.assertEqual(
+            self.read(".codex/config.toml"), self.files[".codex/config.toml"]
         )
 
     def test_trusted_hash_matches_what_codex_accepted(self):

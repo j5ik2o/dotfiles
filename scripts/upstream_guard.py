@@ -9,6 +9,7 @@ PreToolUse から呼ばれる入口で、Orca が起動したセッション（O
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import posixpath
@@ -36,6 +37,7 @@ class Remote:
     fetch_urls: tuple[str, ...] = ()
     push_urls: tuple[str, ...] = ()
     gh_resolved: str | None = None  # remote.<name>.gh-resolved（gh repo set-default）
+    readable: bool = True  # URL を読めなかった（タイムアウトなど）ときは False
 
 
 @dataclass(frozen=True)
@@ -505,7 +507,7 @@ _REST_WRITE_PATH = re.compile(
     r"^(?:pulls/[^/]+/(?:merge|update-branch)|merges|merge-upstream|git/(?:refs|tags|commits|trees|blobs)(?:/.*)?"
     r"|contents(?:/.*)?|releases(?:/.*)?|branches/[^/]+/rename|transfer|tags(?:/.*)?|)$"
 )
-_SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "fish", "mksh", "busybox"}
+_SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "fish", "mksh"}
 _INTERPRETERS = {
     "python",
     "python3",
@@ -654,6 +656,12 @@ _LAUNCH = re.compile(
 _BACKTICK_LAUNCH = re.compile(r"`[^`\n]*\b(?:git|gh|hub|curl)\b[^`\n]*`")
 
 
+# コードの中に書かれた宛先（github.com の URL、-R と --repo の値）
+_EXPLICIT_TARGET = re.compile(
+    r"(?:github\.com[/:]|(?<![\w-])-R[\s'\",=]+|--repo[\s'\",=]+)([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?(?=[\s'\",)\]/]|$)"
+)
+
+
 def _opaque_code(code: str, ctx: Ctx, why: str, name: str = "") -> Verdict:
     """インタープリタのコード。文やデータに語句があるだけなら通す。
 
@@ -664,7 +672,12 @@ def _opaque_code(code: str, ctx: Ctx, why: str, name: str = "") -> Verdict:
     if not (_LAUNCH.search(code) or backtick):
         return ALLOW
     lowered = code.lower()
-    if any(b in lowered for b in ctx.blocked) or _OPAQUE_STRONG.search(code):
+    if any(b in lowered for b in ctx.blocked):
+        return _deny_unresolved("マージか push に見えるコマンド", why)
+    if _OPAQUE_STRONG.search(code):
+        targets = _EXPLICIT_TARGET.findall(code)
+        if targets and not any(blocked_entry(t.lower(), ctx.blocked) for t in targets):
+            return ALLOW  # 宛先が書いてあり、どれも禁止の宛先でない
         return _deny_unresolved("マージか push に見えるコマンド", why)
     return ALLOW
 
@@ -767,11 +780,16 @@ def _decide_cmd(cmd: Cmd, ctx: Ctx) -> Verdict:
             _, v = _expand(Word(parts), ctx)
             if not v.allowed:
                 return v
-    stdin_text = next((r.heredoc for r in cmd.redirects if r.heredoc is not None), None)
-    if stdin_text is None:
-        here = next((r for r in cmd.redirects if r.op == "<<<" and r.target), None)
-        if here is not None:
-            stdin_text = _expand(here.target, ctx)[0].value
+    stdin_text = None
+    for r in reversed(cmd.redirects):
+        if r.heredoc is not None:
+            stdin_text = r.heredoc
+            break
+        if r.op == "<<<" and r.target:
+            stdin_text = _expand(r.target, ctx)[0].value
+            break
+        if r.op in ("<", "<>"):
+            break
     stdin_redirected = any(r.op in ("<", "<>") for r in cmd.redirects)
 
     # 先頭の代入。コマンドが続かなければシェルの変数になる
@@ -789,8 +807,17 @@ def _decide_cmd(cmd: Cmd, ctx: Ctx) -> Verdict:
     if not args:
         ctx.vars.update(cmd_env)
         return ALLOW
+    if (
+        args[0].resolved
+        and _BARE_VAR.fullmatch(words[0].raw)
+        and re.search(r"\s", args[0].value.strip())
+    ):
+        args = [Arg(w, True) for w in args[0].value.split()] + args[1:]
     stdin = Stdin(stdin_text, cmd.stdin_piped or stdin_redirected, cmd)
     return _decide_argv(args, ctx, cmd_env, stdin=stdin)
+
+
+_BARE_VAR = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?")
 
 
 def _lookup(name: str, ctx: Ctx, cmd_env: Mapping[str, str]) -> str:
@@ -822,6 +849,7 @@ _PREFIX_WRAPPERS: dict[str, set[str]] = {
     "xargs": {"-I", "-L", "-n", "-P", "-s", "-d", "-E", "-a", "-i", "-l"},
     "timeout": {"-s", "-k", "--signal", "--kill-after"},
     "gtimeout": {"-s", "-k", "--signal", "--kill-after"},
+    "busybox": set(),
 }
 _AWKS = {"awk", "gawk", "mawk", "nawk"}
 
@@ -862,9 +890,11 @@ def _shell_builtin(
             return _opaque(
                 " ".join(a.value for a in rest), ctx, "eval の中身が変数で決まる"
             )
-        return _decide_script(
-            " ".join(a.value for a in rest), _child(ctx, vars=ctx.vars)
-        )
+        ctx.depth += 1
+        try:
+            return _decide_script(" ".join(a.value for a in rest), ctx)
+        finally:
+            ctx.depth -= 1
     return None
 
 
@@ -955,6 +985,7 @@ def _decide_argv(
         if builtin is not None:
             return builtin
         if name == "env":
+            ctx = _env_without(ctx, rest)
             args, chdir, split = _strip_env(rest, cmd_env)
             if chdir is not None:
                 ctx = _with_cwd(ctx, chdir)
@@ -1065,6 +1096,31 @@ def _skip_opts(args: list[Arg], with_value: set[str]) -> list[Arg]:
             continue
         i += 1
     return args[i:]
+
+
+def _env_without(ctx: Ctx, args: list[Arg]) -> Ctx:
+    """env -i と env -u NAME で、後ろのコマンドに渡らない環境変数を判定からも消す。"""
+    unset: set[str] = set()
+    clear = False
+    for i, a in enumerate(args):
+        v = a.value
+        if v in ("-i", "--ignore-environment", "-"):
+            clear = True
+        elif v in ("-u", "--unset") and i + 1 < len(args):
+            unset.add(args[i + 1].value)
+        elif v.startswith("--unset="):
+            unset.add(v.split("=", 1)[1])
+        elif v.startswith("-u") and len(v) > 2:
+            unset.add(v[2:])
+        elif not v.startswith("-") and not _ASSIGN.match(v):
+            break
+    if not clear and not unset:
+        return ctx
+    if clear:
+        return replace(ctx, env={}, vars={})
+    env = {k: v for k, v in ctx.env.items() if k not in unset}
+    shell_vars = {k: v for k, v in ctx.vars.items() if k not in unset}
+    return replace(ctx, env=env, vars=shell_vars)
 
 
 def _strip_env(
@@ -1215,14 +1271,14 @@ class GitCall:
 def _parse_git_globals(
     rest: list[Arg], ctx: Ctx, cmd_env: Mapping[str, str]
 ) -> tuple[GitCall, list[Arg]]:
-    """git の前置きのオプション（-C、--git-dir、-c）を読み、残りを返す。"""
-    location: str | None = ctx.cwd
+    """git の前置きのオプション（-C、--git-dir、-c）を読み、残りを返す。
+
+    -C は順番に関係なく、相対の --git-dir と GIT_DIR の解決に効く（git の -C の説明のとおり）。
+    """
+    workdir: str | None = ctx.cwd
     git_dir = cmd_env.get("GIT_DIR", ctx.vars.get("GIT_DIR", ctx.env.get("GIT_DIR")))
     location_unknown = git_dir is not None and UNKNOWN in git_dir
     inline_config: list[str] = []
-    if git_dir is not None:
-        location = _join(ctx.cwd, git_dir)
-        location = None if location is None else GIT_DIR_PREFIX + location
     i = 0
     while i < len(rest) and rest[i].value.startswith("-"):
         key, eq, val = rest[i].value.partition("=")
@@ -1235,22 +1291,19 @@ def _parse_git_globals(
         i += 1
         if key in ("-C", "--git-dir") and not resolved:
             location_unknown = True
-        elif (
-            key == "-C"
-            and location is not None
-            and not location.startswith(GIT_DIR_PREFIX)
-        ):
-            location = _join(location, val)
+        elif key == "-C" and workdir is not None:
+            workdir = _join(workdir, val)
         elif key == "--git-dir":
-            base = (
-                ctx.cwd if location is None else location.removeprefix(GIT_DIR_PREFIX)
-            )
-            p = _join(base, val)
-            location = None if p is None else GIT_DIR_PREFIX + p
+            git_dir = val
         elif key in ("-c", "--config-env"):
             inline_config.append(val if resolved else UNKNOWN + val)
             if key == "--config-env":
                 inline_config.append(UNKNOWN + "config-env")
+    location = workdir
+    if git_dir is not None and workdir is not None:
+        location = GIT_DIR_PREFIX + _join(workdir, git_dir)
+    elif git_dir is not None and git_dir.startswith("/"):
+        location = GIT_DIR_PREFIX + os.path.normpath(git_dir)
     info = None if location_unknown or location is None else ctx.repos.get(location)
     return GitCall(location, location_unknown, info, inline_config, cmd_env), rest[i:]
 
@@ -1438,6 +1491,8 @@ def _check_push_target(target: Arg, ctx: Ctx, call: GitCall) -> Verdict:
     remote = call.info.remotes.get(value)
     if remote is None:
         return _deny_unresolved("git push", f"remote {value} が見つからない")
+    if not remote.readable:
+        return _deny_unresolved("git push", f"remote {value} の URL を読めない")
     for url in remote.fetch_urls + remote.push_urls:
         repo = repo_from_url(url)
         entry = repo and blocked_entry(repo, ctx.blocked)
@@ -1547,14 +1602,13 @@ def _gh_target(
             return _deny_unresolved(op, f"{explicit.value} から宛先を読めない")
         candidates = [r]
     if not candidates:
-        flag = _gh_flag(p, "-R", "--repo")
-        if flag is not None:
+        for flag in p.flags.get("-R", []) + p.flags.get("--repo", []):
             if not flag.resolved:
                 return _deny_unresolved(op, "-R の値が変数やコマンド置換で決まる")
             r = repo_from_gh_arg(flag.value)
             if r is None:
                 return _deny_unresolved(op, f"-R {flag.value} から宛先を読めない")
-            candidates = [r]
+            candidates.append(r)
     if not candidates:
         candidates_or_verdict = _gh_default(ctx, cmd_env, op)
         if isinstance(candidates_or_verdict, Verdict):
@@ -1646,7 +1700,9 @@ def _decide_gh(
         if len(pos) > 2:
             return _gh_target(p, ctx, cmd_env, "gh repo sync", pos[2])
         return ALLOW  # 宛先がなければ手元のリポジトリだけを更新する
-    if group == "repo" and sub in ("delete", "rename", "archive"):
+    if group == "repo" and sub == "rename":
+        return _gh_target(p, ctx, cmd_env, "gh repo rename")  # 引数は新しい名前
+    if group == "repo" and sub in ("delete", "archive"):
         return _gh_target(
             p, ctx, cmd_env, f"gh repo {sub}", pos[2] if len(pos) > 2 else None
         )
@@ -1677,7 +1733,7 @@ def _decide_gh_api(p: GhArgs, ctx: Ctx, cmd_env: dict[str, str]) -> Verdict:
     else:
         method = method_arg.value.upper() if method_arg.resolved else None
     if not endpoint.resolved:
-        if method == "GET":
+        if method in _READ_METHODS:
             return ALLOW
         return _deny_unresolved(
             "gh api の書き込み", "エンドポイントが変数やコマンド置換で決まる"
@@ -1701,9 +1757,12 @@ def _decide_gh_api(p: GhArgs, ctx: Ctx, cmd_env: dict[str, str]) -> Verdict:
                     f"GraphQL の {m.group(1)}", "GraphQL はノード ID で宛先を指す"
                 )
         return ALLOW
-    if method == "GET":
+    if method in _READ_METHODS:
         return ALLOW
     return _check_rest_write(path, method, ctx, cmd_env, "gh api")
+
+
+_READ_METHODS = ("GET", "HEAD")
 
 
 def _api_path(value: str) -> str:
@@ -1716,6 +1775,10 @@ def _api_path(value: str) -> str:
 def _api_host(url: str) -> str | None:
     m = re.match(r"^(?:https?://)?(?:[^@/]*@)?([^/:?#]+)", url.strip(), re.IGNORECASE)
     return m.group(1).lower() if m else None
+
+
+# gh api が置き換えるプレースホルダー（gh 2.105.0 の (\\:(owner|repo|branch)\\b|\\{[a-z]+\\})）
+_PLACEHOLDER = re.compile(r"\{[a-z]+\}|:(?:owner|repo|branch)")
 
 
 def _check_rest_write(
@@ -1736,11 +1799,16 @@ def _check_rest_write(
     if rest == "" and method not in ("PATCH", "DELETE", None):
         return ALLOW
     op = f"{op_name} の {method or '書き込み'} {path}"
-    if "{" in owner or "{" in repo:
+    if _PLACEHOLDER.fullmatch(owner) or _PLACEHOLDER.fullmatch(repo):
         default = _gh_default(ctx, cmd_env, op)
         if isinstance(default, Verdict):
             return default
-        candidates = default
+        candidates = []
+        for d in default:
+            d_owner, d_repo = d.split("/", 1)
+            o = d_owner if _PLACEHOLDER.fullmatch(owner) else owner.lower()
+            r = d_repo if _PLACEHOLDER.fullmatch(repo) else repo.lower()
+            candidates.append(f"{o}/{r}")
     elif "\0" in owner or "\0" in repo:
         return _deny_unresolved(op, "owner や repo が変数で決まる")
     else:
@@ -1758,7 +1826,7 @@ _CURL_WITH_VALUE = {
     "-X", "--request", "-d", "--data", "--data-raw", "--data-binary", "--data-urlencode", "--json", "-F",
     "--form", "-T", "--upload-file", "-H", "--header", "-o", "--output", "-u", "--user", "-A", "--user-agent",
     "-e", "--referer", "-b", "--cookie", "-c", "--cookie-jar", "-K", "--config", "--max-time", "-m",
-    "--connect-timeout", "-w", "--write-out", "--url", "--method", "--post-data", "--body-data", "-O",
+    "--connect-timeout", "-w", "--write-out", "--url", "--method", "--post-data", "--body-data",
 }  # fmt: skip
 
 
@@ -1783,16 +1851,34 @@ def _split_short_flags(args: list[Arg]) -> list[Arg]:
     return out
 
 
-def _decide_http(
-    name: str, args: list[Arg], ctx: Ctx, stdin_text: str | None
-) -> Verdict:
+_BODY_FLAGS = {
+    "-d",
+    "--data",
+    "--data-raw",
+    "--data-binary",
+    "--data-urlencode",
+    "--json",
+    "-F",
+    "--form",
+    "--post-data",
+    "--body-data",
+}
+
+
+@dataclass
+class HttpRequest:
+    """curl や wget の 1 回の転送。"""
+
     method: str | None = None
-    body: list[str] = []
-    urls: list[Arg] = []
-    unresolved_body = False
-    i = 0
+    body: list[str] = field(default_factory=list)
+    urls: list[Arg] = field(default_factory=list)
+    unresolved_body: bool = False
+
+
+def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
+    req = HttpRequest()
     positional_method = name in ("http", "https", "xh", "xhs")
-    args = _split_short_flags(args)
+    i = 0
     while i < len(args):
         a = args[i]
         v = a.value
@@ -1801,74 +1887,76 @@ def _decide_http(
             arg = Arg(val, a.resolved) if eq else args[i + 1]
             i += 1 if eq else 2
             if key in ("-X", "--request", "--method"):
-                method = arg.value.upper() if arg.resolved else None
-            elif key in (
-                "-d",
-                "--data",
-                "--data-raw",
-                "--data-binary",
-                "--data-urlencode",
-                "--json",
-                "-F",
-                "--form",
-                "--post-data",
-                "--body-data",
-            ):
-                body.append(arg.value)
-                unresolved_body |= not arg.resolved or arg.value.startswith("@")
-                method = method or "POST"
+                req.method = arg.value.upper() if arg.resolved else None
+            elif key in _BODY_FLAGS:
+                req.body.append(arg.value)
+                req.unresolved_body |= not arg.resolved or arg.value.startswith("@")
+                req.method = req.method or "POST"
             elif key in ("-T", "--upload-file"):
-                method = method or "PUT"
+                req.method = req.method or "PUT"
             elif key == "--url":
-                urls.append(arg)
+                req.urls.append(arg)
             continue
-        if v.startswith("-"):
-            i += 1
-            continue
-        if positional_method and re.fullmatch(r"[A-Za-z]+", v) and not urls:
-            method = v.upper()
-        else:
-            urls.append(a)
         i += 1
+        if v.startswith("-"):
+            continue
+        if positional_method and re.fullmatch(r"[A-Za-z]+", v) and not req.urls:
+            req.method = v.upper()
+        else:
+            req.urls.append(a)
+    return req
+
+
+def _decide_http_url(name: str, url: str, req: HttpRequest, ctx: Ctx) -> Verdict:
+    if "git-receive-pack" in url:
+        repo = repo_from_url(url.split("/git-receive-pack")[0])
+        e = repo and blocked_entry(repo, ctx.blocked)
+        return _deny(f"{name} での push", repo, e) if e else ALLOW
+    host = _api_host(url)
+    if not host or not (
+        host.startswith(("api.", "uploads.")) or "/api/" in url.lower()
+    ):
+        return ALLOW
+    path = _api_path(url if "://" in url else "https://" + url)
+    if path == "graphql":
+        if req.unresolved_body:
+            why = "本文が変数やファイルで渡され中身を見られない"
+            return _deny_unresolved(f"{name} での GraphQL", why)
+        m = _GRAPHQL_WRITES.search("\n".join(req.body))
+        if m:
+            return _deny_unresolved(
+                f"GraphQL の {m.group(1)}", "GraphQL はノード ID で宛先を指す"
+            )
+        return ALLOW
+    method = req.method or ("POST" if req.body else "GET")
+    if method in _READ_METHODS:
+        return ALLOW
+    return _check_rest_write(path, method, ctx, {}, name)
+
+
+def _decide_http(
+    name: str, args: list[Arg], ctx: Ctx, stdin_text: str | None
+) -> Verdict:
+    args = _split_short_flags(args)
+    nexts = [i for i, a in enumerate(args) if a.value in ("--next", "-:")]
+    if nexts:  # curl --next は転送ごとにメソッドと本文を分ける
+        bounds = [-1, *nexts, len(args)]
+        for lo, hi in itertools.pairwise(bounds):
+            v = _decide_http(name, args[lo + 1 : hi], ctx, stdin_text)
+            if not v.allowed:
+                return v
+        return ALLOW
+    req = _parse_http_args(name, args)
     if stdin_text:
-        body.append(stdin_text)
-    for u in urls:
+        req.body.append(stdin_text)
+    for u in req.urls:
         if not u.resolved:
-            if method not in (None, "GET", "HEAD"):
+            if req.method not in (None, *_READ_METHODS):
                 return _deny_unresolved(
                     f"{name} の書き込み", "URL が変数やコマンド置換で決まる"
                 )
             continue
-        url = u.value
-        if "git-receive-pack" in url:
-            repo = repo_from_url(url.split("/git-receive-pack")[0])
-            e = repo and blocked_entry(repo, ctx.blocked)
-            if e:
-                return _deny(f"{name} での push", repo, e)
-            continue
-        host = _api_host(url)
-        if not host or not (
-            host.startswith(("api.", "uploads.")) or "/api/" in url.lower()
-        ):
-            continue
-        path = _api_path(url if "://" in url else "https://" + url)
-        if path == "graphql":
-            text = "\n".join(body)
-            if unresolved_body:
-                return _deny_unresolved(
-                    f"{name} での GraphQL",
-                    "本文が変数やファイルで渡され中身を見られない",
-                )
-            m = _GRAPHQL_WRITES.search(text)
-            if m:
-                return _deny_unresolved(
-                    f"GraphQL の {m.group(1)}", "GraphQL はノード ID で宛先を指す"
-                )
-            continue
-        eff = method or ("POST" if body else "GET")
-        if eff in ("GET", "HEAD"):
-            continue
-        v = _check_rest_write(path, eff, ctx, {}, name)
+        v = _decide_http_url(name, u.value, req, ctx)
         if not v.allowed:
             return v
     return ALLOW
@@ -1932,9 +2020,12 @@ def read_repo_info(location: str) -> RepoInfo | None:
         elif k.endswith(".gh-resolved"):
             gh_resolved[k[len("remote.") : -len(".gh-resolved")]] = v
     for name in names:
-        fetch = tuple(_git(location, "remote", "get-url", "--all", name) or ())
-        push = tuple(_git(location, "remote", "get-url", "--push", "--all", name) or ())
-        remotes[name] = Remote(fetch, push, gh_resolved.get(name))
+        fetch = _git(location, "remote", "get-url", "--all", name)
+        push = _git(location, "remote", "get-url", "--push", "--all", name)
+        readable = fetch is not None and push is not None
+        remotes[name] = Remote(
+            tuple(fetch or ()), tuple(push or ()), gh_resolved.get(name), readable
+        )
     branch = (_git(location, "symbolic-ref", "--short", "-q", "HEAD") or [None])[0]
     default = None
     keys = ([f"branch.{branch}.pushRemote"] if branch else []) + ["remote.pushDefault"]
@@ -1976,7 +2067,11 @@ def _fallback(command: str) -> Verdict:
 def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
     home = environ.get("HOME", os.path.expanduser("~"))
     try:
-        return decide(command, cwd, environ, load_blocked(environ, home), LazyRepos())
+        blocked = load_blocked(environ, home)
+    except Exception:  # noqa: BLE001  追加の一覧を読めなくても、既定の一覧で判定する
+        blocked = DEFAULT_BLOCKED
+    try:
+        return decide(command, cwd, environ, blocked, LazyRepos())
     except Exception:  # noqa: BLE001  判定の失敗でマージと push を通さない
         return _fallback(command)
 
@@ -2044,18 +2139,24 @@ def _hook_group(matcher: str) -> dict:
     }
 
 
-def _is_ours(group: dict) -> bool:
+def _is_our_handler(handler: dict) -> bool:
     # 前の版の形（実行ファイルを直接呼ぶもの）も自分の項目として扱う
-    return any(
-        ".local/bin/upstream-guard" in h.get("command", "")
-        for h in group.get("hooks", [])
-    )
+    return ".local/bin/upstream-guard" in handler.get("command", "")
 
 
 def set_pre_tool_use(doc: dict, present: bool, matcher: str) -> tuple[dict, int | None]:
-    """PreToolUse から自分の項目を除き、present なら末尾に足す。足した位置を返す。"""
+    """PreToolUse から自分のフックだけを外し、present なら末尾に足す。足した位置を返す。
+
+    同じグループにほかのフックがあれば、そのグループは残す。空になったグループだけ消す。
+    """
     hooks = doc.setdefault("hooks", {})
-    groups = [g for g in hooks.get("PreToolUse", []) if not _is_ours(g)]
+    groups = []
+    for group in hooks.get("PreToolUse", []):
+        handlers = [h for h in group.get("hooks", []) if not _is_our_handler(h)]
+        if len(handlers) == len(group.get("hooks", [])):
+            groups.append(group)
+        elif handlers:
+            groups.append({**group, "hooks": handlers})
     index = None
     if present:
         index = len(groups)
@@ -2102,51 +2203,99 @@ def set_codex_trust(config_text: str, key: str | None, trusted_hash: str | None)
         i += 1
     text = "\n".join(out).rstrip("\n") + "\n"
     if key is not None:
-        text += f'\n{TOML_MARK}\n[hooks.state."{key}"]\nenabled = true\ntrusted_hash = "{trusted_hash}"\n'
+        # キーは TOML の基本文字列。JSON の文字列の書き方で \\ と " を逃がす
+        quoted = json.dumps(key, ensure_ascii=False)
+        text += f'\n{TOML_MARK}\n[hooks.state.{quoted}]\nenabled = true\ntrusted_hash = "{trusted_hash}"\n'
     return text
 
 
-def _rewrite(path: str, new_text: str, stamp: str) -> None:
+def _read(path: str, default: str) -> str:
+    if not os.path.exists(path):
+        return default
     with open(path, encoding="utf-8") as f:
-        old = f.read()
-    if old == new_text:
-        return
-    with open(f"{path}.bak-upstream-guard-{stamp}", "w", encoding="utf-8") as f:
-        f.write(old)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(new_text)
+        return f.read()
 
 
-def apply_install(home: str, present: bool, stamp: str) -> list[str]:
-    """present=True で設置、False で取り外し。書き換えたファイルを返す。"""
-    done = []
-    claude = os.path.join(home, ".claude", "settings.json")
-    if os.path.exists(claude):
-        with open(claude, encoding="utf-8") as f:
-            doc = json.load(f)
-        doc, _ = set_pre_tool_use(doc, present, CLAUDE_MATCHER)
-        _rewrite(claude, json.dumps(doc, indent=2, ensure_ascii=False) + "\n", stamp)
-        done.append(claude)
-    codex_hooks = os.path.join(home, ".codex", "hooks.json")
-    codex_config = os.path.join(home, ".codex", "config.toml")
-    if os.path.exists(codex_hooks) and os.path.exists(codex_config):
-        with open(codex_hooks, encoding="utf-8") as f:
-            doc = json.load(f)
-        doc, index = set_pre_tool_use(doc, present, CODEX_MATCHER)
-        _rewrite(
-            codex_hooks, json.dumps(doc, indent=2, ensure_ascii=False) + "\n", stamp
-        )
-        key = (
-            None
-            if index is None
-            else f"{os.path.realpath(codex_hooks)}:pre_tool_use:{index}:0"
-        )
-        with open(codex_config, encoding="utf-8") as f:
-            config_text = f.read()
-        trusted = codex_trusted_hash(_hook_group(CODEX_MATCHER))
-        _rewrite(codex_config, set_codex_trust(config_text, key, trusted), stamp)
-        done += [codex_hooks, codex_config]
-    return done
+def _write_all(plan: list[tuple[str, str]], stamp: str) -> list[str]:
+    """計画したファイルを全部書く。途中で失敗したら、書いた分を元に戻して例外を上げる。"""
+    originals: list[tuple[str, str | None]] = []
+    try:
+        for path, new_text in plan:
+            old = _read(path, "") if os.path.exists(path) else None
+            if old == new_text:
+                continue
+            if old is not None:
+                with open(
+                    f"{path}.bak-upstream-guard-{stamp}", "w", encoding="utf-8"
+                ) as f:
+                    f.write(old)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(new_text)
+            originals.append((path, old))
+    except OSError as e:
+        failed_restore = []
+        for path, old in reversed(originals):
+            try:
+                if old is None:
+                    os.remove(path)
+                else:
+                    with open(path, "w", encoding="utf-8") as f:
+                        f.write(old)
+            except OSError:
+                failed_restore.append(path)
+        if failed_restore:
+            # 戻せなかったファイルは食い違ったまま。写しの場所を添えて知らせる
+            note = ", ".join(
+                f"{p}（写し {p}.bak-upstream-guard-{stamp}）" for p in failed_restore
+            )
+            raise OSError(f"{e}。元に戻せなかった: {note}") from e
+        raise
+    return [path for path, _ in originals]
+
+
+@dataclass
+class InstallResult:
+    written: list[str]
+    skipped: list[str]  # 登録できなかった対象と理由
+
+
+def apply_install(home: str, present: bool, stamp: str) -> InstallResult:
+    """present=True で設置、False で取り外し。
+
+    設置で設定ファイルが無ければ作る。置き場のディレクトリが無い（そのエージェントが
+    入っていない）ときは登録せず、skipped に理由を返す。Codex は hooks.json と
+    config.toml を一組で書き、片方だけが書き換わった状態を残さない。
+    """
+    plan: list[tuple[str, str]] = []
+    skipped: list[str] = []
+    claude_dir = os.path.join(home, ".claude")
+    claude = os.path.join(claude_dir, "settings.json")
+    if os.path.isdir(claude_dir):
+        if present or os.path.exists(claude):
+            doc = json.loads(_read(claude, "{}"))
+            doc, _ = set_pre_tool_use(doc, present, CLAUDE_MATCHER)
+            plan.append((claude, json.dumps(doc, indent=2, ensure_ascii=False) + "\n"))
+    elif present:
+        skipped.append(f"Claude Code: {claude_dir} が無い")
+    codex_dir = os.path.join(home, ".codex")
+    codex_hooks = os.path.join(codex_dir, "hooks.json")
+    codex_config = os.path.join(codex_dir, "config.toml")
+    if os.path.isdir(codex_dir):
+        if present or os.path.exists(codex_hooks) or os.path.exists(codex_config):
+            doc = json.loads(_read(codex_hooks, '{"hooks": {}}'))
+            doc, index = set_pre_tool_use(doc, present, CODEX_MATCHER)
+            plan.append(
+                (codex_hooks, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+            )
+            real = os.path.join(os.path.realpath(codex_dir), "hooks.json")
+            key = None if index is None else f"{real}:pre_tool_use:{index}:0"
+            trusted = codex_trusted_hash(_hook_group(CODEX_MATCHER))
+            plan.append(
+                (codex_config, set_codex_trust(_read(codex_config, ""), key, trusted))
+            )
+    elif present:
+        skipped.append(f"Codex: {codex_dir} が無い")
+    return InstallResult(_write_all(plan, stamp), skipped)
 
 
 def main(argv: list[str]) -> int:
@@ -2177,11 +2326,14 @@ def main(argv: list[str]) -> int:
         import time
 
         home = os.path.expanduser("~")
-        for path in apply_install(
+        result = apply_install(
             home, argv[1] == "install", time.strftime("%Y%m%d%H%M%S")
-        ):
+        )
+        for path in result.written:
             print(f"{argv[1]}: {path}")
-        return 0
+        for reason in result.skipped:
+            print(f"{argv[1]}: 登録できなかった: {reason}", file=sys.stderr)
+        return 1 if result.skipped else 0
     print(
         "usage: upstream-guard hook < payload.json | check [--cwd <dir>] [--] '<command>' | install | uninstall",
         file=sys.stderr,
