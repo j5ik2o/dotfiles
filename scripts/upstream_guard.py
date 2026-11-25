@@ -635,8 +635,10 @@ def decide(
     ctx.script_text = command
     try:
         verdict = _decide_script(command, ctx)
-    except ParseError as e:
-        verdict = _unparsed(command, ctx, f"コマンドを解析できない（{e}）")
+    except ParseError:
+        verdict = _unparsed(
+            command, ctx, "コマンドを解析できない"
+        )  # e には入力の文字が入る
     except RecursionError:
         verdict = _unparsed(command, ctx, "入れ子が深すぎる")
     if verdict.allowed or not verdict.unresolved:
@@ -646,9 +648,16 @@ def decide(
 
 
 def _deny(op: str, repo: str, entry: str) -> Verdict:
+    """宛先が禁止の宛先と決まった拒否。
+
+    理由の文には、コマンドや設定から取った値（URL、ヘッダ、git -c の値など）を写さない。
+    書くのは、何を見たか（op。固定の文）と、設定の一覧に在る禁止の宛先の名前（entry）だけ。
+    repo は呼び出し側が決めた宛先で、文には入れない。
+    """
+    del repo
     return Verdict(
         False,
-        f"upstream-guard: {op}を実行前に止めました。宛先 {repo} は禁止の宛先（{entry}）です。\n{ADVICE}",
+        f"upstream-guard: {op}を実行前に止めました。宛先が禁止の宛先（{entry}）です。\n{ADVICE}",
     )
 
 
@@ -1628,7 +1637,7 @@ def _check_push_target(target: Arg, ctx: Ctx, call: GitCall) -> Verdict:
     if looks_like_url(value):
         repo = repo_from_url(value)
         if repo is None:
-            return _deny_unresolved("git push", f"URL {value} から宛先を読めない")
+            return _deny_unresolved("git push", "URL から宛先を読めない")
         entry = blocked_entry(repo, ctx.blocked)
         return _deny("git push", repo, entry) if entry else ALLOW
     if looks_like_path(value):
@@ -1638,14 +1647,14 @@ def _check_push_target(target: Arg, ctx: Ctx, call: GitCall) -> Verdict:
         return unreadable
     remote = call.info.remotes.get(value)
     if remote is None:
-        return _deny_unresolved("git push", f"remote {value} が見つからない")
+        return _deny_unresolved("git push", "名前の remote が見つからない")
     if not remote.readable:
-        return _deny_unresolved("git push", f"remote {value} の URL を読めない")
+        return _deny_unresolved("git push", "remote の URL を読めない")
     for url in remote.fetch_urls + remote.push_urls:
         repo = repo_from_url(url)
         entry = repo and blocked_entry(repo, ctx.blocked)
         if entry:
-            return _deny(f"git push（remote {value}）", repo, entry)
+            return _deny("git push（remote の URL）", repo, entry)
     return ALLOW
 
 
@@ -1747,7 +1756,7 @@ def _gh_target(
             return _deny_unresolved(op, "宛先が変数やコマンド置換で決まる")
         r = repo_from_gh_arg(explicit.value)
         if r is None:
-            return _deny_unresolved(op, f"{explicit.value} から宛先を読めない")
+            return _deny_unresolved(op, "引数から宛先を読めない")
         candidates = [r]
     if not candidates:
         for flag in p.flags.get("-R", []) + p.flags.get("--repo", []):
@@ -1755,7 +1764,7 @@ def _gh_target(
                 return _deny_unresolved(op, "-R の値が変数やコマンド置換で決まる")
             r = repo_from_gh_arg(flag.value)
             if r is None:
-                return _deny_unresolved(op, f"-R {flag.value} から宛先を読めない")
+                return _deny_unresolved(op, "-R の値から宛先を読めない")
             candidates.append(r)
     if not candidates:
         candidates_or_verdict = _gh_default(ctx, cmd_env, op)
@@ -1779,7 +1788,7 @@ def _gh_default(ctx: Ctx, cmd_env: dict[str, str], op: str) -> list[str] | Verdi
     if gh_repo:
         r = repo_from_gh_arg(gh_repo)
         if r is None:
-            return _deny_unresolved(op, f"GH_REPO={gh_repo} から宛先を読めない")
+            return _deny_unresolved(op, "GH_REPO の値から宛先を読めない")
         return [r]
     if ctx.cwd is None:
         return _deny_unresolved(op, "作業ディレクトリを決められない")
@@ -1951,13 +1960,19 @@ def _api_host(url: str) -> str | None:
 _PLACEHOLDER = re.compile(r"\{[a-z]+\}|:(?:owner|repo|branch)")
 
 
+def _rest_op(op_name: str, method: str | None) -> str:
+    """REST の書き込みの op。パス（入力の値）は写さない。メソッドは決まった名前のときだけ書く。"""
+    known = method if method in ("POST", "PUT", "PATCH", "DELETE") else "書き込み"
+    return f"{op_name} の {known}"
+
+
 def _check_rest_write(
     path: str, method: str | None, ctx: Ctx, cmd_env: dict[str, str], op_name: str
 ) -> Verdict:
     by_id = re.match(r"^repositories/[^/]+(?:/(.*))?$", path)
     if by_id and _REST_WRITE_PATH.match(by_id.group(1) or ""):
         return _deny_unresolved(
-            f"{op_name} の {method or '書き込み'} {path}",
+            _rest_op(op_name, method),
             "リポジトリを数値の ID で指している",
         )
     m = re.match(r"^repos/([^/]+)/([^/]+)(?:/(.*))?$", path)
@@ -1968,7 +1983,7 @@ def _check_rest_write(
         return ALLOW
     if rest == "" and method not in ("PATCH", "DELETE", None):
         return ALLOW
-    op = f"{op_name} の {method or '書き込み'} {path}"
+    op = _rest_op(op_name, method)
     if _PLACEHOLDER.fullmatch(owner) or _PLACEHOLDER.fullmatch(repo):
         default = _gh_default(ctx, cmd_env, op)
         if isinstance(default, Verdict):
@@ -2315,9 +2330,65 @@ def _log_head(command: str) -> str:
     return ""
 
 
+_SECRET_PATTERNS = (
+    # URL の資格情報（//user:token@）。ほかの置換が区切りの @ を消す前に、最初に伏せる
+    # @ が 2 つ以上あっても、/・?・#・空白を越えない範囲で最後の @ まで伏せる
+    (re.compile(r"(//)[^/?#\s]+@"), r"\1***@"),
+    # ヘッダの値（Authorization・Proxy-Authorization・Cookie・Set-Cookie）は、行の終わりまで伏せる
+    (
+        re.compile(r"(?i)\b((?:proxy-)?authorization|(?:set-)?cookie)\s*[:=]\s*[^\n]*"),
+        r"\1: ***",
+    ),
+    # 認証の方式に続く値
+    (re.compile(r"(?i)\b(bearer|basic|token)\s+[A-Za-z0-9._~+/=-]+"), r"\1 ***"),
+    # GitHub のトークンの形
+    (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,})"), "***"),
+    # token=…、password=… などの値
+    (
+        re.compile(
+            r"(?i)\b(token|password|passwd|secret|api[_-]?key)="
+            r"(?:\"[^\"\n]*\"|'[^'\n]*'|[^\s&;'\"]+|[\"'][^\s&;]*)"
+        ),
+        r"\1=***",
+    ),
+)
+
+
 def _redact(text: str) -> str:
-    """URL の資格情報（//user:token@）を伏せる。"""
-    return re.sub(r"(//)[^/@\s]+@", r"\1***@", text)
+    """記録とモデルへの理由から、秘密に見える値を伏せる。"""
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+LOG_MAX_BYTES = (
+    1 << 20
+)  # 記録のファイルの上限（1 MiB）。超えたら .1 に移し、古い .1 は捨てる
+
+
+def _append_private(path: str, line: str) -> None:
+    """本人だけが読める形（置き場 0700、ファイル 0600）で 1 行を追記する。大きさの上限で古い分を切る。
+
+    大きさの確認、.1 への移動、追記は、ロックのファイルで直列にする（同時に動くフックが
+    2 回移して、古い履歴を消さないように）。
+    """
+    import fcntl
+
+    state = os.path.dirname(path)
+    os.makedirs(state, mode=0o700, exist_ok=True)
+    os.chmod(state, 0o700)
+    lock_fd = os.open(path + ".lock", os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
+            os.replace(path, path + ".1")
+            os.chmod(path + ".1", 0o600)
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
+            os.chmod(path, 0o600)  # すでに在るファイルが 0644 でも直す
+            f.write(line)
+    finally:
+        os.close(lock_fd)  # 閉じるとロックも外れる
 
 
 def _log_verdict(
@@ -2356,9 +2427,9 @@ def _log_verdict(
     }
     name = "warnings.log" if verdict.kind == "warn" else "denials.log"
     with contextlib.suppress(OSError):
-        os.makedirs(state, exist_ok=True)
-        with open(os.path.join(state, name), "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        _append_private(
+            os.path.join(state, name), json.dumps(record, ensure_ascii=False) + "\n"
+        )
 
 
 def _warning_output(text: str) -> str:
@@ -2394,10 +2465,10 @@ def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
     verdict = check(command, cwd, environ)
     _log_verdict(verdict, command, cwd, environ)
     if verdict.kind == "warn":
-        return 0, _warning_output(verdict.warning)
+        return 0, _warning_output(_redact(verdict.warning))
     if verdict.allowed:
         return 0, ""
-    return 2, verdict.reason
+    return 2, _redact(verdict.reason)
 
 
 # ---------------------------------------------------------------------------
@@ -2716,7 +2787,7 @@ def main(argv: list[str]) -> int:
             )
             return 64
         verdict = check(rest[0], cwd, os.environ)
-        detail = verdict.warning if verdict.kind == "warn" else verdict.reason
+        detail = _redact(verdict.warning if verdict.kind == "warn" else verdict.reason)
         print(verdict.kind + ("\n" + detail if detail else ""))
         return 0 if verdict.allowed else 2
     if len(argv) == 2 and argv[1] in ("install", "uninstall"):

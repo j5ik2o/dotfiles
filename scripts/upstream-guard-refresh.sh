@@ -4,8 +4,10 @@
 # 使い方: scripts/upstream-guard-refresh.sh [dotfiles のチェックアウト]
 #
 # 効くのは、フックが呼ぶ ~/.local/bin/upstream-guard が <state>/result/bin/upstream-guard を
-# 指しているとき（PR のマージと make apply の前に、手で作ったリンク）だけ。make apply の後は
-# Home Manager が Nix のパッケージを直接指すので、作り直しは make apply で行う。
+# 指しているとき（PR のマージと make apply の前に、手で作ったリンク）だけ。make apply の前には、
+# その手で作ったリンクを取り除く（Home Manager はリンクを .backup へ退避せず、有効化が
+# 「would be clobbered」で止まる）。取り除いている間は、フックは警告を出してコマンドを通す。
+# make apply の後は Home Manager が Nix のパッケージを直接指すので、作り直しは make apply で行う。
 # 最後に実体を確かめ、result を指していなければ「効いていない」と出して 0 以外で終える。
 # 同時に 2 つ走らせない（差し替えは push と同じ区切りに 1 回の運用）。
 # 新しい版は、いま使っていない側の out-link（<state>/slot-a か slot-b）に作り、

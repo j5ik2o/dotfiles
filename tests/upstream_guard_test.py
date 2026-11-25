@@ -19,6 +19,13 @@ sys.path.insert(
 import upstream_guard as ug
 
 R = ug.Remote
+
+
+def _cred(user: str, password: str) -> str:
+    """試験用の偽の資格情報（user:password）。ソースに URL の形のまま書かない（秘密の検知に掛からないように）。"""
+    return user + ":" + password
+
+
 REPOS: dict[str, ug.RepoInfo | None] = {
     # takt の実物と同じ形: origin は自分、upstream は上流で push の URL は DISABLED、set-default は origin
     "/w/takt": ug.RepoInfo(
@@ -321,7 +328,9 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (D, "git push https://github.com/nrslib/takt.git main", "/w/mine", {}),
     (
         D,
-        "git push https://x-access-token:abc@github.com/nrslib/takt main",
+        "git push https://"
+        + _cred("x-access-token", "abc")
+        + "@github.com/nrslib/takt main",
         "/w/mine",
         {},
     ),
@@ -551,7 +560,9 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
     (D, "curl -X PUT HTTPS://api.github.com/repos/nrslib/takt/pulls/1/merge", None, {}),
     (
         D,
-        "curl -X PUT https://x:tok@api.github.com/repos/nrslib/takt/pulls/1/merge",
+        "curl -X PUT https://"
+        + _cred("x", "tok")
+        + "@api.github.com/repos/nrslib/takt/pulls/1/merge",
         None,
         {},
     ),
@@ -1145,6 +1156,104 @@ class DecideTable(unittest.TestCase):
         self.assertEqual(failures, [], "\n".join(failures))
 
 
+class NoRawValuesInOutput(unittest.TestCase):
+    """理由・警告・記録には、コマンドや設定から取った生の値を写さない（表の全件で確かめる性質）。
+
+    入れてよいのは、固定の文、判定の種類、設定の一覧に在る禁止の宛先の名前、作業ディレクトリ、
+    コマンドの先頭の語、長さだけ。秘密の印を値の位置に差し込み、どの判定でも出力に現れないことを見る。
+    """
+
+    MARK = (
+        "Zq" + "9mark" + "XVAL"
+    )  # 秘密の印（部品から組み立てる。禁止の宛先の語を含まない）
+
+    def variants(self, command: str) -> list[str]:
+        m = self.MARK
+        out = [
+            command.replace(
+                "https://", "https://" + _cred("u", m) + "@"
+            ),  # URL の資格情報
+            command.replace("j5ik2o/", m + "j5ik2o/"),  # 宛先の owner
+            command.replace(
+                "nrslib/", "nrslib" + m + "/"
+            ),  # 禁止の宛先の repo を含む名前
+            command.replace(" origin", " origin" + m),  # remote の名前
+            command.replace(" upstream", " upstream" + m),
+            command.replace("-R ", "-R " + m),  # -R の値
+            command.replace("repos/", "repos/" + m),  # API のパス
+            command.replace("pulls/", "pulls/" + m),
+            command.replace("query=", "query=" + m),  # GraphQL のクエリ
+            command + f" -H 'X-Credentials: password=\"{m} v\"'",  # 引数の文
+            f"git -c http.extraHeader='Authorization: token {m}' " + command,
+            f"GH_REPO={m}/x " + command,  # 前置きの代入
+            f"R={m}; " + command,  # シェル変数
+        ]
+        return [v for v in out if v != command and m in v]
+
+    def test_no_input_value_reaches_reason_warning_or_log(self):
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        log_env = {
+            "UPSTREAM_GUARD_STATE": state,
+            "ORCA_AGENT_SESSION_ID": "s",
+            "HOME": "/x",
+        }
+        leaks = []
+        checked = 0
+        for _expected, command, cwd, extra in CASES:
+            for variant in self.variants(command):
+                env = {**ENV, **extra, "GH_REPO_EXTRA": self.MARK}
+                v = ug.decide(variant, cwd, env, ("nrslib",), Repos(REPOS))
+                checked += 1
+                for text in (v.reason, v.warning, v.unresolved):
+                    if self.MARK in text:
+                        leaks.append(f"{v.kind}: {variant!r}\n    {text}")
+                        break
+                ug._log_verdict(v, variant, cwd, log_env)
+        for name in ("warnings.log", "denials.log"):
+            path = os.path.join(state, name)
+            if os.path.exists(path):
+                with open(path) as f:
+                    for line in f:
+                        record = json.loads(line)
+                        if self.MARK in record["reason"] or self.MARK in record["head"]:
+                            leaks.append(f"記録: {record}")
+        self.assertGreater(checked, 1000)
+        self.assertEqual(leaks[:20], [], f"{len(leaks)} 件に生の値が残った")
+
+
+class Redact(unittest.TestCase):
+    """2 つ目の守り（_redact）。理由の文に値が入ってしまったときも、秘密に見えるものを伏せる。"""
+
+    def test_url_credentials_up_to_the_last_at_sign(self):
+        host = "@example.invalid/org/repo"
+        for cred in (_cred("user", "AAA@TOPSECRET"), _cred("user", "A@B@TOPSECRET")):
+            out = ug._redact("https://" + cred + host)
+            self.assertNotIn("TOPSECRET", out)
+            self.assertTrue(out.endswith(host), out)
+        self.assertEqual(
+            ug._redact("https://" + _cred("user", "ONLYONE") + host),
+            "https://***" + host,
+        )
+        # パスとクエリの @ は巻き込まない
+        plain = "https://example.invalid/org/repo@v1?x=a@b"
+        self.assertEqual(ug._redact(plain), plain)
+
+    def test_quoted_values(self):
+        for text in (
+            'password="QUOTED VALUE"',
+            "secret='SINGLE QUOTED'",
+            'api_key="NOSPACE"',
+            'X-Credentials: password="HEADER VALUE" rest',
+            'password="UNCLOSED',
+        ):
+            out = ug._redact(text)
+            for word in ("QUOTED", "SINGLE", "NOSPACE", "HEADER", "UNCLOSED"):
+                self.assertNotIn(word, out, text)
+        self.assertEqual(ug._redact("token=PLAINVALUE&x=1"), "token=***&x=1")
+
+
 class Blocked(unittest.TestCase):
     def test_owner_and_repo_entries_ignore_case(self):
         self.assertEqual(ug.blocked_entry("nrslib/takt", ("NRSLIB",)), "NRSLIB")
@@ -1210,7 +1319,8 @@ class Hook(unittest.TestCase):
             self.payload("git push https://github.com/nrslib/takt main"), env
         )
         self.assertEqual(code, 2)
-        self.assertIn("nrslib/takt", msg)
+        # 理由には、設定の一覧に在る禁止の宛先の名前だけを書く（コマンドの URL は写さない）
+        self.assertIn("禁止の宛先（nrslib）", msg)
 
     def test_monitor_commands_are_checked(self):
         env = {"HOME": "/x", "ORCA_AGENT_SESSION_ID": "s"}
@@ -1334,6 +1444,135 @@ class Hook(unittest.TestCase):
         for command in daily:
             self.assertEqual(ug.check(command, d, env).kind, "allow", command)
 
+    def test_no_secret_reaches_the_log_or_the_model(self):
+        # Authorization・Cookie・トークンに見える値と、URL の //…@ を、記録とモデルへの理由の両方で伏せる
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        secrets = [
+            "SECRETA1",
+            "SECRETB2",
+            "ghp_SECRETC3abcdefghij",
+            "SECRETD4",
+            "SECRETE5",
+        ]
+        commands = [
+            "git -c 'http.https://github.com/nrslib/.extraheader=AUTHORIZATION: basic SECRETA1' push origin",
+            "git -c remote.origin.pushurl=https://"
+            + _cred("x-access-token", "SECRETB2")
+            + "@github.com/nrslib/takt push origin",
+            "git -c 'url.https://github.com/nrslib/.insteadOf=ghp_SECRETC3abcdefghij' push origin",
+            "git -c 'http.https://github.com/nrslib/.cookiefile=Cookie: session=SECRETD4' push origin",
+            "git -c 'http.https://github.com/nrslib/.extraheader=Authorization: Bearer SECRETE5' push origin",
+        ]
+        for command in commands:
+            code, message = ug.hook_main(self.payload(command, "/nonexistent"), env)
+            self.assertEqual(code, 2, command)
+            for secret in secrets:
+                self.assertNotIn(secret, message, command)
+        with open(os.path.join(state, "denials.log")) as f:
+            text = f.read()
+        for secret in secrets:
+            self.assertNotIn(secret, text)
+        self.assertEqual(len(text.splitlines()), len(commands))
+
+    def test_url_credentials_with_token_like_text_are_masked(self):
+        # URL のパスワードに token= などがあっても、URL の資格情報を先に伏せる
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        for command in (
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "TOPSECRET-token=abc")
+            + "@github.com/nrslib/takt push origin",
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "TOPSECRET-cookie=abc")
+            + "@github.com/nrslib/takt push origin",
+        ):
+            code, message = ug.hook_main(self.payload(command, "/nonexistent"), env)
+            self.assertEqual(code, 2)
+            self.assertNotIn("TOPSECRET", message)
+        with open(os.path.join(state, "denials.log")) as f:
+            self.assertNotIn("TOPSECRET", f.read())
+
+    def test_concurrent_rotation_keeps_the_old_history(self):
+        # 複数のフックが同時に上限超過を見ても、ローテーションは 1 回だけで、古い履歴を .1 に残す
+        import subprocess
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        path = os.path.join(state, "denials.log")
+        old = "old-history\n" * 50  # 600 バイト
+        with open(path, "w") as f:
+            f.write(old)
+        # 上限は、元の履歴（600 バイト）より小さく、新しい 12 行の合計（110 バイト）より大きくする。
+        # 小さすぎると、ロックが正しく働いていても、新しい行だけで 2 回目のローテーションが起きる
+        limit = 300
+        self.assertLess(limit, len(old))
+        self.assertGreater(limit, sum(len(f'{{"n": {i}}}') + 1 for i in range(12)))
+        script = (
+            "import sys; sys.path.insert(0, sys.argv[1]); import upstream_guard as ug; "
+            f"ug.LOG_MAX_BYTES = {limit}; ug._append_private(sys.argv[2], sys.argv[3] + chr(10))"
+        )
+        scripts_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "scripts"
+        )
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-c", script, scripts_dir, path, f'{{"n": {i}}}']
+            )
+            for i in range(12)
+        ]
+        for proc in procs:
+            self.assertEqual(proc.wait(), 0)
+        with open(path + ".1") as f:
+            self.assertEqual(f.read(), old)
+        with open(path) as f:
+            self.assertEqual(len(f.read().splitlines()), 12)
+
+    def test_log_files_are_private_and_bounded(self):
+        # 記録のファイルは 0600、置き場は 0700。すでに在る 0644 のファイルも、書く時に 0600 に直す。大きさに上限
+        import stat
+        import tempfile
+
+        state = os.path.join(tempfile.mkdtemp(), "state")
+        os.makedirs(state, mode=0o755)
+        os.chmod(state, 0o755)
+        existing = os.path.join(state, "denials.log")
+        with open(existing, "w") as f:
+            f.write("x" * (ug.LOG_MAX_BYTES + 10) + "\n")
+        os.chmod(existing, 0o644)
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        self.assertEqual(
+            ug.hook_main(self.payload("gh pr merge 1 -R nrslib/takt"), env)[0], 2
+        )
+        self.assertEqual(
+            ug.hook_main(self.payload('git push "$R"', "/nonexistent"), env)[0], 0
+        )
+        self.assertEqual(stat.S_IMODE(os.stat(state).st_mode), 0o700)
+        for name in ("denials.log", "warnings.log", "denials.log.1"):
+            self.assertEqual(
+                stat.S_IMODE(os.stat(os.path.join(state, name)).st_mode), 0o600, name
+            )
+        # 上限を超えた古い分は .1 に移り、新しいファイルは今回の 1 件だけ
+        with open(existing) as f:
+            self.assertEqual(len(f.read().splitlines()), 1)
+        self.assertLessEqual(os.path.getsize(existing + ".1"), ug.LOG_MAX_BYTES + 11)
+
     def test_log_keeps_no_secret_from_quoted_assignments_or_urls(self):
         # C-4: 引用符つきの代入の値を先頭の語にしない。C-5: 理由の中の URL の資格情報を伏せる
         import tempfile
@@ -1347,7 +1586,9 @@ class Hook(unittest.TestCase):
         first = self.payload("KEY='a secretpart' gh pr merge 1 -R nrslib/takt")
         self.assertEqual(ug.hook_main(first, env)[0], 2)
         second = self.payload(
-            "git -c remote.origin.pushurl=https://user:tok123@github.com/nrslib/takt push origin"
+            "git -c remote.origin.pushurl=https://"
+            + _cred("user", "tok123")
+            + "@github.com/nrslib/takt push origin"
         )
         self.assertEqual(ug.hook_main(second, env)[0], 2)
         with open(os.path.join(state, "denials.log")) as f:
