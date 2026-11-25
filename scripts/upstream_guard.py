@@ -2264,14 +2264,37 @@ def load_blocked(environ: Mapping[str, str], home: str) -> tuple[str, ...]:
     return normalize_blocked(entries)
 
 
+def _resolve_gitfile(path: str) -> str | None:
+    """gitfile（.git ファイルの `gitdir: ...`）から実際の git ディレクトリを返す。"""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            first = f.readline().strip()
+    except OSError:
+        return None
+    if not first.startswith("gitdir:"):
+        return None
+    raw = first[len("gitdir:") :].strip()
+    if not raw:
+        return None
+    base = os.path.dirname(os.path.abspath(path))
+    resolved = os.path.normpath(raw if os.path.isabs(raw) else os.path.join(base, raw))
+    return resolved if os.path.isdir(resolved) else None
+
+
 def _discover_git_dirs(location: str) -> tuple[str, str] | None:
     """location から (git_dir, common_dir) を辿る。worktree は .git ファイルと commondir を追う。"""
     git_dir: str | None = None
     if location.startswith(GIT_DIR_PREFIX):
         candidate = os.path.abspath(location.removeprefix(GIT_DIR_PREFIX))
-        if os.path.isdir(candidate) and (
-            os.path.isfile(os.path.join(candidate, "HEAD"))
-            or os.path.isfile(os.path.join(candidate, "config"))
+        if os.path.isfile(candidate):
+            candidate = _resolve_gitfile(candidate) or ""
+        if (
+            candidate
+            and os.path.isdir(candidate)
+            and (
+                os.path.isfile(os.path.join(candidate, "HEAD"))
+                or os.path.isfile(os.path.join(candidate, "config"))
+            )
         ):
             git_dir = candidate
     else:
@@ -2284,22 +2307,9 @@ def _discover_git_dirs(location: str) -> tuple[str, str] | None:
                 git_dir = dotgit
                 break
             if os.path.isfile(dotgit):
-                try:
-                    with open(dotgit, encoding="utf-8", errors="replace") as f:
-                        first = f.readline().strip()
-                except OSError:
+                git_dir = _resolve_gitfile(dotgit)
+                if git_dir is None:
                     return None
-                if not first.startswith("gitdir:"):
-                    return None
-                raw = first[len("gitdir:") :].strip()
-                if not raw:
-                    return None
-                resolved = os.path.normpath(
-                    raw if os.path.isabs(raw) else os.path.join(cur, raw)
-                )
-                if not os.path.isdir(resolved):
-                    return None
-                git_dir = resolved
                 break
             if (
                 os.path.isfile(os.path.join(cur, "HEAD"))

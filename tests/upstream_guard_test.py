@@ -2053,6 +2053,15 @@ class RealGitConfig(unittest.TestCase):
         )
         self.assertEqual(self.verdict("git push", wt, benign_env), "deny")
         self.assertEqual(self.verdict("git push origin", wt, benign_env), "allow")
+        # worktree の gitfile を --git-dir / GIT_DIR で渡した場合も commondir 先を辿る
+        self.assertEqual(
+            self.verdict("git --git-dir=.git push upstream main", wt, benign_env),
+            "deny",
+        )
+        self.assertEqual(
+            self.verdict("GIT_DIR=.git git push origin main", wt, benign_env),
+            "allow",
+        )
 
     def test_include_if_worktree_config_system_config_and_url_reset(self):
         import subprocess
