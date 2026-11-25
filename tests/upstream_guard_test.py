@@ -1334,6 +1334,74 @@ class Hook(unittest.TestCase):
         for command in daily:
             self.assertEqual(ug.check(command, d, env).kind, "allow", command)
 
+    def test_no_secret_reaches_the_log_or_the_model(self):
+        # Authorization・Cookie・トークンに見える値と、URL の //…@ を、記録とモデルへの理由の両方で伏せる
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        secrets = [
+            "SECRETA1",
+            "SECRETB2",
+            "ghp_SECRETC3abcdefghij",
+            "SECRETD4",
+            "SECRETE5",
+        ]
+        commands = [
+            "git -c 'http.https://github.com/nrslib/.extraheader=AUTHORIZATION: basic SECRETA1' push origin",
+            "git -c remote.origin.pushurl=https://x-access-token:SECRETB2@github.com/nrslib/takt push origin",
+            "git -c 'url.https://github.com/nrslib/.insteadOf=ghp_SECRETC3abcdefghij' push origin",
+            "git -c 'http.https://github.com/nrslib/.cookiefile=Cookie: session=SECRETD4' push origin",
+            "git -c 'http.https://github.com/nrslib/.extraheader=Authorization: Bearer SECRETE5' push origin",
+        ]
+        for command in commands:
+            code, message = ug.hook_main(self.payload(command, "/nonexistent"), env)
+            self.assertEqual(code, 2, command)
+            for secret in secrets:
+                self.assertNotIn(secret, message, command)
+        with open(os.path.join(state, "denials.log")) as f:
+            text = f.read()
+        for secret in secrets:
+            self.assertNotIn(secret, text)
+        self.assertEqual(len(text.splitlines()), len(commands))
+
+    def test_log_files_are_private_and_bounded(self):
+        # 記録のファイルは 0600、置き場は 0700。すでに在る 0644 のファイルも、書く時に 0600 に直す。大きさに上限
+        import stat
+        import tempfile
+
+        state = os.path.join(tempfile.mkdtemp(), "state")
+        os.makedirs(state, mode=0o755)
+        os.chmod(state, 0o755)
+        existing = os.path.join(state, "denials.log")
+        with open(existing, "w") as f:
+            f.write("x" * (ug.LOG_MAX_BYTES + 10) + "\n")
+        os.chmod(existing, 0o644)
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        self.assertEqual(
+            ug.hook_main(self.payload("gh pr merge 1 -R nrslib/takt"), env)[0], 2
+        )
+        self.assertEqual(
+            ug.hook_main(self.payload('git push "$R"', "/nonexistent"), env)[0], 0
+        )
+        self.assertEqual(stat.S_IMODE(os.stat(state).st_mode), 0o700)
+        for name in ("denials.log", "warnings.log", "denials.log.1"):
+            self.assertEqual(
+                stat.S_IMODE(os.stat(os.path.join(state, name)).st_mode), 0o600, name
+            )
+        # 上限を超えた古い分は .1 に移り、新しいファイルは今回の 1 件だけ
+        with open(existing) as f:
+            self.assertEqual(len(f.read().splitlines()), 1)
+        self.assertLessEqual(os.path.getsize(existing + ".1"), ug.LOG_MAX_BYTES + 11)
+
     def test_log_keeps_no_secret_from_quoted_assignments_or_urls(self):
         # C-4: 引用符つきの代入の値を先頭の語にしない。C-5: 理由の中の URL の資格情報を伏せる
         import tempfile

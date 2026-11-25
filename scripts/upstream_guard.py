@@ -2315,9 +2315,50 @@ def _log_head(command: str) -> str:
     return ""
 
 
+_SECRET_PATTERNS = (
+    # ヘッダの値（Authorization・Proxy-Authorization・Cookie・Set-Cookie）は、行の終わりまで伏せる
+    (
+        re.compile(r"(?i)\b((?:proxy-)?authorization|(?:set-)?cookie)\s*[:=]\s*[^\n]*"),
+        r"\1: ***",
+    ),
+    # 認証の方式に続く値
+    (re.compile(r"(?i)\b(bearer|basic|token)\s+[A-Za-z0-9._~+/=-]+"), r"\1 ***"),
+    # GitHub のトークンの形
+    (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,})"), "***"),
+    # token=…、password=… などの値
+    (
+        re.compile(r"(?i)\b(token|password|passwd|secret|api[_-]?key)=[^\s&;'\"]+"),
+        r"\1=***",
+    ),
+    # URL の資格情報（//user:token@）
+    (re.compile(r"(//)[^/@\s]+@"), r"\1***@"),
+)
+
+
 def _redact(text: str) -> str:
-    """URL の資格情報（//user:token@）を伏せる。"""
-    return re.sub(r"(//)[^/@\s]+@", r"\1***@", text)
+    """記録とモデルへの理由から、秘密に見える値を伏せる。"""
+    for pattern, replacement in _SECRET_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+LOG_MAX_BYTES = (
+    1 << 20
+)  # 記録のファイルの上限（1 MiB）。超えたら .1 に移し、古い .1 は捨てる
+
+
+def _append_private(path: str, line: str) -> None:
+    """本人だけが読める形（置き場 0700、ファイル 0600）で 1 行を追記する。大きさの上限で古い分を切る。"""
+    state = os.path.dirname(path)
+    os.makedirs(state, mode=0o700, exist_ok=True)
+    os.chmod(state, 0o700)
+    if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
+        os.replace(path, path + ".1")
+        os.chmod(path + ".1", 0o600)
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as f:
+        os.chmod(path, 0o600)  # すでに在るファイルが 0644 でも直す
+        f.write(line)
 
 
 def _log_verdict(
@@ -2356,9 +2397,9 @@ def _log_verdict(
     }
     name = "warnings.log" if verdict.kind == "warn" else "denials.log"
     with contextlib.suppress(OSError):
-        os.makedirs(state, exist_ok=True)
-        with open(os.path.join(state, name), "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        _append_private(
+            os.path.join(state, name), json.dumps(record, ensure_ascii=False) + "\n"
+        )
 
 
 def _warning_output(text: str) -> str:
@@ -2394,10 +2435,10 @@ def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
     verdict = check(command, cwd, environ)
     _log_verdict(verdict, command, cwd, environ)
     if verdict.kind == "warn":
-        return 0, _warning_output(verdict.warning)
+        return 0, _warning_output(_redact(verdict.warning))
     if verdict.allowed:
         return 0, ""
-    return 2, verdict.reason
+    return 2, _redact(verdict.reason)
 
 
 # ---------------------------------------------------------------------------
@@ -2716,7 +2757,7 @@ def main(argv: list[str]) -> int:
             )
             return 64
         verdict = check(rest[0], cwd, os.environ)
-        detail = verdict.warning if verdict.kind == "warn" else verdict.reason
+        detail = _redact(verdict.warning if verdict.kind == "warn" else verdict.reason)
         print(verdict.kind + ("\n" + detail if detail else ""))
         return 0 if verdict.allowed else 2
     if len(argv) == 2 and argv[1] in ("install", "uninstall"):
