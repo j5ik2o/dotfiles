@@ -48,7 +48,7 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 - 語を探す範囲は、コマンドの全文、値の決まらない変数の代入の元、作業ディレクトリと判定の中で引いた場所の remote（fetch と push の URL。insteadOf を通した後の形）、`GH_` と `GIT_` で始まる環境変数、読んだクエリのファイル。大文字小文字は区別しない。禁止の宛先が `owner/repo` の形なら、全体と owner と repo のどれが出てきても当てる。
 - 宛先が禁止の宛先と決まったものは、これまでどおり止める。GraphQL の、宛先に関係なく止めていた mutation も、同じ考え方で扱う。
 
-警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。理由の文（記録とモデルへ返すものの両方）からは、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値、URL の `//…@` の部分を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
+警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。大きさの確認、移動、追記は、ロックのファイル（`<記録>.lock`）で直列にする。理由の文（記録とモデルへ返すものの両方）からは、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値、URL の `//…@` の部分を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
 
 `gh pr create`、`comment`、`view`、`review --approve`、issue の操作、読み取り、禁止でない宛先への操作は止めない。
 
@@ -67,6 +67,19 @@ upstream-guard install      # Claude と Codex の設定に 1 項目ずつ足す
 upstream-guard uninstall    # 足した項目だけを消す
 ```
 
+### 手で作ったリンクから make apply へ移るとき
+
+PR のマージより前に `~/.local/bin/upstream-guard` を手で作ったリンク（`~/.local/state/upstream-guard/result/bin/upstream-guard` を指すもの）で入れていた場合は、`make apply` の前にそのリンクを取り除く。残したままだと、Home Manager の有効化が「Existing file '~/.local/bin/upstream-guard' would be clobbered」で止まる。
+
+- `backupFileExtension = "backup"`（`flake.nix` の `home-manager.backupFileExtension`）が退避するのは、シンボリックリンクでない普通のファイルだけ。Home Manager の `modules/files/check-link-targets.sh` は、`[[ ! -L "$targetPath" && -n "$HOME_MANAGER_BACKUP_EXT" ]]` のときだけ `.backup` へ移す。リンクで、指す先が Home Manager の世代（`*-home-manager-files/*`）でないものは、退避されずに衝突として止まる（`b56bcd04` の Home Manager で確認）。
+- 取り除いてから `make apply` が終わるまでの間は、実行ファイルが無いので、フックは判定をせず、警告を出してコマンドを通す（`実行ファイルが無いため…` の警告）。
+- `make apply` の後は、`~/.local/bin/upstream-guard` が Nix のパッケージを直接指すので、`scripts/upstream-guard-refresh.sh` は効かない（実体を確かめて、効いていないと出して 0 以外で終える）。作り直しは `make apply` で行う。
+
+```sh
+mv ~/.local/bin/upstream-guard ~/.local/bin/upstream-guard.manual   # 手で作ったリンクを退避する
+make apply
+```
+
 `install` と `uninstall` は何度実行しても同じ結果になる。書き換える前のファイルは `<ファイル>.bak-upstream-guard-<日時>` に残す。
 
 - 設定ファイル（`settings.json`、`hooks.json`、`config.toml`）が無ければ、`install` が作る。置き場のディレクトリ（`~/.claude`、`~/.codex`）が無いときは、そのエージェントは入っていないとみなして登録せず、登録できなかった対象を表示して 0 以外で終える。
@@ -79,7 +92,7 @@ upstream-guard uninstall    # 足した項目だけを消す
 
 ### 実行ファイルの作り直し
 
-`scripts/upstream-guard-refresh.sh` が効くのは、フックが呼ぶ `~/.local/bin/upstream-guard` が `~/.local/state/upstream-guard/result/bin/upstream-guard` を指しているとき（PR のマージと `make apply` の前に、手で作ったリンク）だけ。`make apply` の後は、Home Manager が既存のリンクを `.backup` に退避して、Nix のパッケージを直接指すリンクに置き換える（`backupFileExtension = "backup"`）。そのあとの作り直しは `make apply` で行う。refresh は最後に実体を確かめ、`result` を指していなければ「効いていない」と出して 0 以外で終える。refresh は同時に 2 つ走らせない。差し替えは、push と同じ区切りに 1 回だけ行う運用にしている。
+`scripts/upstream-guard-refresh.sh` が効くのは、フックが呼ぶ `~/.local/bin/upstream-guard` が `~/.local/state/upstream-guard/result/bin/upstream-guard` を指しているとき（PR のマージと `make apply` の前に、手で作ったリンク）だけ。`make apply` の前に、そのリンクを取り除く必要がある（上の「手で作ったリンクから make apply へ移るとき」。Home Manager はリンクを `.backup` へ退避しない）。`make apply` の後は Nix のパッケージを直接指すので、作り直しは `make apply` で行う。refresh は最後に実体を確かめ、`result` を指していなければ「効いていない」と出して 0 以外で終える。refresh は同時に 2 つ走らせない。差し替えは、push と同じ区切りに 1 回だけ行う運用にしている。
 
 PR のマージと `make apply` の前に、手元の実行ファイルだけを作り直すときは `scripts/upstream-guard-refresh.sh` を使う。新しい版は、いま使っていない側の out-link（`~/.local/state/upstream-guard/slot-a` か `slot-b`）に作り、単体テストと `check` の入口（禁止の宛先へのマージは拒否、読み取りは許可）が通ってから、`result` のリンクを 1 回の rename で付け替える。前の版は、もう片方の out-link に残る。どこかで失敗したら `result` は変えない。作業の途中の版は、別のパスに作って `check` の入口で試す。全ボットに掛かっている実行ファイルには入れない。
 

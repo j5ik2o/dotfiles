@@ -1369,6 +1369,56 @@ class Hook(unittest.TestCase):
             self.assertNotIn(secret, text)
         self.assertEqual(len(text.splitlines()), len(commands))
 
+    def test_url_credentials_with_token_like_text_are_masked(self):
+        # URL のパスワードに token= などがあっても、URL の資格情報を先に伏せる
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        for command in (
+            "git -c remote.origin.pushurl=https://user:TOPSECRET-token=abc@github.com/nrslib/takt push origin",
+            "git -c remote.origin.pushurl=https://user:TOPSECRET-cookie=abc@github.com/nrslib/takt push origin",
+        ):
+            code, message = ug.hook_main(self.payload(command, "/nonexistent"), env)
+            self.assertEqual(code, 2)
+            self.assertNotIn("TOPSECRET", message)
+        with open(os.path.join(state, "denials.log")) as f:
+            self.assertNotIn("TOPSECRET", f.read())
+
+    def test_concurrent_rotation_keeps_the_old_history(self):
+        # 複数のフックが同時に上限超過を見ても、ローテーションは 1 回だけで、古い履歴を .1 に残す
+        import subprocess
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        path = os.path.join(state, "denials.log")
+        old = "old-history\n" * 50
+        with open(path, "w") as f:
+            f.write(old)
+        script = (
+            "import sys; sys.path.insert(0, sys.argv[1]); import upstream_guard as ug; ug.LOG_MAX_BYTES = 100; "
+            "ug._append_private(sys.argv[2], sys.argv[3] + chr(10))"
+        )
+        scripts_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "scripts"
+        )
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-c", script, scripts_dir, path, f'{{"n": {i}}}']
+            )
+            for i in range(12)
+        ]
+        for proc in procs:
+            self.assertEqual(proc.wait(), 0)
+        with open(path + ".1") as f:
+            self.assertEqual(f.read(), old)
+        with open(path) as f:
+            self.assertEqual(len(f.read().splitlines()), 12)
+
     def test_log_files_are_private_and_bounded(self):
         # 記録のファイルは 0600、置き場は 0700。すでに在る 0644 のファイルも、書く時に 0600 に直す。大きさに上限
         import stat

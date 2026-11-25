@@ -2316,6 +2316,8 @@ def _log_head(command: str) -> str:
 
 
 _SECRET_PATTERNS = (
+    # URL の資格情報（//user:token@）。ほかの置換が区切りの @ を消す前に、最初に伏せる
+    (re.compile(r"(//)[^/@\s]+@"), r"\1***@"),
     # ヘッダの値（Authorization・Proxy-Authorization・Cookie・Set-Cookie）は、行の終わりまで伏せる
     (
         re.compile(r"(?i)\b((?:proxy-)?authorization|(?:set-)?cookie)\s*[:=]\s*[^\n]*"),
@@ -2330,8 +2332,6 @@ _SECRET_PATTERNS = (
         re.compile(r"(?i)\b(token|password|passwd|secret|api[_-]?key)=[^\s&;'\"]+"),
         r"\1=***",
     ),
-    # URL の資格情報（//user:token@）
-    (re.compile(r"(//)[^/@\s]+@"), r"\1***@"),
 )
 
 
@@ -2348,17 +2348,28 @@ LOG_MAX_BYTES = (
 
 
 def _append_private(path: str, line: str) -> None:
-    """本人だけが読める形（置き場 0700、ファイル 0600）で 1 行を追記する。大きさの上限で古い分を切る。"""
+    """本人だけが読める形（置き場 0700、ファイル 0600）で 1 行を追記する。大きさの上限で古い分を切る。
+
+    大きさの確認、.1 への移動、追記は、ロックのファイルで直列にする（同時に動くフックが
+    2 回移して、古い履歴を消さないように）。
+    """
+    import fcntl
+
     state = os.path.dirname(path)
     os.makedirs(state, mode=0o700, exist_ok=True)
     os.chmod(state, 0o700)
-    if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
-        os.replace(path, path + ".1")
-        os.chmod(path + ".1", 0o600)
-    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
-    with os.fdopen(fd, "a", encoding="utf-8") as f:
-        os.chmod(path, 0o600)  # すでに在るファイルが 0644 でも直す
-        f.write(line)
+    lock_fd = os.open(path + ".lock", os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        if os.path.exists(path) and os.path.getsize(path) > LOG_MAX_BYTES:
+            os.replace(path, path + ".1")
+            os.chmod(path + ".1", 0o600)
+        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "a", encoding="utf-8") as f:
+            os.chmod(path, 0o600)  # すでに在るファイルが 0644 でも直す
+            f.write(line)
+    finally:
+        os.close(lock_fd)  # 閉じるとロックも外れる
 
 
 def _log_verdict(
