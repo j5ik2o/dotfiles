@@ -40,6 +40,7 @@ let
       cliproxyapi = final.callPackage ./packages/cliproxyapi.nix { };
       coderabbit = final.callPackage ./packages/coderabbit.nix { };
       herdr = final.callPackage ./packages/herdr.nix { };
+      upstream-guard = final.callPackage ./packages/upstream-guard.nix { };
       copilot-chat-nvim = final.callPackage ./packages/copilot-chat.nix { };
       # opencode 2.2.5 は nixpkgs 側の node_modules ハッシュが壊れている
       # (NixOS/nixpkgs#582673, 修正 PR #582675 は未マージ)。

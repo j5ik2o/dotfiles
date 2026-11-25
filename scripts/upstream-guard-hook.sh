@@ -1,0 +1,5 @@
+#!/bin/sh
+# upstream-guard を PreToolUse から呼ぶ包み。設定ファイルには、下の 1 行（HOOK_COMMAND）をそのまま登録する。
+# この行は scripts/upstream_guard.py の HOOK_COMMAND と同じでなければならない（tests/upstream_guard_test.py で確かめる）。
+# ShellCheck の検査は make lint で掛かる。振る舞い（実行ファイルが無い・壊れた・正常）は同じテストで固定している。
+G="$HOME/.local/bin/upstream-guard"; [ -z "${ORCA_AGENT_SESSION_ID-}" ] && exit 0; if [ -x "$G" ]; then "$G" hook; c=$?; case $c in 0|2) exit $c;; esac; printf '{"systemMessage": "upstream-guard（警告）: 判定が終了コード %s で失敗したため、このコマンドのマージと push の判定をしていません。コマンドは止めていません。副元帥へ知らせてください。", "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "upstream-guard（警告）: 判定が終了コード %s で失敗したため、このコマンドのマージと push の判定をしていません。コマンドは止めていません。副元帥へ知らせてください。"}}\n' "$c" "$c"; exit 0; fi; printf '%s\n' '{"systemMessage": "upstream-guard（警告）: 実行ファイルが無いため、このコマンドのマージと push の判定をしていません。コマンドは止めていません。副元帥へ知らせてください。", "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": "upstream-guard（警告）: 実行ファイルが無いため、このコマンドのマージと push の判定をしていません。コマンドは止めていません。副元帥へ知らせてください。"}}'

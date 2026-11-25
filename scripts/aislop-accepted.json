@@ -295,6 +295,17 @@
           "message": "File too large (limit: 400, flagged above 441 lines)"
         }
       ]
+    },
+    {
+      "reason": "upstream-guard は Claude Code と Codex の PreToolUse から呼ぶ単一の実行ファイル（packages/upstream-guard.nix の writers.writePython3Bin）として配るため 1 ファイルにしている。中は、宛先の読み取り、シェルの字句解析、判定（git・gh・HTTP）、外界を読む入口、設置の 5 部に分けてあり、関数ごとの長さと引数の数は上限の内に収めた。分けると配り方（モジュールの探索パス）が変わるため、行数の指摘を受け入れる。",
+      "findings": [
+        {
+          "engine": "code-quality",
+          "rule": "complexity/file-too-large",
+          "file": "scripts/upstream_guard.py",
+          "message": "File too large (limit: 400, flagged above 441 lines)"
+        }
+      ]
     }
   ]
 }
