@@ -978,6 +978,76 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         "/w/mine",
         {},
     ),  # 決まらない拒否の後ろの、決まった拒否を見逃さない
+    # --- PR #229 の 2 回目のレビューの指摘（入力は指摘のまま） ----------------
+    # E-7: unset で消した変数は、後ろのコマンドの判定でも消す
+    (D, "unset GH_REPO; gh pr merge 12", "/w/clone", {"GH_REPO": "j5ik2o/takt"}),
+    (D, "unset -v GH_REPO; gh pr merge 12", "/w/clone", {"GH_REPO": "j5ik2o/takt"}),
+    (A, "unset FOO; gh pr merge 12", "/w/clone", {"GH_REPO": "j5ik2o/takt"}),
+    # E-9: シェル形式の git のエイリアスは、-C で選んだ場所で判定する
+    (D, "git -C /w/clone -c 'alias.ship=!git push origin' ship", "/w/takt", {}),
+    (A, "git -C /w/mine -c 'alias.ship=!git push origin' ship", "/w/clone", {}),
+    # E-5: 値の決まらない -X は、GET とみなさない
+    (
+        D,
+        'curl -X "$(cat method.txt)" https://api.github.com/repos/nrslib/takt/pulls/12/merge',
+        None,
+        {},
+    ),
+    (
+        A,
+        'curl -X "$(cat method.txt)" https://api.github.com/repos/j5ik2o/takt/pulls/12',
+        None,
+        {},
+    ),
+    (A, "curl -sS https://api.github.com/repos/j5ik2o/takt/pulls/12", None, {}),
+    # E-4: wget の --post-file と --body-file は本文の指定
+    (
+        D,
+        "wget --post-file=payload.json --header=Content-Type:application/json https://api.github.com/repos/nrslib/takt/git/refs",
+        None,
+        {},
+    ),
+    (
+        D,
+        "wget --post-file payload.json https://api.github.com/repos/nrslib/takt/git/refs",
+        None,
+        {},
+    ),
+    (
+        D,
+        "wget --method=PUT --body-file=b.json https://api.github.com/repos/nrslib/takt/pulls/1/merge",
+        None,
+        {},
+    ),
+    (
+        A,
+        "wget --post-file=payload.json https://api.github.com/repos/j5ik2o/takt/git/refs",
+        None,
+        {},
+    ),
+    # E-3: xargs の、値を取る長い形式のオプション
+    (D, "printf main | xargs --max-args 1 git push upstream", "/w/takt", {}),
+    (
+        D,
+        "printf main | xargs --max-procs 2 --delimiter , git push upstream",
+        "/w/takt",
+        {},
+    ),
+    (A, "printf main | xargs --max-args 1 git push origin", "/w/takt", {}),
+    # E-6: curl の URL の glob は展開しない。書き込みなら宛先を決められないものとして扱う
+    (D, "curl -X POST 'https://api.github.com/repos/{j5ik2o,nrslib}/takt/git/refs' -d @payload.json", None, {}),
+    (W, "curl -X POST 'https://api.github.com/repos/j5ik2o/takt[1-3]/git/refs' -d @payload.json", None, {}),
+    (A, "curl -g -X POST 'https://api.github.com/repos/j5ik2o/takt/git/refs?x={a}' -d @p.json", None, {}),
+    (A, "curl 'https://api.github.com/repos/{j5ik2o,nrslib}/takt/pulls'", None, {}),
+    # E-10: find の -execdir と -okdir は、一致した場所で実行される（作業場所は決まらない）
+    (
+        D,
+        "find /w -name .git -type d -execdir git push origin ';'",
+        "/w/takt",
+        {},
+    ),  # takt に nrslib の remote
+    (W, "find /w -name .git -type d -execdir git push origin ';'", "/w/mine", {}),
+    (A, "find . -name '*.md' -execdir grep -l push {} +", "/w/mine", {}),
     # D-3: 拒否の例と同じ起動の形で、宛先だけが禁止でないもの
     (
         A,
@@ -1174,6 +1244,58 @@ class Hook(unittest.TestCase):
         ):
             v = ug.decide(command, "/w/mine", ENV, ("nrslib",), repos, files)
             self.assertEqual(v.kind, expected, command)
+
+    def test_check_reads_graphql_query_files(self):
+        # E-1: 本番の経路（check() と LazyFiles）でも、クエリのファイルを読む
+        import tempfile
+
+        d = tempfile.mkdtemp()
+        with open(os.path.join(d, "merge.graphql"), "w") as f:
+            f.write(
+                'query{repository(owner:"nrslib",name:"takt"){id}} mutation{mergePullRequest(input:{pullRequestId:"x"}){clientMutationId}}'
+            )
+        with open(os.path.join(d, "resolve.graphql"), "w") as f:
+            f.write(
+                'mutation{r0: resolveReviewThread(input:{threadId:"PRRT_x"}){thread{isResolved}}}'
+            )
+        with open(os.path.join(d, "threads.graphql"), "w") as f:
+            f.write(
+                'query{repository(owner:"j5ik2o",name:"dotfiles"){pullRequest(number:229){reviewThreads(first:80){nodes{id isResolved}}}}}'
+            )
+        env = {"HOME": d, "PATH": os.environ.get("PATH", "")}
+        verdict = ug.check("gh api graphql -F query=@merge.graphql", d, env)
+        self.assertEqual(verdict.kind, "deny")
+        # レビューの返信、スレッドの解決と読み取りは、ファイル・変数・直接の 3 通りとも通す
+        daily = [
+            "gh api graphql -F query=@resolve.graphql --jq '[.data[]] | length'",
+            "gh api graphql -F query=@threads.graphql",
+            "gh api graphql --input resolve.graphql",
+            'q=$(cat resolve.graphql); gh api graphql -f query="$q"',
+            "gh api graphql -f query='mutation{r0: resolveReviewThread(input:{threadId:\"PRRT_x\"}){thread{isResolved}}}'",
+            'gh api graphql -f query=\'query{repository(owner:"j5ik2o",name:"dotfiles"){pullRequest(number:229){reviewThreads(first:80){nodes{id}}}}}\'',
+            "for id in 1 2; do gh api -X POST repos/j5ik2o/dotfiles/pulls/229/comments/$id/replies -F body=@r.md; done",
+        ]
+        for command in daily:
+            self.assertEqual(ug.check(command, d, env).kind, "allow", command)
+
+    def test_log_head_drops_leading_assignments(self):
+        # 記録の先頭の語に、前置きの代入（トークンなど）を入れない
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        payload = self.payload(
+            "GH_TOKEN=ghp_review_fake_secret FOO=1 gh pr merge 1 -R nrslib/takt"
+        )
+        self.assertEqual(ug.hook_main(payload, env)[0], 2)
+        with open(os.path.join(state, "denials.log")) as f:
+            text = f.read()
+        self.assertNotIn("ghp_review_fake_secret", text)
+        self.assertEqual(json.loads(text)["head"], "gh")
 
     def test_warn_reaches_the_model_and_both_kinds_are_logged_without_the_command(self):
         # 1 と 7: 警告は additionalContext と systemMessage で返し、警告と拒否を 1 行 1 件で残す
@@ -1516,19 +1638,106 @@ class Install(unittest.TestCase):
 
     def test_codex_files_are_written_together_or_not_at_all(self):
         # C-4: config.toml を書けなければ、hooks.json も元のまま
-        config = os.path.join(self.home, ".codex/config.toml")
-        os.chmod(config, 0o444)
+        real_replace = os.replace
+
+        def failing_replace(src, dst):
+            if str(dst).endswith("config.toml"):
+                raise OSError("置き換えに失敗")
+            return real_replace(src, dst)
+
+        ug.os.replace = failing_replace
         try:
             with self.assertRaises(OSError):
                 ug.apply_install(self.home, True, "t1")
         finally:
-            os.chmod(config, 0o644)
+            ug.os.replace = real_replace
         self.assertEqual(
             self.read(".codex/hooks.json"), self.files[".codex/hooks.json"]
         )
         self.assertEqual(
             self.read(".codex/config.toml"), self.files[".codex/config.toml"]
         )
+
+    def test_partial_write_is_restored(self):
+        # E-2: 書き込みの途中で失敗し、切り詰められたファイルも元に戻る
+        import builtins
+
+        real_open = builtins.open
+
+        class Failing:
+            def __init__(self, f):
+                self.f = f
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                self.f.close()
+
+            def write(self, text):
+                self.f.write(text[: len(text) // 2])
+                raise OSError("ディスクが一杯")
+
+        def fake_open(path, mode="r", *args, **kwargs):
+            f = real_open(path, mode, *args, **kwargs)
+            if (
+                "w" in mode
+                and "config.toml" in str(path)
+                and "bak-upstream-guard" not in str(path)
+            ):
+                return Failing(f)
+            return f
+
+        ug.open = fake_open
+        try:
+            with self.assertRaises(OSError):
+                ug.apply_install(self.home, True, "t1")
+        finally:
+            del ug.open
+        self.assertEqual(
+            self.read(".codex/config.toml"), self.files[".codex/config.toml"]
+        )
+        self.assertEqual(
+            self.read(".codex/hooks.json"), self.files[".codex/hooks.json"]
+        )
+
+    def test_existing_unmarked_trust_table_is_replaced_not_duplicated(self):
+        # 管理の印の無い、同じキーの信頼の表（前の版の形）があっても、重ねて書かない
+        import tomllib
+
+        real = os.path.join(
+            os.path.realpath(os.path.join(self.home, ".codex")), "hooks.json"
+        )
+        old_handler = {
+            "type": "command",
+            "command": '"$HOME/.local/bin/upstream-guard" hook',
+            "timeout": 10,
+        }
+        with open(os.path.join(self.home, ".codex/hooks.json"), "w") as f:
+            json.dump(
+                {
+                    "hooks": {
+                        "PreToolUse": [
+                            self.ORCA_GROUP,
+                            {"matcher": "Bash", "hooks": [old_handler]},
+                        ]
+                    }
+                },
+                f,
+            )
+        with open(os.path.join(self.home, ".codex/config.toml"), "w") as f:
+            f.write(
+                f'model = "m"\n\n[hooks.state."{real}:pre_tool_use:1:0"]\nenabled = true\ntrusted_hash = "sha256:old"\n\n[other]\nx = 1\n'
+            )
+        ug.apply_install(self.home, True, "t1")
+        with open(os.path.join(self.home, ".codex/config.toml"), "rb") as f:
+            config = tomllib.load(f)
+        state = config["hooks"]["state"][f"{real}:pre_tool_use:1:0"]
+        self.assertEqual(
+            state["trusted_hash"],
+            ug.codex_trusted_hash(ug._hook_group(ug.CODEX_MATCHER)),
+        )
+        self.assertEqual(config["other"], {"x": 1})
 
     def test_trusted_hash_matches_what_codex_accepted(self):
         # codex 0.167.2 の exec が、この値を config.toml に書いたフックを実行した（2026-11-25 に確認）

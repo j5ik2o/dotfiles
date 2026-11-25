@@ -628,7 +628,7 @@ def decide(
     呼び出し側が読んで渡す。読めなければ None。
     """
     blocked = normalize_blocked(blocked)
-    seen_repos, seen_files = _Seen(repos), _Seen(files or {})
+    seen_repos, seen_files = _Seen(repos), _Seen({} if files is None else files)
     ctx = Ctx(cwd=cwd, env=dict(env), vars={}, blocked=blocked, repos=seen_repos)
     ctx.files = seen_files
     ctx.script_text = command
@@ -945,7 +945,25 @@ _PREFIX_WRAPPERS: dict[str, set[str]] = {
     "doas": {"-u", "-C"},
     "stdbuf": {"-i", "-o", "-e"},
     "watch": {"-n", "-d", "--interval"},
-    "xargs": {"-I", "-L", "-n", "-P", "-s", "-d", "-E", "-a", "-i", "-l"},
+    "xargs": {
+        "-I",
+        "-L",
+        "-n",
+        "-P",
+        "-s",
+        "-d",
+        "-E",
+        "-a",
+        "-i",
+        "-l",
+        "--arg-file",
+        "--delimiter",
+        "--max-lines",
+        "--max-args",
+        "--max-procs",
+        "--max-chars",
+        "--process-slot-var",
+    },
     "timeout": {"-s", "-k", "--signal", "--kill-after"},
     "gtimeout": {"-s", "-k", "--signal", "--kill-after"},
     "busybox": set(),
@@ -965,6 +983,12 @@ def _shell_builtin(
                 ctx.vars[m.group(1)] = prior + m.group(2)
             elif not a.resolved and "=" in a.value:
                 ctx.vars[a.value.split("=", 1)[0]] = UNKNOWN
+        return ALLOW
+    if name == "unset":
+        for a in rest:
+            if not a.value.startswith("-"):
+                ctx.vars.pop(a.value, None)
+                ctx.env.pop(a.value, None)
         return ALLOW
     if name == "trap" and rest:
         if not rest[0].resolved:
@@ -1284,7 +1308,10 @@ def _decide_find(args: list[Arg], ctx: Ctx, cmd_env: dict[str, str]) -> Verdict:
             j = i + 1
             while j < len(args) and args[j].value not in (";", "+"):
                 j += 1
-            v = _decide_argv(args[i + 1 : j], ctx, dict(cmd_env), args_unknown=True)
+            where = ctx
+            if args[i].value in ("-execdir", "-okdir"):
+                where = _child(ctx, cwd=None, depth=ctx.depth)
+            v = _decide_argv(args[i + 1 : j], where, dict(cmd_env), args_unknown=True)
             if not v.allowed:
                 return v
             i = j
@@ -1407,6 +1434,16 @@ def _parse_git_globals(
     return GitCall(location, location_unknown, info, inline_config, cmd_env), rest[i:]
 
 
+def _alias_ctx(call: GitCall, ctx: Ctx) -> Ctx:
+    """シェル形式のエイリアスを判定する場所。git は選んだ場所（-C）で、GIT_DIR を渡して実行する。"""
+    if call.location_unknown or call.location is None:
+        return _child(ctx, cwd=None)
+    if call.location.startswith(GIT_DIR_PREFIX):
+        git_dir = call.location.removeprefix(GIT_DIR_PREFIX)
+        return _child(ctx, env={**ctx.env, "GIT_DIR": git_dir})
+    return _child(ctx, cwd=call.location)
+
+
 def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Verdict:
     """git のエイリアスを展開する（設定、-c alias.x=...、同じコマンドの中での定義）。"""
     aliases = {**(call.info.git_aliases if call.info else {}), **ctx.git_aliases}
@@ -1424,7 +1461,7 @@ def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Ve
             script = (
                 expansion[1:] + " " + " ".join(shlex.quote(a.value) for a in sub[1:])
             )
-            return _decide_script(script, _child(ctx))
+            return _decide_script(script, _alias_ctx(call, ctx))
         try:
             sub = [Arg(w, True) for w in shlex.split(expansion)] + sub[1:]
         except ValueError:
@@ -1948,6 +1985,7 @@ _CURL_WITH_VALUE = {
     "--form", "-T", "--upload-file", "-H", "--header", "-o", "--output", "-u", "--user", "-A", "--user-agent",
     "-e", "--referer", "-b", "--cookie", "-c", "--cookie-jar", "-K", "--config", "--max-time", "-m",
     "--connect-timeout", "-w", "--write-out", "--url", "--method", "--post-data", "--body-data",
+    "--post-file", "--body-file",
 }  # fmt: skip
 
 
@@ -1983,6 +2021,8 @@ _BODY_FLAGS = {
     "--form",
     "--post-data",
     "--body-data",
+    "--post-file",
+    "--body-file",
 }
 
 
@@ -1994,6 +2034,7 @@ class HttpRequest:
     body: list[str] = field(default_factory=list)
     urls: list[Arg] = field(default_factory=list)
     unresolved_body: bool = False
+    method_unknown: bool = False  # -X などはあるが、値が変数やコマンド置換で決まる
 
 
 def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
@@ -2009,9 +2050,14 @@ def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
             i += 1 if eq else 2
             if key in ("-X", "--request", "--method"):
                 req.method = arg.value.upper() if arg.resolved else None
+                req.method_unknown = not arg.resolved
             elif key in _BODY_FLAGS:
                 req.body.append(arg.value)
-                req.unresolved_body |= not arg.resolved or arg.value.startswith("@")
+                from_file = arg.value.startswith("@") or key in (
+                    "--post-file",
+                    "--body-file",
+                )
+                req.unresolved_body |= not arg.resolved or from_file
                 req.method = req.method or "POST"
             elif key in ("-T", "--upload-file"):
                 req.method = req.method or "PUT"
@@ -2049,6 +2095,8 @@ def _decide_http_url(name: str, url: str, req: HttpRequest, ctx: Ctx) -> Verdict
                 f"GraphQL の {m.group(1)}", "GraphQL はノード ID で宛先を指す"
             )
         return ALLOW
+    if req.method_unknown:
+        return _check_rest_write(path, None, ctx, {}, name)  # 書き込みとして見る
     method = req.method or ("POST" if req.body else "GET")
     if method in _READ_METHODS:
         return ALLOW
@@ -2068,15 +2116,28 @@ def _decide_http(
                 return v
         return ALLOW
     req = _parse_http_args(name, args)
+    globoff = any(a.value in ("-g", "--globoff") for a in args)
     if stdin_text:
         req.body.append(stdin_text)
     for u in req.urls:
         if not u.resolved:
-            if req.method not in (None, *_READ_METHODS):
+            if req.method_unknown or req.method not in (None, *_READ_METHODS):
                 return _deny_unresolved(
                     f"{name} の書き込み", "URL が変数やコマンド置換で決まる"
                 )
             continue
+        writes = (
+            req.method_unknown
+            or (req.method or ("POST" if req.body else "GET")) not in _READ_METHODS
+        )
+        if (
+            name == "curl"
+            and writes
+            and not globoff
+            and re.search(r"[{}\[\]]", u.value)
+        ):
+            # curl は URL の {a,b} と [1-3] を展開する。展開した宛先は 1 つずつ追わない
+            return _deny_unresolved(f"{name} の書き込み", "URL の glob で宛先が決まる")
         v = _decide_http_url(name, u.value, req, ctx)
         if not v.allowed:
             return v
@@ -2233,7 +2294,9 @@ def _log_verdict(
         "state",
         "upstream-guard",
     )
-    words = command.split()
+    words = [
+        w for w in command.split() if not _ASSIGN.match(w)
+    ]  # GH_TOKEN=… などを残さない
     looks = (
         "merge"
         if re.search(r"merge|マージ", verdict.unresolved or verdict.reason)
@@ -2402,6 +2465,23 @@ def codex_trusted_hash(group: dict) -> str:
     return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
 
 
+def _drop_toml_table(text: str, header: str) -> str:
+    """見出しが header の表（次の見出しの手前まで）を消す。前の版が印なしで書いた同じキーを重ねないため。"""
+    out: list[str] = []
+    skipping = False
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("["):
+            skipping = stripped == f"[{header}]"
+            if skipping:
+                while out and out[-1] == "":
+                    out.pop()
+                continue
+        if not skipping:
+            out.append(line)
+    return "\n".join(out).rstrip("\n") + "\n"
+
+
 def set_codex_trust(config_text: str, key: str | None, trusted_hash: str | None) -> str:
     """config.toml から自分の区画（印の行と続く 3 行）を除き、key があれば末尾に足す。"""
     lines = config_text.split("\n")
@@ -2417,6 +2497,9 @@ def set_codex_trust(config_text: str, key: str | None, trusted_hash: str | None)
         i += 1
     text = "\n".join(out).rstrip("\n") + "\n"
     if key is not None:
+        text = _drop_toml_table(
+            text, f"hooks.state.{json.dumps(key, ensure_ascii=False)}"
+        )
         # キーは TOML の基本文字列。JSON の文字列の書き方で \\ と " を逃がす
         quoted = json.dumps(key, ensure_ascii=False)
         text += f'\n{TOML_MARK}\n[hooks.state.{quoted}]\nenabled = true\ntrusted_hash = "{trusted_hash}"\n'
@@ -2428,6 +2511,19 @@ def _read(path: str, default: str) -> str:
         return default
     with open(path, encoding="utf-8") as f:
         return f.read()
+
+
+def _replace_file(path: str, text: str) -> None:
+    """一時ファイルに書き終えてから rename で置き換える。途中で失敗しても元のファイルは壊れない。"""
+    tmp = f"{path}.tmp-upstream-guard"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError:
+        with contextlib.suppress(OSError):
+            os.remove(tmp)
+        raise
 
 
 def _write_all(plan: list[tuple[str, str]], stamp: str) -> list[str]:
@@ -2443,18 +2539,17 @@ def _write_all(plan: list[tuple[str, str]], stamp: str) -> list[str]:
                     f"{path}.bak-upstream-guard-{stamp}", "w", encoding="utf-8"
                 ) as f:
                     f.write(old)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(new_text)
-            originals.append((path, old))
+            originals.append((path, old))  # 書く前に登録する
+            _replace_file(path, new_text)
     except OSError as e:
         failed_restore = []
         for path, old in reversed(originals):
             try:
                 if old is None:
-                    os.remove(path)
-                else:
-                    with open(path, "w", encoding="utf-8") as f:
-                        f.write(old)
+                    if os.path.exists(path):
+                        os.remove(path)
+                elif _read(path, "") != old:
+                    _replace_file(path, old)
             except OSError:
                 failed_restore.append(path)
         if failed_restore:
