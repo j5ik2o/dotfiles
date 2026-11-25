@@ -2104,7 +2104,7 @@ class RealGitConfig(unittest.TestCase):
         )
         self.assertEqual(self.verdict("git push origin", repo_wt_cfg), "deny")
 
-        # 3) 空の pushurl で継承した pushurl をリセットする
+        # 3) 空の pushurl で既存の禁止 pushurl を消さない（Git 2.43 など旧版でも安全側に倒す）
         global_cfg = os.path.join(self.dir, "global.gitconfig")
         with open(global_cfg, "w", encoding="utf-8") as f:
             f.write('[remote "origin"]\n\tpushurl = https://github.com/nrslib/takt\n')
@@ -2119,7 +2119,32 @@ class RealGitConfig(unittest.TestCase):
             )
         self.assertEqual(
             self.verdict("git push origin", repo_reset, {"GIT_CONFIG_GLOBAL": global_cfg}),
-            "allow",
+            "deny",
+        )
+
+        # 3b) global の includeIf (hasconfig:remote.*.url:) が config.worktree の URL に一致する
+        inc_hascfg = os.path.join(self.dir, "inc-hascfg.gitconfig")
+        with open(inc_hascfg, "w", encoding="utf-8") as f:
+            f.write('[remote "origin"]\n\tpushurl = https://github.com/nrslib/takt\n')
+        global_hascfg = os.path.join(self.dir, "global-hascfg.gitconfig")
+        with open(global_hascfg, "w", encoding="utf-8") as f:
+            f.write(
+                f'[includeIf "hasconfig:remote.*.url:https://github.com/j5ik2o/**"]\n\tpath = {inc_hascfg}\n'
+            )
+        repo_hascfg = self.repo(
+            ("config", "extensions.worktreeConfig", "true"),
+            (
+                "config",
+                "--worktree",
+                "remote.origin.url",
+                "https://github.com/j5ik2o/takt",
+            ),
+        )
+        self.assertEqual(
+            self.verdict(
+                "git push origin", repo_hascfg, {"GIT_CONFIG_GLOBAL": global_hascfg}
+            ),
+            "deny",
         )
 
         # 4) システム設定（GIT_CONFIG_SYSTEM）の pushInsteadOf

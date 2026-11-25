@@ -2744,16 +2744,10 @@ def _build_repo_info(
                 remote_names.append(sub)
                 remote_urls[sub] = []
                 remote_pushurls[sub] = []
-            if key == "url":
-                if val == "":
-                    remote_urls[sub].clear()
-                else:
-                    remote_urls[sub].append(val)
-            elif key == "pushurl":
-                if val == "":
-                    remote_pushurls[sub].clear()
-                else:
-                    remote_pushurls[sub].append(val)
+            if key == "url" and val:
+                remote_urls[sub].append(val)
+            elif key == "pushurl" and val:
+                remote_pushurls[sub].append(val)
             elif key == "gh-resolved":
                 gh_resolved[sub] = val
         elif sec == "branch" and sub is not None:
@@ -2781,32 +2775,17 @@ def _build_repo_info(
     return RepoInfo(remotes=remotes, default_push_remote=default, git_aliases=aliases)
 
 
-def read_repo_info(
-    location: str, environ: Mapping[str, str] | None = None
-) -> RepoInfo | None:
-    """リポジトリの .git/config（worktree は commondir 先）を直接読む。GIT_CONFIG_* には頼らない。"""
-    dirs = _discover_git_dirs(location)
-    if dirs is None:
-        return None
-    git_dir, common_dir = dirs
-    env = os.environ if environ is None else environ
-    home = env.get("HOME", os.path.expanduser("~"))
-    branch = _read_head_branch(git_dir)
-    config_path = os.path.join(common_dir, "config")
-    # hasconfig:remote.*.url 向けに、先にリポジトリ設定の remote URL を集める
-    seed_ctx = _GitConfigCtx(home=home, git_dir=git_dir, branch=branch)
-    repo_seed = _load_git_config_file(config_path, seed_ctx, required=True)
-    if repo_seed is None:
-        return None
-    cfg_ctx = _GitConfigCtx(
-        home=home,
-        git_dir=git_dir,
-        branch=branch,
-        known_remote_urls=set(seed_ctx.known_remote_urls),
-    )
+def _read_all_git_configs(
+    env: Mapping[str, str],
+    git_dir: str,
+    common_dir: str,
+    cfg_ctx: _GitConfigCtx,
+) -> list[tuple[str, str | None, str, str]] | None:
+    """system → global → repo → config.worktree の順に設定を読む。"""
     entries = _read_system_git_config(env, cfg_ctx) + _read_global_git_config(
         env, cfg_ctx
     )
+    config_path = os.path.join(common_dir, "config")
     repo_entries = _load_git_config_file(config_path, cfg_ctx, required=True)
     if repo_entries is None:
         return None
@@ -2821,6 +2800,33 @@ def read_repo_info(
         if wt_entries is None:
             return None
         entries.extend(wt_entries)
+    return entries
+
+
+def read_repo_info(
+    location: str, environ: Mapping[str, str] | None = None
+) -> RepoInfo | None:
+    """リポジトリの .git/config（worktree は commondir 先）を直接読む。GIT_CONFIG_* には頼らない。"""
+    dirs = _discover_git_dirs(location)
+    if dirs is None:
+        return None
+    git_dir, common_dir = dirs
+    env = os.environ if environ is None else environ
+    home = env.get("HOME", os.path.expanduser("~"))
+    branch = _read_head_branch(git_dir)
+    # hasconfig:remote.*.url 向けに、全スコープ（system/global/repo/worktree）から先に URL を集める
+    seed_ctx = _GitConfigCtx(home=home, git_dir=git_dir, branch=branch)
+    if _read_all_git_configs(env, git_dir, common_dir, seed_ctx) is None:
+        return None
+    cfg_ctx = _GitConfigCtx(
+        home=home,
+        git_dir=git_dir,
+        branch=branch,
+        known_remote_urls=set(seed_ctx.known_remote_urls),
+    )
+    entries = _read_all_git_configs(env, git_dir, common_dir, cfg_ctx)
+    if entries is None:
+        return None
     return _build_repo_info(entries, branch)
 
 
