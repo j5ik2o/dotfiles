@@ -1,0 +1,59 @@
+name: dotfiles-reflect
+description: >-
+  マージ済みの変更を実環境へ反映するワークフロー。差分を分類し、
+  ユーザー側 Home Manager だけの変更なら、flake.lock で固定した
+  home-manager で反映して確認する。darwin 側や秘密情報を含む変更は
+  反映せず、オーナー待ちとして報告して完了する。
+all_steps:
+  rules:
+    - ref: findings-handling
+      position: before_instruction
+    - ref: plain-terminology
+      position: before_instruction
+max_steps: 10
+initial_step: classify
+steps:
+  - name: classify
+    description: マージされたプルリクエストの差分を読み、反映の種類を判定する
+    edit: false
+    persona: supervisor
+    policy:
+      - review
+    knowledge:
+      - dotfiles-rules
+    instruction: dotfiles-reflect-classify
+    output_contracts:
+      report:
+        - name: reflect-classification.md
+          format: supervisor-summary
+    rules:
+      - condition: ユーザー側の Home Manager だけの変更で、反映してよい
+        next: reflect
+      - condition: darwin 側の変更を含む
+        next: COMPLETE
+      - condition: 秘密情報の変更を含む
+        next: COMPLETE
+      - condition: 判定できない
+        next: ABORT
+  - name: reflect
+    description: 固定した home-manager でユーザー側を反映し、反映後の状態を確認する
+    input_reports:
+      from_step: classify
+      reports:
+        - reflect-classification.md
+    edit: false
+    persona: exec-worker
+    policy:
+      - coding
+    knowledge:
+      - dotfiles-rules
+    instruction: dotfiles-reflect-run
+    output_contracts:
+      report:
+        - name: reflect-report.md
+          format: supervisor-summary
+    rules:
+      - condition: 反映と確認が完了した
+        next: COMPLETE
+      - condition: 反映に失敗した、または確認で問題が見つかった
+        next: ABORT

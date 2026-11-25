@@ -1,0 +1,25 @@
+language: ja
+# 同時 1 本まで。新規開始は1件ずつ（2026-11-15 午後、DGX Spark へ既定が
+# 戻ったあとの姿勢。11:45 の同時 2 本の暫定は終えた）
+concurrency: 1
+base_branch: main
+
+# provider が rate limit に達したときの切替先（順に試す）
+# 2026-11-15 午後、横断の指示で切替先を空にした。DGX Spark が既定のあいだは
+# Ollama Cloud のモデルを切替先に置かず、上限エラーは失敗として表に出して
+# 新しいタスクの開始を止めて問い合わせる。Ollama Cloud は並行の追加分と
+# Opus 級モデルの宛先として、明示的な委任で引き続き使う。
+rate_limit_fallback:
+  switch_chain: []
+
+# ワークフロー内の system step が固定コマンド（make done）を実行するために必要
+workflow_system_commands:
+  custom_scripts: true
+
+# manager（ゴール管理）がタスクに使ってよいワークフロー
+manager:
+  workflows:
+    - default
+    - simple
+    - dotfiles-change
+    - dotfiles-reflect
