@@ -48,7 +48,7 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 - 語を探す範囲は、コマンドの全文、値の決まらない変数の代入の元、作業ディレクトリと判定の中で引いた場所の remote（fetch と push の URL。insteadOf を通した後の形）、`GH_` と `GIT_` で始まる環境変数、読んだクエリのファイル。大文字小文字は区別しない。禁止の宛先が `owner/repo` の形なら、全体と owner と repo のどれが出てきても当てる。
 - 宛先が禁止の宛先と決まったものは、これまでどおり止める。GraphQL の、宛先に関係なく止めていた mutation も、同じ考え方で扱う。
 
-警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。大きさの確認、移動、追記は、ロックのファイル（`<記録>.lock`）で直列にする。理由の文（記録とモデルへ返すものの両方）からは、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値、URL の `//…@` の部分を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
+警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。大きさの確認、移動、追記は、ロックのファイル（`<記録>.lock`）で直列にする。理由の文（記録とモデルへ返す理由と警告）には、コマンドや設定から取った生の値（URL、ヘッダ、`git -c` の値、変数の中身、API のパスなど）を写さない。書くのは、何を見たかを示す固定の文、判定の種類、設定の一覧に在る禁止の宛先の名前、作業ディレクトリだけ。記録には、ほかにコマンドの先頭の語と長さを書く。2 つ目の守りとして、それでも文に入ったときのために、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値（引用符で囲んだ値は閉じる引用符まで）、URL の `//…@` の部分（`@` が 2 つ以上あれば最後の `@` まで）を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
 
 `gh pr create`、`comment`、`view`、`review --approve`、issue の操作、読み取り、禁止でない宛先への操作は止めない。
 
@@ -79,6 +79,9 @@ PR のマージより前に `~/.local/bin/upstream-guard` を手で作ったリ�
 mv ~/.local/bin/upstream-guard ~/.local/bin/upstream-guard.manual   # 手で作ったリンクを退避する
 make apply
 ```
+
+- `make apply` が失敗したら、退避したリンクを戻す（`mv ~/.local/bin/upstream-guard.manual ~/.local/bin/upstream-guard`）。戻さないと、フックは警告だけでコマンドを通し続ける。原因を直してから、もう一度リンクを退避して `make apply` を流す。たとえば macOS では、`make apply` は `apply-darwin` を呼び、`hosts/<ホスト名>.nix` が無く `FORCE` も無いと、`darwin-rebuild switch` の前に 1 で終わる（`Makefile` の `apply-darwin`）。
+- `make apply` が成功したら、`~/.local/bin/upstream-guard.manual` は消してよい。
 
 `install` と `uninstall` は何度実行しても同じ結果になる。書き換える前のファイルは `<ファイル>.bak-upstream-guard-<日時>` に残す。
 

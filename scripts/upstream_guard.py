@@ -635,8 +635,10 @@ def decide(
     ctx.script_text = command
     try:
         verdict = _decide_script(command, ctx)
-    except ParseError as e:
-        verdict = _unparsed(command, ctx, f"コマンドを解析できない（{e}）")
+    except ParseError:
+        verdict = _unparsed(
+            command, ctx, "コマンドを解析できない"
+        )  # e には入力の文字が入る
     except RecursionError:
         verdict = _unparsed(command, ctx, "入れ子が深すぎる")
     if verdict.allowed or not verdict.unresolved:
@@ -646,9 +648,16 @@ def decide(
 
 
 def _deny(op: str, repo: str, entry: str) -> Verdict:
+    """宛先が禁止の宛先と決まった拒否。
+
+    理由の文には、コマンドや設定から取った値（URL、ヘッダ、git -c の値など）を写さない。
+    書くのは、何を見たか（op。固定の文）と、設定の一覧に在る禁止の宛先の名前（entry）だけ。
+    repo は呼び出し側が決めた宛先で、文には入れない。
+    """
+    del repo
     return Verdict(
         False,
-        f"upstream-guard: {op}を実行前に止めました。宛先 {repo} は禁止の宛先（{entry}）です。\n{ADVICE}",
+        f"upstream-guard: {op}を実行前に止めました。宛先が禁止の宛先（{entry}）です。\n{ADVICE}",
     )
 
 
@@ -1628,7 +1637,7 @@ def _check_push_target(target: Arg, ctx: Ctx, call: GitCall) -> Verdict:
     if looks_like_url(value):
         repo = repo_from_url(value)
         if repo is None:
-            return _deny_unresolved("git push", f"URL {value} から宛先を読めない")
+            return _deny_unresolved("git push", "URL から宛先を読めない")
         entry = blocked_entry(repo, ctx.blocked)
         return _deny("git push", repo, entry) if entry else ALLOW
     if looks_like_path(value):
@@ -1638,14 +1647,14 @@ def _check_push_target(target: Arg, ctx: Ctx, call: GitCall) -> Verdict:
         return unreadable
     remote = call.info.remotes.get(value)
     if remote is None:
-        return _deny_unresolved("git push", f"remote {value} が見つからない")
+        return _deny_unresolved("git push", "名前の remote が見つからない")
     if not remote.readable:
-        return _deny_unresolved("git push", f"remote {value} の URL を読めない")
+        return _deny_unresolved("git push", "remote の URL を読めない")
     for url in remote.fetch_urls + remote.push_urls:
         repo = repo_from_url(url)
         entry = repo and blocked_entry(repo, ctx.blocked)
         if entry:
-            return _deny(f"git push（remote {value}）", repo, entry)
+            return _deny("git push（remote の URL）", repo, entry)
     return ALLOW
 
 
@@ -1747,7 +1756,7 @@ def _gh_target(
             return _deny_unresolved(op, "宛先が変数やコマンド置換で決まる")
         r = repo_from_gh_arg(explicit.value)
         if r is None:
-            return _deny_unresolved(op, f"{explicit.value} から宛先を読めない")
+            return _deny_unresolved(op, "引数から宛先を読めない")
         candidates = [r]
     if not candidates:
         for flag in p.flags.get("-R", []) + p.flags.get("--repo", []):
@@ -1755,7 +1764,7 @@ def _gh_target(
                 return _deny_unresolved(op, "-R の値が変数やコマンド置換で決まる")
             r = repo_from_gh_arg(flag.value)
             if r is None:
-                return _deny_unresolved(op, f"-R {flag.value} から宛先を読めない")
+                return _deny_unresolved(op, "-R の値から宛先を読めない")
             candidates.append(r)
     if not candidates:
         candidates_or_verdict = _gh_default(ctx, cmd_env, op)
@@ -1779,7 +1788,7 @@ def _gh_default(ctx: Ctx, cmd_env: dict[str, str], op: str) -> list[str] | Verdi
     if gh_repo:
         r = repo_from_gh_arg(gh_repo)
         if r is None:
-            return _deny_unresolved(op, f"GH_REPO={gh_repo} から宛先を読めない")
+            return _deny_unresolved(op, "GH_REPO の値から宛先を読めない")
         return [r]
     if ctx.cwd is None:
         return _deny_unresolved(op, "作業ディレクトリを決められない")
@@ -1951,13 +1960,19 @@ def _api_host(url: str) -> str | None:
 _PLACEHOLDER = re.compile(r"\{[a-z]+\}|:(?:owner|repo|branch)")
 
 
+def _rest_op(op_name: str, method: str | None) -> str:
+    """REST の書き込みの op。パス（入力の値）は写さない。メソッドは決まった名前のときだけ書く。"""
+    known = method if method in ("POST", "PUT", "PATCH", "DELETE") else "書き込み"
+    return f"{op_name} の {known}"
+
+
 def _check_rest_write(
     path: str, method: str | None, ctx: Ctx, cmd_env: dict[str, str], op_name: str
 ) -> Verdict:
     by_id = re.match(r"^repositories/[^/]+(?:/(.*))?$", path)
     if by_id and _REST_WRITE_PATH.match(by_id.group(1) or ""):
         return _deny_unresolved(
-            f"{op_name} の {method or '書き込み'} {path}",
+            _rest_op(op_name, method),
             "リポジトリを数値の ID で指している",
         )
     m = re.match(r"^repos/([^/]+)/([^/]+)(?:/(.*))?$", path)
@@ -1968,7 +1983,7 @@ def _check_rest_write(
         return ALLOW
     if rest == "" and method not in ("PATCH", "DELETE", None):
         return ALLOW
-    op = f"{op_name} の {method or '書き込み'} {path}"
+    op = _rest_op(op_name, method)
     if _PLACEHOLDER.fullmatch(owner) or _PLACEHOLDER.fullmatch(repo):
         default = _gh_default(ctx, cmd_env, op)
         if isinstance(default, Verdict):
@@ -2317,7 +2332,8 @@ def _log_head(command: str) -> str:
 
 _SECRET_PATTERNS = (
     # URL の資格情報（//user:token@）。ほかの置換が区切りの @ を消す前に、最初に伏せる
-    (re.compile(r"(//)[^/@\s]+@"), r"\1***@"),
+    # @ が 2 つ以上あっても、/・?・#・空白を越えない範囲で最後の @ まで伏せる
+    (re.compile(r"(//)[^/?#\s]+@"), r"\1***@"),
     # ヘッダの値（Authorization・Proxy-Authorization・Cookie・Set-Cookie）は、行の終わりまで伏せる
     (
         re.compile(r"(?i)\b((?:proxy-)?authorization|(?:set-)?cookie)\s*[:=]\s*[^\n]*"),
@@ -2329,7 +2345,10 @@ _SECRET_PATTERNS = (
     (re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,})"), "***"),
     # token=…、password=… などの値
     (
-        re.compile(r"(?i)\b(token|password|passwd|secret|api[_-]?key)=[^\s&;'\"]+"),
+        re.compile(
+            r"(?i)\b(token|password|passwd|secret|api[_-]?key)="
+            r"(?:\"[^\"\n]*\"|'[^'\n]*'|[^\s&;'\"]+|[\"'][^\s&;]*)"
+        ),
         r"\1=***",
     ),
 )

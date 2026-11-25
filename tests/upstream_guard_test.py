@@ -1156,6 +1156,104 @@ class DecideTable(unittest.TestCase):
         self.assertEqual(failures, [], "\n".join(failures))
 
 
+class NoRawValuesInOutput(unittest.TestCase):
+    """理由・警告・記録には、コマンドや設定から取った生の値を写さない（表の全件で確かめる性質）。
+
+    入れてよいのは、固定の文、判定の種類、設定の一覧に在る禁止の宛先の名前、作業ディレクトリ、
+    コマンドの先頭の語、長さだけ。秘密の印を値の位置に差し込み、どの判定でも出力に現れないことを見る。
+    """
+
+    MARK = (
+        "Zq" + "9mark" + "XVAL"
+    )  # 秘密の印（部品から組み立てる。禁止の宛先の語を含まない）
+
+    def variants(self, command: str) -> list[str]:
+        m = self.MARK
+        out = [
+            command.replace(
+                "https://", "https://" + _cred("u", m) + "@"
+            ),  # URL の資格情報
+            command.replace("j5ik2o/", m + "j5ik2o/"),  # 宛先の owner
+            command.replace(
+                "nrslib/", "nrslib" + m + "/"
+            ),  # 禁止の宛先の repo を含む名前
+            command.replace(" origin", " origin" + m),  # remote の名前
+            command.replace(" upstream", " upstream" + m),
+            command.replace("-R ", "-R " + m),  # -R の値
+            command.replace("repos/", "repos/" + m),  # API のパス
+            command.replace("pulls/", "pulls/" + m),
+            command.replace("query=", "query=" + m),  # GraphQL のクエリ
+            command + f" -H 'X-Credentials: password=\"{m} v\"'",  # 引数の文
+            f"git -c http.extraHeader='Authorization: token {m}' " + command,
+            f"GH_REPO={m}/x " + command,  # 前置きの代入
+            f"R={m}; " + command,  # シェル変数
+        ]
+        return [v for v in out if v != command and m in v]
+
+    def test_no_input_value_reaches_reason_warning_or_log(self):
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        log_env = {
+            "UPSTREAM_GUARD_STATE": state,
+            "ORCA_AGENT_SESSION_ID": "s",
+            "HOME": "/x",
+        }
+        leaks = []
+        checked = 0
+        for _expected, command, cwd, extra in CASES:
+            for variant in self.variants(command):
+                env = {**ENV, **extra, "GH_REPO_EXTRA": self.MARK}
+                v = ug.decide(variant, cwd, env, ("nrslib",), Repos(REPOS))
+                checked += 1
+                for text in (v.reason, v.warning, v.unresolved):
+                    if self.MARK in text:
+                        leaks.append(f"{v.kind}: {variant!r}\n    {text}")
+                        break
+                ug._log_verdict(v, variant, cwd, log_env)
+        for name in ("warnings.log", "denials.log"):
+            path = os.path.join(state, name)
+            if os.path.exists(path):
+                with open(path) as f:
+                    for line in f:
+                        record = json.loads(line)
+                        if self.MARK in record["reason"] or self.MARK in record["head"]:
+                            leaks.append(f"記録: {record}")
+        self.assertGreater(checked, 1000)
+        self.assertEqual(leaks[:20], [], f"{len(leaks)} 件に生の値が残った")
+
+
+class Redact(unittest.TestCase):
+    """2 つ目の守り（_redact）。理由の文に値が入ってしまったときも、秘密に見えるものを伏せる。"""
+
+    def test_url_credentials_up_to_the_last_at_sign(self):
+        host = "@example.invalid/org/repo"
+        for cred in (_cred("user", "AAA@TOPSECRET"), _cred("user", "A@B@TOPSECRET")):
+            out = ug._redact("https://" + cred + host)
+            self.assertNotIn("TOPSECRET", out)
+            self.assertTrue(out.endswith(host), out)
+        self.assertEqual(
+            ug._redact("https://" + _cred("user", "ONLYONE") + host),
+            "https://***" + host,
+        )
+        # パスとクエリの @ は巻き込まない
+        plain = "https://example.invalid/org/repo@v1?x=a@b"
+        self.assertEqual(ug._redact(plain), plain)
+
+    def test_quoted_values(self):
+        for text in (
+            'password="QUOTED VALUE"',
+            "secret='SINGLE QUOTED'",
+            'api_key="NOSPACE"',
+            'X-Credentials: password="HEADER VALUE" rest',
+            'password="UNCLOSED',
+        ):
+            out = ug._redact(text)
+            for word in ("QUOTED", "SINGLE", "NOSPACE", "HEADER", "UNCLOSED"):
+                self.assertNotIn(word, out, text)
+        self.assertEqual(ug._redact("token=PLAINVALUE&x=1"), "token=***&x=1")
+
+
 class Blocked(unittest.TestCase):
     def test_owner_and_repo_entries_ignore_case(self):
         self.assertEqual(ug.blocked_entry("nrslib/takt", ("NRSLIB",)), "NRSLIB")
@@ -1221,7 +1319,8 @@ class Hook(unittest.TestCase):
             self.payload("git push https://github.com/nrslib/takt main"), env
         )
         self.assertEqual(code, 2)
-        self.assertIn("nrslib/takt", msg)
+        # 理由には、設定の一覧に在る禁止の宛先の名前だけを書く（コマンドの URL は写さない）
+        self.assertIn("禁止の宛先（nrslib）", msg)
 
     def test_monitor_commands_are_checked(self):
         env = {"HOME": "/x", "ORCA_AGENT_SESSION_ID": "s"}
