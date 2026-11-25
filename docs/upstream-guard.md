@@ -123,7 +123,7 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 - `unset -f NAME`（関数の削除）も、同じ名前の変数を消したものとして扱う
 - 子のシェル（`bash -c '…'`、丸括弧）の中の `unset` が、親の環境からも消えたものとして扱う
 - `NAME=… env -i cmd` の、`env -i` より前の代入を、`cmd` に渡るものとして扱う
-- 判定の中で git の設定を読むときは、フック自身の環境（`GIT_DIR` など）を引き継ぐ。対象のコマンドが `env -u GIT_DIR` で外していても、外したことにはならない
+- 判定の中で git の設定を読むときは、対象リポジトリの `.git/config`（worktree は `commondir` の先）を直接読み、`GIT_CONFIG_*` には頼らない。`GIT_CONFIG_COUNT` や `GIT_CONFIG_PARAMETERS` は、push 先に効く設定（`remote.*`、`branch.*`、`url.*`、`include.*`、`includeIf.*`）を差し替えているときだけ拒否（または警告）に倒す
 - GraphQL のクエリのファイルが FIFO などの特別なファイルだと、読むのを待ってフックが時間切れ（10 秒）になる
 - curl の `--next` で、前の転送の宛先をコマンド置換で作り、後ろの転送の URL の語を `%` エンコードで書いたもの（`n%72slib` など）は、宛先を決められないものとして扱われ、禁止の宛先の語も見つからないので警告だけで通る
 - `pushd` と `popd`、関数の定義の中の `cd` など、作業場所を間接に変える形は、実行の順を追わない（`popd` で戻った場所や、呼んでいない関数の中の `cd` を、そのとおりには扱わない）

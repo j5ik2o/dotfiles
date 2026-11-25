@@ -17,7 +17,6 @@ import posixpath
 import re
 import shlex
 import stat
-import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
@@ -1457,8 +1456,12 @@ def _alias_ctx(call: GitCall, ctx: Ctx) -> Ctx:
 
 
 def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Verdict:
-    """git のエイリアスを展開する（設定、-c alias.x=...、同じコマンドの中での定義）。"""
+    """git のエイリアスを展開する（設定、-c alias.x=...、GIT_CONFIG_*、同じコマンドの中での定義）。"""
     aliases = {**(call.info.git_aliases if call.info else {}), **ctx.git_aliases}
+    env_entries, _ = _parse_git_env_config({**ctx.env, **ctx.vars, **call.cmd_env})
+    for k, val in env_entries:
+        if k.lower().startswith("alias."):
+            aliases[k[6:]] = val
     for c in call.inline_config:
         k, _, val = c.partition("=")
         if k.lower().startswith("alias."):
@@ -1469,6 +1472,8 @@ def _expand_git_alias(sub: list[Arg], call: GitCall, ctx: Ctx) -> list[Arg] | Ve
     ):
         seen.add(sub[0].value)
         expansion = aliases[sub[0].value]
+        if UNKNOWN in expansion:
+            return _deny_unresolved("git のエイリアス", "エイリアスの値が変数で決まる")
         if expansion.startswith("!"):
             script = (
                 expansion[1:] + " " + " ".join(shlex.quote(a.value) for a in sub[1:])
@@ -1532,7 +1537,48 @@ _GIT_CONFIG_READ = {
     "get",
     "list",
 }
-_PUSH_CONFIG_KEY = re.compile(r"^(remote|branch|url|alias)\.", re.IGNORECASE)
+_PUSH_CONFIG_KEY = re.compile(
+    r"^(remote|branch|url|alias|include|includeif)\.", re.IGNORECASE
+)
+_ENV_PUSH_CONFIG_KEY = re.compile(
+    r"^(remote|branch|url|include|includeif)\.", re.IGNORECASE
+)
+
+
+def _parse_git_env_config(
+    env: Mapping[str, str],
+) -> tuple[list[tuple[str, str]], str | None]:
+    """GIT_CONFIG_COUNT と GIT_CONFIG_PARAMETERS から (key, value) の組を取り出す。"""
+    entries: list[tuple[str, str]] = []
+    raw_count = env.get("GIT_CONFIG_COUNT")
+    if raw_count is not None and raw_count != "":
+        if UNKNOWN in raw_count:
+            return [], "GIT_CONFIG_COUNT が変数で決まる"
+        try:
+            count = int(raw_count)
+        except ValueError:
+            return [], "GIT_CONFIG_COUNT を解析できない"
+        if count < 0 or count > 1000:
+            return [], "GIT_CONFIG_COUNT を解析できない"
+        for i in range(count):
+            key = env.get(f"GIT_CONFIG_KEY_{i}")
+            if not key or UNKNOWN in key:
+                return [], "GIT_CONFIG_KEY_* を読めない"
+            entries.append((key, env.get(f"GIT_CONFIG_VALUE_{i}", "")))
+    raw_params = env.get("GIT_CONFIG_PARAMETERS")
+    if raw_params is not None and raw_params.strip() != "":
+        if UNKNOWN in raw_params:
+            return [], "GIT_CONFIG_PARAMETERS が変数で決まる"
+        try:
+            tokens = shlex.split(raw_params)
+        except ValueError:
+            return [], "GIT_CONFIG_PARAMETERS を解析できない"
+        for tok in tokens:
+            k, _, v = tok.partition("=")
+            if not k:
+                return [], "GIT_CONFIG_PARAMETERS を解析できない"
+            entries.append((k, v))
+    return entries, None
 
 
 def _mark_git_config_write(op: str, args: list[Arg], ctx: Ctx) -> None:
@@ -1572,9 +1618,23 @@ def _push_config_risk(
             return _deny_unresolved(
                 "git push", "git -c で push 先に効く設定を差し替えている"
             )
-    for scope in (cmd_env, ctx.vars, ctx.env):
-        if any(k in scope for k in ("GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS")):
-            return _deny_unresolved("git push", "GIT_CONFIG_* で設定を差し替えている")
+    effective_env = {**ctx.env, **ctx.vars, **cmd_env}
+    env_entries, env_err = _parse_git_env_config(effective_env)
+    if env_err is not None:
+        return _deny_unresolved("git push", env_err)
+    for key, val in env_entries:
+        lowered = f"{key}={val}".lower()
+        if _ENV_PUSH_CONFIG_KEY.match(key):
+            entry = next((b for b in ctx.blocked if b in lowered), None)
+            if entry:
+                return _deny("git push", val or key, entry)
+            return _deny_unresolved(
+                "git push", "GIT_CONFIG_* で push 先に効く設定を差し替えている"
+            )
+        if key.lower().startswith("http."):
+            entry = next((b for b in ctx.blocked if b in lowered), None)
+            if entry:
+                return _deny("git push", val or key, entry)
     if ctx.dirty:
         why = (
             f"同じコマンドの中で設定を書き換えている（{', '.join(sorted(ctx.dirty))}）"
@@ -2194,68 +2254,428 @@ def load_blocked(environ: Mapping[str, str], home: str) -> tuple[str, ...]:
     return normalize_blocked(entries)
 
 
-def _git(location: str, *args: str) -> list[str] | None:
+def _discover_git_dirs(location: str) -> tuple[str, str] | None:
+    """location から (git_dir, common_dir) を辿る。worktree は .git ファイルと commondir を追う。"""
+    git_dir: str | None = None
     if location.startswith(GIT_DIR_PREFIX):
-        base = ["git", location]
+        candidate = os.path.abspath(location.removeprefix(GIT_DIR_PREFIX))
+        if os.path.isdir(candidate) and (
+            os.path.isfile(os.path.join(candidate, "HEAD"))
+            or os.path.isfile(os.path.join(candidate, "config"))
+        ):
+            git_dir = candidate
     else:
-        base = ["git", "-C", location]
-    try:
-        out = subprocess.run(
-            base + list(args),
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        cur = os.path.abspath(location)
+        if not os.path.isdir(cur):
+            return None
+        while True:
+            dotgit = os.path.join(cur, ".git")
+            if os.path.isdir(dotgit):
+                git_dir = dotgit
+                break
+            if os.path.isfile(dotgit):
+                try:
+                    with open(dotgit, encoding="utf-8", errors="replace") as f:
+                        first = f.readline().strip()
+                except OSError:
+                    return None
+                if not first.startswith("gitdir:"):
+                    return None
+                raw = first[len("gitdir:") :].strip()
+                if not raw:
+                    return None
+                resolved = os.path.normpath(
+                    raw if os.path.isabs(raw) else os.path.join(cur, raw)
+                )
+                if not os.path.isdir(resolved):
+                    return None
+                git_dir = resolved
+                break
+            if (
+                os.path.isfile(os.path.join(cur, "HEAD"))
+                and os.path.isfile(os.path.join(cur, "config"))
+                and os.path.isdir(os.path.join(cur, "objects"))
+            ):
+                git_dir = cur
+                break
+            parent = os.path.dirname(cur)
+            if parent == cur:
+                return None
+            cur = parent
+    if git_dir is None:
+        return None
+    commondir_file = os.path.join(git_dir, "commondir")
+    if os.path.isfile(commondir_file):
+        try:
+            with open(commondir_file, encoding="utf-8", errors="replace") as f:
+                raw_common = f.readline().strip()
+        except OSError:
+            return None
+        if not raw_common:
+            return None
+        common_dir = os.path.normpath(
+            raw_common
+            if os.path.isabs(raw_common)
+            else os.path.join(git_dir, raw_common)
         )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if out.returncode != 0:
-        return None
-    return out.stdout.splitlines()
+    else:
+        common_dir = git_dir
+    return git_dir, common_dir
 
 
-def read_repo_info(location: str) -> RepoInfo | None:
-    """git の設定だけを読む（ネットワークに出ない）。"""
-    if _git(location, "rev-parse", "--git-dir") is None:
+_GIT_CONFIG_ESCAPES = {"n": "\n", "t": "\t", "b": "\b", '"': '"', "\\": "\\"}
+
+
+def _parse_git_section_header(text: str, i: int) -> tuple[str, str | None, int] | None:
+    """text[i] は '['。見出しの (section, subsection, 次の位置) を返す。"""
+    n = len(text)
+    i += 1
+    start = i
+    while i < n and (text[i].isalnum() or text[i] == "-"):
+        i += 1
+    if i == start or i >= n:
         return None
-    config = (
-        _git(
-            location, "config", "--get-regexp", r"^(remote\..*\.gh-resolved|alias\..*)$"
-        )
-        or []
-    )
-    names = _git(location, "remote") or []
-    remotes = {}
-    gh_resolved = {}
-    aliases = {}
-    for line in config:
-        k, _, v = line.partition(" ")
-        if k.startswith("alias."):
-            aliases[k[6:]] = v
-        elif k.endswith(".gh-resolved"):
-            gh_resolved[k[len("remote.") : -len(".gh-resolved")]] = v
-    for name in names:
-        fetch = _git(location, "remote", "get-url", "--all", name)
-        push = _git(location, "remote", "get-url", "--push", "--all", name)
-        readable = fetch is not None and push is not None
-        remotes[name] = Remote(
-            tuple(fetch or ()), tuple(push or ()), gh_resolved.get(name), readable
-        )
-    branch = (_git(location, "symbolic-ref", "--short", "-q", "HEAD") or [None])[0]
-    default = None
-    keys = ([f"branch.{branch}.pushRemote"] if branch else []) + ["remote.pushDefault"]
-    keys += [f"branch.{branch}.remote"] if branch else []
-    for key in keys:
-        value = _git(location, "config", "--get", key)
-        if value:
-            default = value[0]
+    section = text[start:i].lower()
+    if text[i] == "]":
+        return section, None, i + 1
+    if text[i] == ".":
+        sub_start = i + 1
+        end = text.find("]", sub_start)
+        if end < 0 or "\n" in text[sub_start:end]:
+            return None
+        return section, text[sub_start:end].lower(), end + 1
+    if text[i] not in " \t":
+        return None
+    while i < n and text[i] in " \t":
+        i += 1
+    if i >= n or text[i] != '"':
+        return None
+    i += 1
+    sub_chars: list[str] = []
+    while i < n:
+        ch = text[i]
+        if ch == "\n":
+            return None
+        if ch == '"':
+            i += 1
             break
+        if ch == "\\":
+            if i + 1 >= n or text[i + 1] == "\n":
+                return None
+            sub_chars.append(text[i + 1])
+            i += 2
+            continue
+        sub_chars.append(ch)
+        i += 1
+    else:
+        return None
+    while i < n and text[i] in " \t":
+        i += 1
+    if i >= n or text[i] != "]":
+        return None
+    return section, "".join(sub_chars), i + 1
+
+
+def _parse_git_config_value(text: str, i: int) -> tuple[str, int] | None:
+    """'=' の直後から行末（またはコメント）までを git-config の規約で読む。"""
+    n = len(text)
+    while i < n and text[i] in " \t":
+        i += 1
+    chars: list[str] = []
+    trailing_ws: list[str] = []
+    in_quote = False
+    while i < n:
+        ch = text[i]
+        if ch == "\r":
+            i += 1
+            continue
+        if ch == "\n":
+            if in_quote:
+                return None
+            i += 1
+            break
+        if not in_quote and ch in "#;":
+            while i < n and text[i] != "\n":
+                i += 1
+            break
+        if ch == '"':
+            if trailing_ws:
+                chars.extend(trailing_ws)
+                trailing_ws.clear()
+            in_quote = not in_quote
+            i += 1
+            continue
+        if ch == "\\":
+            if i + 1 >= n:
+                return None
+            nxt = text[i + 1]
+            if nxt == "\r" and i + 2 < n and text[i + 2] == "\n":
+                i += 3
+                continue
+            if nxt == "\n":
+                i += 2
+                continue
+            esc = _GIT_CONFIG_ESCAPES.get(nxt)
+            if esc is None:
+                return None
+            if trailing_ws:
+                chars.extend(trailing_ws)
+                trailing_ws.clear()
+            chars.append(esc)
+            i += 2
+            continue
+        if not in_quote and ch in " \t":
+            trailing_ws.append(ch)
+            i += 1
+            continue
+        if trailing_ws:
+            chars.extend(trailing_ws)
+            trailing_ws.clear()
+        chars.append(ch)
+        i += 1
+    if in_quote:
+        return None
+    return "".join(chars), i
+
+
+def _parse_git_config_text(text: str) -> list[tuple[str, str | None, str, str]] | None:
+    """git の config ファイルの本文を (section, subsection, key, value) の列に解析する。"""
+    text = text.removeprefix("\ufeff")
+    entries: list[tuple[str, str | None, str, str]] = []
+    section: str | None = None
+    subsection: str | None = None
+    i = 0
+    n = len(text)
+    while i < n:
+        while i < n and text[i] in " \t\r\n":
+            i += 1
+        if i >= n:
+            break
+        if text[i] in "#;":
+            j = text.find("\n", i)
+            i = n if j < 0 else j + 1
+            continue
+        if text[i] == "[":
+            parsed = _parse_git_section_header(text, i)
+            if parsed is None:
+                return None
+            section, subsection, i = parsed
+            continue
+        if section is None or not text[i].isalpha():
+            return None
+        start = i
+        while i < n and (text[i].isalnum() or text[i] == "-"):
+            i += 1
+        key = text[start:i].lower()
+        while i < n and text[i] in " \t":
+            i += 1
+        if i >= n or text[i] in "\r\n#;":
+            entries.append((section, subsection, key, "true"))
+            if i < n and text[i] in "#;":
+                j = text.find("\n", i)
+                i = n if j < 0 else j + 1
+            continue
+        if text[i] != "=":
+            return None
+        val_parsed = _parse_git_config_value(text, i + 1)
+        if val_parsed is None:
+            return None
+        value, i = val_parsed
+        entries.append((section, subsection, key, value))
+    return entries
+
+
+def _load_git_config_file(
+    path: str, home: str, *, required: bool, depth: int = 0
+) -> list[tuple[str, str | None, str, str]] | None:
+    if depth > 10:
+        return None if required else []
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return None if required else []
+    entries = _parse_git_config_text(text)
+    if entries is None:
+        return None if required else []
+    out: list[tuple[str, str | None, str, str]] = []
+    base_dir = os.path.dirname(os.path.abspath(path))
+    for entry in entries:
+        out.append(entry)
+        sec, sub, key, val = entry
+        if sec == "include" and sub is None and key == "path" and val:
+            inc = val
+            if inc.startswith("~/"):
+                inc = os.path.join(home, inc[2:])
+            elif not os.path.isabs(inc):
+                inc = os.path.join(base_dir, inc)
+            included = _load_git_config_file(inc, home, required=False, depth=depth + 1)
+            if included:
+                out.extend(included)
+    return out
+
+
+def _rewrite_git_url(url: str, rules: list[tuple[str, str]]) -> tuple[str, bool]:
+    """url.<base>.insteadOf / pushInsteadOf の最長一致で URL を書き換える。"""
+    best_prefix = ""
+    best_base: str | None = None
+    for prefix, base in rules:
+        if prefix and url.startswith(prefix) and len(prefix) > len(best_prefix):
+            best_prefix = prefix
+            best_base = base
+    if best_base is None:
+        return url, False
+    return best_base + url[len(best_prefix) :], True
+
+
+def _read_global_git_config(
+    env: Mapping[str, str], home: str
+) -> list[tuple[str, str | None, str, str]]:
+    if "GIT_CONFIG_GLOBAL" in env:
+        global_path = env["GIT_CONFIG_GLOBAL"]
+        if not global_path or global_path == os.devnull:
+            return []
+        return _load_git_config_file(global_path, home, required=False) or []
+    xdg = env.get("XDG_CONFIG_HOME") or os.path.join(home, ".config")
+    out: list[tuple[str, str | None, str, str]] = []
+    for path in (
+        os.path.join(xdg, "git", "config"),
+        os.path.join(home, ".gitconfig"),
+    ):
+        out.extend(_load_git_config_file(path, home, required=False) or [])
+    return out
+
+
+def _read_head_branch(git_dir: str) -> str | None:
+    with contextlib.suppress(OSError):
+        with open(
+            os.path.join(git_dir, "HEAD"), encoding="utf-8", errors="replace"
+        ) as f:
+            head = f.readline().strip()
+        if head.startswith("ref: refs/heads/"):
+            return head[len("ref: refs/heads/") :]
+    return None
+
+
+def _resolve_remotes(
+    remote_names: list[str],
+    remote_urls: Mapping[str, list[str]],
+    remote_pushurls: Mapping[str, list[str]],
+    gh_resolved: Mapping[str, str],
+    instead_of: list[tuple[str, str]],
+    push_instead_of: list[tuple[str, str]],
+) -> dict[str, Remote]:
+    remotes: dict[str, Remote] = {}
+    for name in remote_names:
+        raw_urls = remote_urls[name]
+        raw_pushurls = remote_pushurls[name]
+        fetch_urls = tuple(_rewrite_git_url(u, instead_of)[0] for u in raw_urls)
+        if raw_pushurls:
+            push_urls = tuple(_rewrite_git_url(u, instead_of)[0] for u in raw_pushurls)
+        else:
+            rewritten_push: list[str] = []
+            for u in raw_urls:
+                rewritten, matched = _rewrite_git_url(u, push_instead_of)
+                rewritten_push.append(
+                    rewritten if matched else _rewrite_git_url(u, instead_of)[0]
+                )
+            push_urls = tuple(rewritten_push)
+        readable = bool(fetch_urls or push_urls)
+        remotes[name] = Remote(fetch_urls, push_urls, gh_resolved.get(name), readable)
+    return remotes
+
+
+def _build_repo_info(
+    entries: list[tuple[str, str | None, str, str]], git_dir: str
+) -> RepoInfo:
+    remote_names: list[str] = []
+    remote_urls: dict[str, list[str]] = {}
+    remote_pushurls: dict[str, list[str]] = {}
+    gh_resolved: dict[str, str] = {}
+    aliases: dict[str, str] = {}
+    instead_of: list[tuple[str, str]] = []
+    push_instead_of: list[tuple[str, str]] = []
+    push_default: str | None = None
+    branch_push_remote: dict[str, str] = {}
+    branch_remote: dict[str, str] = {}
+    for sec, sub, key, val in entries:
+        if sec == "alias" and sub is None:
+            aliases[key] = val
+        elif sec == "url" and sub is not None:
+            if key == "insteadof":
+                instead_of.append((val, sub))
+            elif key == "pushinsteadof":
+                push_instead_of.append((val, sub))
+        elif sec == "remote" and sub is None and key == "pushdefault":
+            push_default = val
+        elif sec == "remote" and sub is not None:
+            if sub not in remote_urls:
+                remote_names.append(sub)
+                remote_urls[sub] = []
+                remote_pushurls[sub] = []
+            if key == "url":
+                remote_urls[sub].append(val)
+            elif key == "pushurl":
+                remote_pushurls[sub].append(val)
+            elif key == "gh-resolved":
+                gh_resolved[sub] = val
+        elif sec == "branch" and sub is not None:
+            if key == "pushremote":
+                branch_push_remote[sub] = val
+            elif key == "remote":
+                branch_remote[sub] = val
+    remotes = _resolve_remotes(
+        remote_names,
+        remote_urls,
+        remote_pushurls,
+        gh_resolved,
+        instead_of,
+        push_instead_of,
+    )
+    branch = _read_head_branch(git_dir)
+    default = (
+        (branch_push_remote.get(branch) if branch else None)
+        or push_default
+        or (branch_remote.get(branch) if branch else None)
+    )
     if default is None and "origin" in remotes:
         default = "origin"
     if default is None and len(remotes) == 1:
         default = next(iter(remotes))
     return RepoInfo(remotes=remotes, default_push_remote=default, git_aliases=aliases)
+
+
+def read_repo_info(
+    location: str, environ: Mapping[str, str] | None = None
+) -> RepoInfo | None:
+    """リポジトリの .git/config（worktree は commondir 先）を直接読む。GIT_CONFIG_* には頼らない。"""
+    dirs = _discover_git_dirs(location)
+    if dirs is None:
+        return None
+    git_dir, common_dir = dirs
+    env = os.environ if environ is None else environ
+    home = env.get("HOME", os.path.expanduser("~"))
+    repo_entries = _load_git_config_file(
+        os.path.join(common_dir, "config"), home, required=True
+    )
+    if repo_entries is None:
+        return None
+    entries = _read_global_git_config(env, home) + repo_entries
+    worktree_config_enabled = False
+    for sec, sub, key, val in repo_entries:
+        if sec == "extensions" and sub is None and key == "worktreeconfig":
+            worktree_config_enabled = val.lower() in ("true", "yes", "on", "1")
+    worktree_config = os.path.join(git_dir, "config.worktree")
+    if (
+        worktree_config_enabled
+        and git_dir != common_dir
+        and os.path.isfile(worktree_config)
+    ):
+        wt_entries = _load_git_config_file(worktree_config, home, required=True)
+        if wt_entries is None:
+            return None
+        entries.extend(wt_entries)
+    return _build_repo_info(entries, git_dir)
 
 
 class LazyFiles(Mapping):
@@ -2309,7 +2729,8 @@ def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
     except Exception:  # noqa: BLE001  追加の一覧を読めなくても、既定の一覧で判定する
         blocked = DEFAULT_BLOCKED
     try:
-        return decide(command, cwd, environ, blocked, LazyRepos(), LazyFiles())
+        repos = LazyRepos(lambda loc: read_repo_info(loc, environ))
+        return decide(command, cwd, environ, blocked, repos, LazyFiles())
     except Exception:  # noqa: BLE001  判定の失敗でマージと push を通さない
         return settle(_fallback(command), command, blocked)
 

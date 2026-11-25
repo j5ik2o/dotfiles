@@ -1128,6 +1128,145 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         "/w/mine",
         {},
     ),
+    # --- GIT_CONFIG_* 環境変数と直接 .git/config 解決の回帰試験 ----------------
+    (
+        A,
+        "git push origin HEAD:refs/heads/test-branch",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        A,
+        "git push -u origin j5ik2o/takt-finish-hook",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        A,
+        "git push origin HEAD:refs/heads/j5ik2o/takt-finish-hook",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        A,
+        "git push origin main",
+        "/w/takt",
+        {"GIT_CONFIG_PARAMETERS": "'core.pager=cat' 'user.name=Bot'"},
+    ),
+    (
+        D,
+        "git push upstream main",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        D,
+        "git push https://github.com/nrslib/takt.git main",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        D,
+        "gh pr merge 1 -R nrslib/takt",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        A,
+        "gh pr merge 1 -R j5ik2o/takt",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        },
+    ),
+    (
+        D,
+        "git push origin main",
+        "/w/mine",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "remote.origin.pushurl",
+            "GIT_CONFIG_VALUE_0": "https://github.com/nrslib/takt",
+        },
+    ),
+    (
+        D,
+        "git push origin main",
+        "/w/mine",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "url.https://github.com/nrslib/.insteadOf",
+            "GIT_CONFIG_VALUE_0": "https://github.com/j5ik2o/",
+        },
+    ),
+    (
+        D,
+        "git push origin main",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "include.path",
+            "GIT_CONFIG_VALUE_0": "/tmp/extra.conf",
+        },
+    ),
+    (
+        W,
+        "git push origin main",
+        "/w/mine",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "include.path",
+            "GIT_CONFIG_VALUE_0": "/tmp/extra.conf",
+        },
+    ),
+    (
+        D,
+        "git zz",
+        "/w/takt",
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "alias.zz",
+            "GIT_CONFIG_VALUE_0": "push upstream",
+        },
+    ),
+    (
+        D,
+        "git push origin main",
+        "/w/takt",
+        {"GIT_CONFIG_COUNT": "not-a-number"},
+    ),
+    (
+        W,
+        "git push origin main",
+        "/w/mine",
+        {"GIT_CONFIG_COUNT": "not-a-number"},
+    ),
 ]
 
 
@@ -1778,8 +1917,10 @@ class RealGitConfig(unittest.TestCase):
             subprocess.run(["git", "-C", path, *args], check=True)
         return path
 
-    def verdict(self, command: str, cwd: str) -> str:
-        env = {"HOME": self.dir, "PATH": os.environ.get("PATH", "")}
+    def verdict(
+        self, command: str, cwd: str, extra: dict[str, str] | None = None
+    ) -> str:
+        env = {"HOME": self.dir, "PATH": os.environ.get("PATH", ""), **(extra or {})}
         return ug.check(command, cwd, env).kind  # C-8: warn を allow に丸めない
 
     def test_push_targets_come_from_the_real_config(self):
@@ -1796,6 +1937,11 @@ class RealGitConfig(unittest.TestCase):
             ("remote", "add", "origin", "up:takt"),
         )
         self.assertEqual(self.verdict("git push origin", rewritten), "deny")
+        push_rewritten = self.repo(
+            ("config", "url.https://github.com/nrslib/.pushInsteadOf", "up:"),
+            ("remote", "add", "origin", "up:takt"),
+        )
+        self.assertEqual(self.verdict("git push origin", push_rewritten), "deny")
         push_remote = self.repo(
             ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
             ("remote", "add", "up", "https://github.com/nrslib/takt"),
@@ -1803,6 +1949,88 @@ class RealGitConfig(unittest.TestCase):
         )
         self.assertEqual(self.verdict("git push", push_remote), "deny")
         self.assertEqual(self.verdict("git push origin", push_remote), "allow")
+
+    def test_git_config_env_does_not_block_valid_push_and_worktree_resolves_commondir(
+        self,
+    ):
+        import subprocess
+
+        takt = self.repo(
+            ("remote", "add", "origin", "https://github.com/j5ik2o/takt"),
+            ("remote", "add", "upstream", "https://github.com/nrslib/takt.git"),
+            ("remote", "set-url", "--push", "upstream", "DISABLED"),
+            ("config", "remote.origin.gh-resolved", "base"),
+            # 実機の takt と同じく、引用符の中に # を含む fetch refspec がある形
+            (
+                "config",
+                "--add",
+                "remote.upstream.fetch",
+                "+refs/heads/takt/#143/x*:refs/remotes/upstream/takt/#143/x*",
+            ),
+            ("config", "user.name", "Test"),
+            ("config", "user.email", "test@example.invalid"),
+        )
+        subprocess.run(
+            ["git", "-C", takt, "commit", "--allow-empty", "-q", "-m", "init"],
+            check=True,
+        )
+        wt = os.path.join(self.dir, "takt-wt")
+        subprocess.run(
+            ["git", "-C", takt, "worktree", "add", "-q", "-b", "feat/x", wt],
+            check=True,
+        )
+        wt_sub = os.path.join(wt, "sub", "dir")
+        os.makedirs(wt_sub)
+
+        benign_env = {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.pager",
+            "GIT_CONFIG_VALUE_0": "cat",
+        }
+        for cwd in (takt, wt, wt_sub):
+            # 素の環境で git push origin → allow
+            self.assertEqual(
+                self.verdict("git push origin HEAD:refs/heads/test-branch", cwd),
+                "allow",
+                cwd,
+            )
+            # GIT_CONFIG_* を付けても git push origin → allow
+            for cmd in (
+                "git push origin HEAD:refs/heads/test-branch",
+                "git push -u origin j5ik2o/takt-finish-hook",
+                "git push origin HEAD:refs/heads/j5ik2o/takt-finish-hook",
+            ):
+                self.assertEqual(self.verdict(cmd, cwd, benign_env), "allow", (cwd, cmd))
+            # 同じリポジトリで git push upstream → deny
+            self.assertEqual(
+                self.verdict("git push upstream main", cwd, benign_env), "deny", cwd
+            )
+            # URL 直書きの nrslib 宛て → deny
+            self.assertEqual(
+                self.verdict(
+                    "git push https://github.com/nrslib/takt.git main", cwd, benign_env
+                ),
+                "deny",
+                cwd,
+            )
+            # gh pr merge の判定も変わらない
+            self.assertEqual(
+                self.verdict("gh pr merge 1 -R nrslib/takt", cwd, benign_env),
+                "deny",
+                cwd,
+            )
+            self.assertEqual(
+                self.verdict("gh pr merge 1 -R j5ik2o/takt", cwd, benign_env),
+                "allow",
+                cwd,
+            )
+        # worktree 固有のブランチに branch.<name>.pushRemote = upstream が付いたら deny
+        subprocess.run(
+            ["git", "-C", takt, "config", "branch.feat/x.pushRemote", "upstream"],
+            check=True,
+        )
+        self.assertEqual(self.verdict("git push", wt, benign_env), "deny")
+        self.assertEqual(self.verdict("git push origin", wt, benign_env), "allow")
 
     def test_gh_default_repo_follows_set_default(self):
         both = (
@@ -1815,29 +2043,33 @@ class RealGitConfig(unittest.TestCase):
         self.assertEqual(self.verdict("gh pr merge 3", resolved), "allow")
 
     def test_unreadable_push_urls_make_the_target_unknown(self):
-        # A-12: push の URL を読めなかった remote は、空の一覧ではなく「決まらない」
-        mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
-        original = ug._git
-
-        def flaky(location, *args):
-            if args[:3] == ("remote", "get-url", "--push"):
-                return None
-            return original(location, *args)
-
-        ug._git = flaky
-        try:
-            info = ug.read_repo_info(mine)
-            self.assertFalse(info.remotes["origin"].readable)
-            v = ug.decide("git push origin", mine, {}, ("nrslib",), {mine: info})
-            self.assertEqual(v.kind, "warn")  # 決まらないが、禁止の宛先の語は無い
-            up = self.repo(
-                ("remote", "add", "origin", "https://github.com/nrslib/takt")
-            )
-            info = ug.read_repo_info(up)
-            v = ug.decide("git push origin", up, {}, ("nrslib",), {up: info})
-            self.assertEqual(v.kind, "deny")  # fetch の URL に禁止の宛先の語がある
-        finally:
-            ug._git = original
+        # A-12: URL を読めなかった remote や壊れた .git/config は、空の一覧ではなく「決まらない」
+        mine_info = ug.RepoInfo(
+            remotes={
+                "origin": R(("https://github.com/j5ik2o/takt",), (), readable=False)
+            },
+            default_push_remote="origin",
+        )
+        v = ug.decide("git push origin", "/w/m", {}, ("nrslib",), {"/w/m": mine_info})
+        self.assertEqual(v.kind, "warn")  # 決まらないが、禁止の宛先の語は無い
+        up_info = ug.RepoInfo(
+            remotes={
+                "origin": R(("https://github.com/nrslib/takt",), (), readable=False)
+            },
+            default_push_remote="origin",
+        )
+        v = ug.decide("git push origin", "/w/u", {}, ("nrslib",), {"/w/u": up_info})
+        self.assertEqual(v.kind, "deny")  # fetch の URL に禁止の宛先の語がある
+        self.assertIn("-R owner/repo", v.reason)
+        # 実ファイルの .git/config が壊れていれば読めない扱い（None）に倒れる
+        broken = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
+        with open(os.path.join(broken, ".git", "config"), "w", encoding="utf-8") as f:
+            f.write('[remote "origin"\nurl = https://github.com/j5ik2o/takt\n')
+        self.assertIsNone(ug.read_repo_info(broken))
+        self.assertEqual(self.verdict("git push origin", broken), "warn")
+        self.assertEqual(
+            self.verdict("git push origin", broken, {"GH_REPO": "nrslib/takt"}), "deny"
+        )
 
 
 class CheckCommand(unittest.TestCase):
