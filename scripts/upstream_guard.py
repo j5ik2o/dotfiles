@@ -16,6 +16,7 @@ import os
 import posixpath
 import re
 import shlex
+import stat
 import subprocess
 import sys
 from collections.abc import Callable, Mapping
@@ -638,6 +639,8 @@ def decide(
         verdict = _unparsed(command, ctx, f"コマンドを解析できない（{e}）")
     except RecursionError:
         verdict = _unparsed(command, ctx, "入れ子が深すぎる")
+    if verdict.allowed or not verdict.unresolved:
+        return verdict  # 確定した判定に、手掛かり（git の照会を含む）は要らない
     ctx.cwd = cwd
     return settle(verdict, _evidence(ctx, command, seen_repos, seen_files), blocked)
 
@@ -1527,12 +1530,21 @@ def _mark_git_config_write(op: str, args: list[Arg], ctx: Ctx) -> None:
     """同じコマンドの中で、push 先に効く設定を書き換えたら印を付ける。"""
     values = [a.value for a in args]
     if op == "config" and not any(v in _GIT_CONFIG_READ for v in values):
-        positional = [v for v in values if not v.startswith("-")]
-        if positional[:1] == ["set"]:
+        positional = [a for a in args if not a.value.startswith("-")]
+        if positional[:1] and positional[0].value in ("set", "unset"):
             positional = positional[1:]
-        if len(positional) >= 2 and positional[0].lower().startswith("alias."):
-            ctx.git_aliases[positional[0][6:]] = positional[1]
-        if len(positional) >= 2 or "--unset" in values:
+        key = positional[0] if positional else None
+        if (
+            key is not None
+            and key.resolved
+            and len(positional) >= 2
+            and key.value.lower().startswith("alias.")
+        ):
+            ctx.git_aliases[key.value[6:]] = positional[1].value
+        writes = len(positional) >= 2 or "--unset" in values or "--unset-all" in values
+        if writes and (
+            key is None or not key.resolved or _PUSH_CONFIG_KEY.match(key.value)
+        ):
             ctx.dirty.add("git config")
     if op == "remote" and values[:1] and values[0] in ("add", "set-url", "rename"):
         ctx.dirty.add("git remote " + values[0])
@@ -2035,6 +2047,8 @@ class HttpRequest:
     urls: list[Arg] = field(default_factory=list)
     unresolved_body: bool = False
     method_unknown: bool = False  # -X などはあるが、値が変数やコマンド置換で決まる
+    explicit_method: bool = False
+    get: bool = False  # curl -G／--get
 
 
 def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
@@ -2051,6 +2065,7 @@ def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
             if key in ("-X", "--request", "--method"):
                 req.method = arg.value.upper() if arg.resolved else None
                 req.method_unknown = not arg.resolved
+                req.explicit_method = True
             elif key in _BODY_FLAGS:
                 req.body.append(arg.value)
                 from_file = arg.value.startswith("@") or key in (
@@ -2065,12 +2080,16 @@ def _parse_http_args(name: str, args: list[Arg]) -> HttpRequest:
                 req.urls.append(arg)
             continue
         i += 1
+        if v in ("-G", "--get"):
+            req.get = True
         if v.startswith("-"):
             continue
         if positional_method and re.fullmatch(r"[A-Za-z]+", v) and not req.urls:
             req.method = v.upper()
         else:
             req.urls.append(a)
+    if req.get and not req.explicit_method:
+        req.method = "GET"
     return req
 
 
@@ -2280,6 +2299,27 @@ def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
         return settle(_fallback(command), command, blocked)
 
 
+def _log_head(command: str) -> str:
+    """記録に残すコマンドの先頭の語。前置きの代入を除き、実行ファイルの名前に見える語のときだけ残す。"""
+    try:
+        tokens = tokenize(command)
+    except ParseError:
+        return ""
+    for tok in tokens:
+        if not isinstance(tok, Word):
+            continue
+        if _ASSIGN.match(tok.raw):
+            continue  # GH_TOKEN=… や KEY='a b' の値を残さない
+        value = "".join(t for k, t in tok.parts if k == "lit")
+        return value[:60] if re.fullmatch(r"[A-Za-z0-9._/+-]+", value) else ""
+    return ""
+
+
+def _redact(text: str) -> str:
+    """URL の資格情報（//user:token@）を伏せる。"""
+    return re.sub(r"(//)[^/@\s]+@", r"\1***@", text)
+
+
 def _log_verdict(
     verdict: Verdict, command: str, cwd: str | None, environ: Mapping[str, str]
 ) -> None:
@@ -2294,9 +2334,7 @@ def _log_verdict(
         "state",
         "upstream-guard",
     )
-    words = [
-        w for w in command.split() if not _ASSIGN.match(w)
-    ]  # GH_TOKEN=… などを残さない
+    head = _log_head(command)
     looks = (
         "merge"
         if re.search(r"merge|マージ", verdict.unresolved or verdict.reason)
@@ -2311,8 +2349,8 @@ def _log_verdict(
         "session": environ.get("ORCA_AGENT_SESSION_ID", ""),
         "cwd": cwd or "",
         "verdict": verdict.kind,
-        "reason": (verdict.unresolved or verdict.reason.splitlines()[0])[:300],
-        "head": words[0][:60] if words else "",
+        "reason": _redact(verdict.unresolved or verdict.reason.splitlines()[0])[:300],
+        "head": head,
         "length": len(command),
         "looks_like": looks,
     }
@@ -2421,28 +2459,59 @@ def _is_our_handler(handler: dict) -> bool:
     return ".local/bin/upstream-guard" in handler.get("command", "")
 
 
-def set_pre_tool_use(doc: dict, present: bool, matcher: str) -> tuple[dict, int | None]:
-    """PreToolUse から自分のフックだけを外し、present なら末尾に足す。足した位置を返す。
+def set_pre_tool_use(
+    doc: dict, present: bool, matcher: str
+) -> tuple[dict, int | None, list[int]]:
+    """PreToolUse の自分のフックを入れ直す・外す。(doc, 自分の位置, 消したグループの元の位置) を返す。
 
-    同じグループにほかのフックがあれば、そのグループは残す。空になったグループだけ消す。
+    自分だけのグループが既にあれば、同じ位置で置き換える（並びを変えず、後ろのフックの信頼のキーを
+    ずらさない）。ほかのフックと同じグループにある自分のフックは外し、空になったグループだけ消す。
     """
     hooks = doc.setdefault("hooks", {})
-    groups = []
-    for group in hooks.get("PreToolUse", []):
-        handlers = [h for h in group.get("hooks", []) if not _is_our_handler(h)]
-        if len(handlers) == len(group.get("hooks", [])):
+    groups: list[dict] = []
+    index: int | None = None
+    removed: list[int] = []
+    for position, group in enumerate(hooks.get("PreToolUse", [])):
+        handlers = group.get("hooks", [])
+        kept = [h for h in handlers if not _is_our_handler(h)]
+        if len(kept) == len(handlers):
             groups.append(group)
-        elif handlers:
-            groups.append({**group, "hooks": handlers})
-    index = None
-    if present:
+        elif kept:
+            groups.append({**group, "hooks": kept})
+        elif present and index is None:
+            index = len(groups)
+            groups.append(_hook_group(matcher))
+        else:
+            removed.append(position)
+    if present and index is None:
         index = len(groups)
         groups.append(_hook_group(matcher))
     if groups:
         hooks["PreToolUse"] = groups
     else:
         hooks.pop("PreToolUse", None)
-    return doc, index
+    return doc, index, removed
+
+
+_TOML_HEADER = re.compile(r"^\s*\[\s*([^\[\]]+?)\s*\]\s*(?:#.*)?$")
+
+
+def shift_trust_keys(config_text: str, real: str, removed: list[int]) -> str:
+    """消したグループより後ろの PreToolUse の信頼のキーを、消した数だけ前へずらす。"""
+    if not removed:
+        return config_text
+    prefix = json.dumps(f"{real}:pre_tool_use:", ensure_ascii=False)[:-1]
+    pattern = re.compile(
+        r"^(\s*\[\s*hooks\.state\." + re.escape(prefix) + r")(\d+)(:\d+\"\s*\].*)$"
+    )
+    out = []
+    for line in config_text.split("\n"):
+        m = pattern.match(line)
+        if m:
+            g = int(m.group(2))
+            line = f"{m.group(1)}{g - sum(1 for r in removed if r < g)}{m.group(3)}"
+        out.append(line)
+    return "\n".join(out)
 
 
 def codex_trusted_hash(group: dict) -> str:
@@ -2470,9 +2539,9 @@ def _drop_toml_table(text: str, header: str) -> str:
     out: list[str] = []
     skipping = False
     for line in text.split("\n"):
-        stripped = line.strip()
-        if stripped.startswith("["):
-            skipping = stripped == f"[{header}]"
+        m = _TOML_HEADER.match(line)
+        if m or line.strip().startswith("["):
+            skipping = bool(m) and m.group(1) == header
             if skipping:
                 while out and out[-1] == "":
                     out.pop()
@@ -2516,8 +2585,10 @@ def _read(path: str, default: str) -> str:
 def _replace_file(path: str, text: str) -> None:
     """一時ファイルに書き終えてから rename で置き換える。途中で失敗しても元のファイルは壊れない。"""
     tmp = f"{path}.tmp-upstream-guard"
+    mode = stat.S_IMODE(os.stat(path).st_mode) if os.path.exists(path) else 0o600
     try:
         with open(tmp, "w", encoding="utf-8") as f:
+            os.chmod(tmp, mode)  # 中身を書く前に、元のファイルと同じ権限にする
             f.write(text)
         os.replace(tmp, path)
     except OSError:
@@ -2535,9 +2606,9 @@ def _write_all(plan: list[tuple[str, str]], stamp: str) -> list[str]:
             if old == new_text:
                 continue
             if old is not None:
-                with open(
-                    f"{path}.bak-upstream-guard-{stamp}", "w", encoding="utf-8"
-                ) as f:
+                backup = f"{path}.bak-upstream-guard-{stamp}"
+                with open(backup, "w", encoding="utf-8") as f:
+                    os.chmod(backup, 0o600)  # 写しは本人だけが読める
                     f.write(old)
             originals.append((path, old))  # 書く前に登録する
             _replace_file(path, new_text)
@@ -2568,6 +2639,18 @@ class InstallResult:
     skipped: list[str]  # 登録できなかった対象と理由
 
 
+def _ensure_toml(text: str, path: str) -> None:
+    """書き換えた config.toml を読めなければ、書かずに失敗させる（壊れた設定を残さない）。"""
+    import tomllib
+
+    try:
+        tomllib.loads(text)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(
+            f"{path} を書き換えた結果を TOML として読めないので、書かない: {e}"
+        ) from e
+
+
 def apply_install(home: str, present: bool, stamp: str) -> InstallResult:
     """present=True で設置、False で取り外し。
 
@@ -2582,7 +2665,7 @@ def apply_install(home: str, present: bool, stamp: str) -> InstallResult:
     if os.path.isdir(claude_dir):
         if present or os.path.exists(claude):
             doc = json.loads(_read(claude, "{}"))
-            doc, _ = set_pre_tool_use(doc, present, CLAUDE_MATCHER)
+            doc, _, _ = set_pre_tool_use(doc, present, CLAUDE_MATCHER)
             plan.append((claude, json.dumps(doc, indent=2, ensure_ascii=False) + "\n"))
     elif present:
         skipped.append(f"Claude Code: {claude_dir} が無い")
@@ -2592,16 +2675,20 @@ def apply_install(home: str, present: bool, stamp: str) -> InstallResult:
     if os.path.isdir(codex_dir):
         if present or os.path.exists(codex_hooks) or os.path.exists(codex_config):
             doc = json.loads(_read(codex_hooks, '{"hooks": {}}'))
-            doc, index = set_pre_tool_use(doc, present, CODEX_MATCHER)
+            doc, index, removed = set_pre_tool_use(doc, present, CODEX_MATCHER)
             plan.append(
                 (codex_hooks, json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
             )
             real = os.path.join(os.path.realpath(codex_dir), "hooks.json")
             key = None if index is None else f"{real}:pre_tool_use:{index}:0"
             trusted = codex_trusted_hash(_hook_group(CODEX_MATCHER))
-            plan.append(
-                (codex_config, set_codex_trust(_read(codex_config, ""), key, trusted))
-            )
+            config_text = set_codex_trust(_read(codex_config, ""), key, trusted)
+            if removed:
+                config_text = set_codex_trust(
+                    shift_trust_keys(config_text, real, removed), key, trusted
+                )
+            _ensure_toml(config_text, codex_config)
+            plan.append((codex_config, config_text))
     elif present:
         skipped.append(f"Codex: {codex_dir} が無い")
     return InstallResult(_write_all(plan, stamp), skipped)

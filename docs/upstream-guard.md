@@ -26,7 +26,7 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 
 - PR のマージ: `gh pr merge`（`-R`、URL、作業ディレクトリの既定の宛先、`GH_REPO`、`--auto`、`--admin`）、`gh pr update-branch`
 - GitHub の API での書き換え: `gh api` と `curl` などでの `pulls/N/merge`、`merges`、`merge-upstream`、`git/refs` など `git/*`、`contents/*`、`releases`
-- GraphQL の `enablePullRequestAutoMerge`、`mergePullRequest`、`enqueuePullRequest` など。GraphQL はノード ID で宛先を指すため、宛先に関係なく止める
+- GraphQL の `enablePullRequestAutoMerge`、`mergePullRequest`、`enqueuePullRequest` など。GraphQL はノード ID で宛先を指すため宛先を決められないものとして扱い、クエリ・変数・読めるファイルなどに禁止の宛先の語があれば止め、無ければ警告して通す（下の「宛先を判定できないとき」）
 - push: `git push`（remote 名、URL、`git@github.com:owner/repo`、`-C`、`--git-dir`、`GIT_DIR`、fetch と push の URL のどちらか、git のエイリアス）、`git send-pack`、`git subtree push`
 - `gh repo sync <宛先>`、`gh release create/edit/delete/upload`、`gh repo delete/rename/archive`
 
@@ -79,6 +79,8 @@ upstream-guard uninstall    # 足した項目だけを消す
 
 ### 実行ファイルの作り直し
 
+`scripts/upstream-guard-refresh.sh` が効くのは、フックが呼ぶ `~/.local/bin/upstream-guard` が `~/.local/state/upstream-guard/result/bin/upstream-guard` を指しているとき（PR のマージと `make apply` の前に、手で作ったリンク）だけ。`make apply` の後は、Home Manager が既存のリンクを `.backup` に退避して、Nix のパッケージを直接指すリンクに置き換える（`backupFileExtension = "backup"`）。そのあとの作り直しは `make apply` で行う。refresh は最後に実体を確かめ、`result` を指していなければ「効いていない」と出して 0 以外で終える。refresh は同時に 2 つ走らせない。差し替えは、push と同じ区切りに 1 回だけ行う運用にしている。
+
 PR のマージと `make apply` の前に、手元の実行ファイルだけを作り直すときは `scripts/upstream-guard-refresh.sh` を使う。新しい版は、いま使っていない側の out-link（`~/.local/state/upstream-guard/slot-a` か `slot-b`）に作り、単体テストと `check` の入口（禁止の宛先へのマージは拒否、読み取りは許可）が通ってから、`result` のリンクを 1 回の rename で付け替える。前の版は、もう片方の out-link に残る。どこかで失敗したら `result` は変えない。作業の途中の版は、別のパスに作って `check` の入口で試す。全ボットに掛かっている実行ファイルには入れない。
 
 ### 表示の読み方
@@ -94,12 +96,18 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 
 - curl の URL の glob（`{a,b}` や `[1-3]`）は展開しない。`-g` の無い書き込みは、宛先を決められないものとして扱う（禁止の宛先の語が文字で書いてあれば止め、無ければ警告して通す）。語を glob で割ったもの（`nrsli{b,x}`）は警告だけで通る
 - `export` していないシェル変数（`GH_REPO=…; gh …`）を、gh や git に渡る環境変数として扱う。引き継いだ環境と区別していない
+- 先頭の語をコマンド置換で作り、その置換の中身の判定が「宛先を決められない」になったときは、コマンドの本体を調べずにその判定を返す。禁止の宛先の語がどこにも無ければ警告だけで通る
+- `unset -f NAME`（関数の削除）も、同じ名前の変数を消したものとして扱う
+- 子のシェル（`bash -c '…'`、丸括弧）の中の `unset` が、親の環境からも消えたものとして扱う
+- `NAME=… env -i cmd` の、`env -i` より前の代入を、`cmd` に渡るものとして扱う
+- 判定の中で git の設定を読むときは、フック自身の環境（`GIT_DIR` など）を引き継ぐ。対象のコマンドが `env -u GIT_DIR` で外していても、外したことにはならない
+- GraphQL のクエリのファイルが FIFO などの特別なファイルだと、読むのを待ってフックが時間切れ（10 秒）になる
 - `pushd` と `popd`、関数の定義の中の `cd` など、作業場所を間接に変える形は、実行の順を追わない（`popd` で戻った場所や、呼んでいない関数の中の `cd` を、そのとおりには扱わない）
 - Orca の外のセッションと、Orca の端末のペインで動くエージェント（どちらも `ORCA_AGENT_SESSION_ID` がない）。オーナーの対話と見分けられないため、対象にしない
 - 登録の項目そのものが消えたとき（`settings.json` や `hooks.json` の書き直しなど）。警告も出ない。実行ファイルが無い・壊れたときは、コマンドを止めずに警告だけを出す
 - 実行ファイルの差し替えの間は、判定が働かない瞬間がありうる。`scripts/upstream-guard-refresh.sh` は rename で付け替えるので、ほぼ無くなる。`make apply` での置き換えは Home Manager の手順による
 - 宛先を決められず、禁止の宛先の語も現れない形は、警告だけで通る。たとえば、別名の remote を insteadOf 以外の方法で差し替える（`~/.ssh/config` の Host の別名、`GIT_SSH_COMMAND`、資格情報の仕掛け）、変数やファイルに入れた URL（`git push "$(cat url.txt)"`）、スクリプトの中で組み立てた宛先、ブレース展開などで語を割ったもの（`nrsli{b..b}`）、GraphQL のノード ID だけで指すマージ
-- GraphQL のクエリを、読めないファイルや決まらない変数で渡し、その中身をこのコマンドの外で作ったもの。中身を読めるファイルと、同じコマンドの中で作ったクエリは、マージや ref の書き換えの mutation の名前を探して止める
+- GraphQL のクエリを、読めないファイルや決まらない変数で渡し、その中身をこのコマンドの外で作ったもの。中身を読めるファイルと、同じコマンドの中で作ったクエリは、マージや ref の書き換えの mutation の名前を探し、禁止の宛先の語があれば止め、無ければ警告して通す
 - Codex の信頼の値と `hooks.json` の並びがずれたとき（Orca が項目の順を変えたなど）。Codex は黙ってフックを動かさなくなる。`upstream-guard install` を再実行すると直る
 - インタープリタのコードで、子プロセスの起動や HTTP の形を名前で書かないもの（`getattr(os, "sys" + "tem")`、`__import__` に組み立てた名前を渡す、`new Function`、別のモジュールに起動を任せるなど）
 - シェルを通らない経路: ブラウザの操作（Orca のブラウザ、Codex の browser・chrome・computer-use）、Codex の `node_repl` のような MCP のコード実行、Codex の GitHub のプラグイン（コネクタ）

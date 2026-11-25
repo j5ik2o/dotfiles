@@ -41,7 +41,7 @@ mkdir -p "\$out/bin"
 if [[ \${FAKE_GUARD_BROKEN:-0} == 1 ]]; then
   printf '#!/bin/sh\nexit 0\n' >"\$out/bin/upstream-guard"
 else
-  printf '#!/bin/sh\nexec python3 %s "\$@"\n' "$repo_root/scripts/upstream_guard.py" >"\$out/bin/upstream-guard"
+  printf '#!/bin/sh\nexec python3 "%s" "\$@"\n' "$repo_root/scripts/upstream_guard.py" >"\$out/bin/upstream-guard"
 fi
 chmod +x "\$out/bin/upstream-guard"
 ln -sfn "\$out" "\$link"
@@ -49,8 +49,12 @@ EOF
 chmod +x "$bin/nix"
 
 state="$root/state"
+hook_bin="$root/local-bin/upstream-guard"
+mkdir -p "$root/local-bin"
+ln -s "$state/result/bin/upstream-guard" "$hook_bin" # フックが呼ぶ実行ファイル（result を指す）
 run() {
-  PATH="$bin:$PATH" UPSTREAM_GUARD_STATE="$state" UPSTREAM_GUARD_SYSTEM=test "$@" "$refresh" "$repo_root" >/dev/null 2>&1
+  PATH="$bin:$PATH" UPSTREAM_GUARD_STATE="$state" UPSTREAM_GUARD_SYSTEM=test UPSTREAM_GUARD_BIN="$hook_bin" \
+    "$@" "$refresh" "$repo_root" >/dev/null 2>&1
 }
 
 # --- 1 回目: slot-a に作り、result を向ける --------------------------------
@@ -73,6 +77,12 @@ check "新しい版は前の版と違う" test "$first" != "$second"
 fails() { ! "$@"; }
 check "拒否を返さない版では失敗する" fails run env FAKE_GUARD_BROKEN=1
 check "壊れた版のときは result を変えない" test "$second" = "$(readlink "$state/result")"
+
+# --- フックが呼ぶ実行ファイルが result を指していなければ、効いていないと知らせて失敗する ---------
+
+rm "$hook_bin"
+ln -s "$root/store/elsewhere/bin/upstream-guard" "$hook_bin" # make apply 後の形（Nix のパッケージを直接指す）
+check "フックが result を指していなければ失敗する" fails run env
 
 if ((failures > 0)); then
   printf '%d 件失敗\n' "$failures" >&2

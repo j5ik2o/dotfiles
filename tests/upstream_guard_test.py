@@ -1034,10 +1034,66 @@ CASES: list[tuple[str, str, str | None, dict[str, str]]] = [
         {},
     ),
     (A, "printf main | xargs --max-args 1 git push origin", "/w/takt", {}),
+    # --- PR #229 の 3 回目のレビューの指摘（入力は指摘のまま） ----------------
+    # A-2: push 先に効かない git config の後の push は止めない
+    (A, "git config user.name Bot; git push origin", "/w/takt", {}),
+    (
+        A,
+        "git config --global user.email bot@example.com && git push origin main",
+        "/w/takt",
+        {},
+    ),
+    (
+        D,
+        "git config remote.origin.url https://github.com/x/y; git push origin",
+        "/w/takt",
+        {},
+    ),
+    (D, "git config $KEY x; git push origin", "/w/takt", {}),
+    # A-3: curl -G／--get は、本文の指定があっても GET
+    (
+        A,
+        "curl -G --data-urlencode 'ref=main' https://api.github.com/repos/nrslib/takt/contents/README.md",
+        None,
+        {},
+    ),
+    (
+        A,
+        "curl --get --data-urlencode 'ref=main' https://api.github.com/repos/nrslib/takt/contents/README.md",
+        None,
+        {},
+    ),
+    (
+        A,
+        "curl -sG -d per_page=100 https://api.github.com/repos/nrslib/takt/git/refs",
+        None,
+        {},
+    ),
+    (
+        D,
+        "curl -G -X PUT https://api.github.com/repos/nrslib/takt/pulls/1/merge",
+        None,
+        {},
+    ),
     # E-6: curl の URL の glob は展開しない。書き込みなら宛先を決められないものとして扱う
-    (D, "curl -X POST 'https://api.github.com/repos/{j5ik2o,nrslib}/takt/git/refs' -d @payload.json", None, {}),
-    (W, "curl -X POST 'https://api.github.com/repos/j5ik2o/takt[1-3]/git/refs' -d @payload.json", None, {}),
-    (A, "curl -g -X POST 'https://api.github.com/repos/j5ik2o/takt/git/refs?x={a}' -d @p.json", None, {}),
+    (
+        D,
+        "curl -X POST 'https://api.github.com/repos/{j5ik2o,nrslib}/takt/git/refs' -d @payload.json",
+        None,
+        {},
+    ),
+    (
+        W,
+        "curl -X POST 'https://api.github.com/repos/j5ik2o/takt[1-3]/git/refs' -d @payload.json",
+        None,
+        {},
+    ),
+    (
+        A,
+        "curl -g -X POST 'https://api.github.com/repos/j5ik2o/takt/git/refs?x={a}' -d @p.json",
+        None,
+        {},
+    ),
     (A, "curl 'https://api.github.com/repos/{j5ik2o,nrslib}/takt/pulls'", None, {}),
     # E-10: find の -execdir と -okdir は、一致した場所で実行される（作業場所は決まらない）
     (
@@ -1278,6 +1334,64 @@ class Hook(unittest.TestCase):
         for command in daily:
             self.assertEqual(ug.check(command, d, env).kind, "allow", command)
 
+    def test_log_keeps_no_secret_from_quoted_assignments_or_urls(self):
+        # C-4: 引用符つきの代入の値を先頭の語にしない。C-5: 理由の中の URL の資格情報を伏せる
+        import tempfile
+
+        state = tempfile.mkdtemp()
+        env = {
+            "HOME": "/x",
+            "ORCA_AGENT_SESSION_ID": "s",
+            "UPSTREAM_GUARD_STATE": state,
+        }
+        first = self.payload("KEY='a secretpart' gh pr merge 1 -R nrslib/takt")
+        self.assertEqual(ug.hook_main(first, env)[0], 2)
+        second = self.payload(
+            "git -c remote.origin.pushurl=https://user:tok123@github.com/nrslib/takt push origin"
+        )
+        self.assertEqual(ug.hook_main(second, env)[0], 2)
+        with open(os.path.join(state, "denials.log")) as f:
+            text = f.read()
+        records = [json.loads(line) for line in text.splitlines()]
+        self.assertEqual(records[0]["head"], "gh")
+        self.assertNotIn("secretpart", text)
+        self.assertNotIn("tok123", text)
+
+    def test_input_json_body_is_checked(self):
+        # C-7: gh api --input は JSON の本文を取る。query の中の mutation と禁止の宛先の語を拾う
+        files = {
+            "/w/mine/up.json": json.dumps(
+                {
+                    "query": 'query{repository(owner:"nrslib",name:"takt"){id}} mutation{mergePullRequest(input:{pullRequestId:"x"}){clientMutationId}}'
+                }
+            ),
+            "/w/mine/merge.json": json.dumps(
+                {
+                    "query": "mutation($id:ID!){mergePullRequest(input:{pullRequestId:$id}){clientMutationId}}",
+                    "variables": {"id": "PR_x"},
+                }
+            ),
+            "/w/mine/resolve.json": json.dumps(
+                {
+                    "query": 'mutation{resolveReviewThread(input:{threadId:"T"}){thread{isResolved}}}'
+                }
+            ),
+        }
+        for name, expected in (
+            ("up.json", "deny"),
+            ("merge.json", "warn"),
+            ("resolve.json", "allow"),
+        ):
+            v = ug.decide(
+                f"gh api graphql --input {name}",
+                "/w/mine",
+                ENV,
+                ("nrslib",),
+                Repos(REPOS),
+                files,
+            )
+            self.assertEqual(v.kind, expected, name)
+
     def test_log_head_drops_leading_assignments(self):
         # 記録の先頭の語に、前置きの代入（トークンなど）を入れない
         import tempfile
@@ -1390,9 +1504,18 @@ class RealGitConfig(unittest.TestCase):
     def setUp(self):
         import tempfile
 
-        self.saved = {
-            k: os.environ.get(k) for k in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
-        }
+        # A-7: git のフックの中などで走らせても別のリポジトリに触れないよう、引き継いだ GIT_* を外す
+        names = (
+            "GIT_CONFIG_GLOBAL",
+            "GIT_CONFIG_NOSYSTEM",
+            "GIT_DIR",
+            "GIT_COMMON_DIR",
+            "GIT_WORK_TREE",
+            "GIT_INDEX_FILE",
+        )
+        self.saved = {k: os.environ.get(k) for k in names}
+        for k in names:
+            os.environ.pop(k, None)
         os.environ["GIT_CONFIG_GLOBAL"] = os.devnull
         os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
         self.dir = tempfile.mkdtemp()
@@ -1416,7 +1539,7 @@ class RealGitConfig(unittest.TestCase):
 
     def verdict(self, command: str, cwd: str) -> str:
         env = {"HOME": self.dir, "PATH": os.environ.get("PATH", "")}
-        return "allow" if ug.check(command, cwd, env).allowed else "deny"
+        return ug.check(command, cwd, env).kind  # C-8: warn を allow に丸めない
 
     def test_push_targets_come_from_the_real_config(self):
         mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
@@ -1700,6 +1823,93 @@ class Install(unittest.TestCase):
         self.assertEqual(
             self.read(".codex/hooks.json"), self.files[".codex/hooks.json"]
         )
+
+    def codex_setup(self, groups, config_tail=""):
+        real = os.path.join(
+            os.path.realpath(os.path.join(self.home, ".codex")), "hooks.json"
+        )
+        with open(os.path.join(self.home, ".codex/hooks.json"), "w") as f:
+            json.dump({"hooks": {"PreToolUse": groups}}, f)
+        with open(os.path.join(self.home, ".codex/config.toml"), "w") as f:
+            f.write('model = "m"\n' + config_tail.replace("REAL", real))
+        return real
+
+    def trust(self):
+        import tomllib
+
+        with open(os.path.join(self.home, ".codex/config.toml"), "rb") as f:
+            return tomllib.load(f)["hooks"]["state"]
+
+    def test_reinstall_keeps_the_position_and_other_trust_keys(self):
+        # A-1: 入れ直しで自分の位置を変えず、後ろのほかの Codex フックの信頼の値をずらさない
+        later = {
+            "matcher": "Edit",
+            "hooks": [{"type": "command", "command": "later-hook", "timeout": 5}],
+        }
+        ours = ug._hook_group(ug.CODEX_MATCHER)
+        real = self.codex_setup(
+            [self.ORCA_GROUP, ours, later],
+            '\n[hooks.state."REAL:pre_tool_use:2:0"]\nenabled = true\ntrusted_hash = "sha256:later"\n',
+        )
+        ug.apply_install(self.home, True, "t1")
+        groups = json.loads(self.read(".codex/hooks.json"))["hooks"]["PreToolUse"]
+        self.assertEqual(groups[1]["hooks"][0]["command"], ug.HOOK_COMMAND)
+        self.assertEqual(groups[2], later)
+        state = self.trust()
+        self.assertEqual(
+            state[f"{real}:pre_tool_use:2:0"]["trusted_hash"], "sha256:later"
+        )
+        self.assertIn(f"{real}:pre_tool_use:1:0", state)
+        # 外すときは、後ろのフックのキーを 1 つ前へ追従させる
+        ug.apply_install(self.home, False, "t2")
+        groups = json.loads(self.read(".codex/hooks.json"))["hooks"]["PreToolUse"]
+        self.assertEqual(groups, [self.ORCA_GROUP, later])
+        state = self.trust()
+        self.assertEqual(
+            state[f"{real}:pre_tool_use:1:0"]["trusted_hash"], "sha256:later"
+        )
+        self.assertNotIn(f"{real}:pre_tool_use:2:0", state)
+
+    def test_trust_header_with_trailing_comment_is_not_duplicated(self):
+        # A-5: 見出しの行末にコメントがある同じ表を、重ねて書かない
+        real = self.codex_setup(
+            [self.ORCA_GROUP, ug._hook_group(ug.CODEX_MATCHER)],
+            '\n[hooks.state."REAL:pre_tool_use:1:0"]  # 手で足した\nenabled = true\ntrusted_hash = "sha256:old"\n',
+        )
+        ug.apply_install(self.home, True, "t1")
+        state = self.trust()  # 読めること（重ねると tomllib が失敗する）
+        self.assertEqual(
+            state[f"{real}:pre_tool_use:1:0"]["trusted_hash"],
+            ug.codex_trusted_hash(ug._hook_group(ug.CODEX_MATCHER)),
+        )
+
+    def test_unreadable_toml_result_is_not_written(self):
+        # A-5: 書き換えた結果を tomllib で読めなければ、書かずに失敗させる
+        self.codex_setup([self.ORCA_GROUP], "\n[broken\n")
+        before = self.read(".codex/config.toml")
+        with self.assertRaises(ValueError):
+            ug.apply_install(self.home, True, "t1")
+        self.assertEqual(self.read(".codex/config.toml"), before)
+        self.assertEqual(
+            json.loads(self.read(".codex/hooks.json"))["hooks"]["PreToolUse"],
+            [self.ORCA_GROUP],
+        )
+
+    def test_permissions_are_kept_and_backups_are_private(self):
+        # A-4: 0600 の設定ファイルを 0644 に広げない。写しは 0600
+        import stat
+
+        for rel in (".claude/settings.json", ".codex/hooks.json", ".codex/config.toml"):
+            os.chmod(os.path.join(self.home, rel), 0o600)
+        ug.apply_install(self.home, True, "t1")
+        for rel in (".claude/settings.json", ".codex/hooks.json", ".codex/config.toml"):
+            path = os.path.join(self.home, rel)
+            self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600, rel)
+            self.assertEqual(
+                stat.S_IMODE(os.stat(path + ".bak-upstream-guard-t1").st_mode),
+                0o600,
+                rel,
+            )
 
     def test_existing_unmarked_trust_table_is_replaced_not_duplicated(self):
         # 管理の印の無い、同じキーの信頼の表（前の版の形）があっても、重ねて書かない
