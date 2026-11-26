@@ -1362,8 +1362,19 @@ class NoRawValuesInOutput(unittest.TestCase):
                     if self.MARK in text:
                         leaks.append(f"{v.kind}: {variant!r}\n    {text}")
                         break
-                ug._log_verdict(v, variant, cwd, log_env)
-        for name in ("warnings.log", "denials.log"):
+                where = ug.Where(cwd, "payload") if cwd else ug.NOWHERE
+                ug._log_verdict(v, variant, where, log_env)
+                if cwd is None:  # 推定の場所で決まった理由（推定の一文と、許可の理由）も確かめる
+                    hinted = ug.Where(None, "estimated", ("/w/takt", "/w/mine"))
+                    v = ug.decide_located(
+                        variant, hinted, env, ("nrslib",), Repos(REPOS)
+                    )
+                    for text in (v.reason, v.warning, v.unresolved):
+                        if self.MARK in text:
+                            leaks.append(f"{v.kind}: {variant!r}\n    {text}")
+                            break
+                    ug._log_verdict(v, variant, hinted, log_env)
+        for name in ("warnings.log", "denials.log", "allows.log"):
             path = os.path.join(state, name)
             if os.path.exists(path):
                 with open(path) as f:
@@ -1581,7 +1592,7 @@ class Hook(unittest.TestCase):
                 'query{repository(owner:"j5ik2o",name:"dotfiles"){pullRequest(number:229){reviewThreads(first:80){nodes{id isResolved}}}}}'
             )
         env = {"HOME": d, "PATH": os.environ.get("PATH", "")}
-        verdict = ug.check("gh api graphql -F query=@merge.graphql", d, env)
+        verdict = ug.check("gh api graphql -F query=@merge.graphql", ug.Where(d, "payload"), env)
         self.assertEqual(verdict.kind, "deny")
         # レビューの返信、スレッドの解決と読み取りは、ファイル・変数・直接の 3 通りとも通す
         daily = [
@@ -1594,7 +1605,7 @@ class Hook(unittest.TestCase):
             "for id in 1 2; do gh api -X POST repos/j5ik2o/dotfiles/pulls/229/comments/$id/replies -F body=@r.md; done",
         ]
         for command in daily:
-            self.assertEqual(ug.check(command, d, env).kind, "allow", command)
+            self.assertEqual(ug.check(command, ug.Where(d, "payload"), env).kind, "allow", command)
 
     def test_no_secret_reaches_the_log_or_the_model(self):
         # Authorization・Cookie・トークンに見える値と、URL の //…@ を、記録とモデルへの理由の両方で伏せる
@@ -1943,7 +1954,7 @@ class RealGitConfig(unittest.TestCase):
             "GIT_CONFIG_NOSYSTEM": "1",
             **(extra or {}),
         }
-        return ug.check(command, cwd, env).kind  # C-8: warn を allow に丸めない
+        return ug.check(command, ug.Where(cwd, "payload"), env).kind  # C-8: warn を allow に丸めない
 
     def test_push_targets_come_from_the_real_config(self):
         mine = self.repo(("remote", "add", "origin", "https://github.com/j5ik2o/takt"))
@@ -2577,6 +2588,604 @@ class Install(unittest.TestCase):
             ug.codex_trusted_hash(group),
             "sha256:dd90b162a34b0711d2b5d9f9482e1524380931b69d4536644bb96de561a943ac",
         )
+
+
+# ---------------------------------------------------------------------------
+# 入力に cwd が無い呼び出し（Cursor の ACP ワーカー）：推定した場所での判定
+# ---------------------------------------------------------------------------
+
+# 推定の表だけで使う場所。/w/nest/sub は takt と同じ remote（相対の -C を推定の場所から解く確認用）
+LOCATED_REPOS: dict[str, ug.RepoInfo | None] = {
+    **REPOS,
+    "/w/nest/sub": REPOS["/w/takt"],
+}
+
+# (期待, 推定の場所で決まったか, コマンド, 推定の候補)。候補が空なら、推定なし（いまの判定）と同じ。
+# 推定の場所で決まった拒否にだけ、推定の一文が付く
+LOCATED_CASES: list[tuple[str, bool, str, tuple[str, ...]]] = [
+    # 推定で許可・拒否
+    (A, True, "git push origin HEAD:feat", ("/w/takt",)),
+    (A, True, "git push", ("/w/takt",)),
+    (D, True, "git push upstream HEAD:main", ("/w/takt",)),
+    (D, True, "git push origin main", ("/w/clone",)),
+    (D, True, "gh pr merge 12", ("/w/clone",)),
+    (A, True, "gh pr merge 12", ("/w/takt",)),
+    (A, True, "gh pr merge 12", ("/w/mine",)),
+    (D, True, "command git push upstream HEAD:main", ("/w/takt",)),
+    (D, True, "env git push upstream HEAD:main", ("/w/takt",)),
+    (D, True, "\\git push upstream HEAD:main", ("/w/takt",)),
+    (D, True, "git push --repo=upstream", ("/w/takt",)),
+    # 推定なし（いまと同じ。git push upstream は残る穴）
+    (W, False, "git push origin HEAD:feat", ()),
+    (W, False, "git push upstream HEAD:main", ()),
+    (W, False, "gh pr merge 12", ()),
+    # -C：絶対パスは cwd が無くても場所になる。相対パスは推定の場所から解く
+    (D, False, "git -C /w/takt push upstream HEAD:main", ()),
+    (A, False, "git -C /w/takt push origin HEAD:feat", ()),
+    (W, False, "git -C sub push origin x", ()),
+    (D, True, "git -C sub push upstream x", ("/w/nest",)),
+    (D, False, "git -C /w -C takt push upstream HEAD:main", ()),  # /w/takt になる
+    (D, False, "git -C sub -C /w/takt push upstream HEAD:main", ()),
+    (D, False, "git -C /w/clone push origin main", ("/w/mine",)),
+    # cd の連結
+    (D, False, "cd /w/takt && git push upstream HEAD:main", ("/w/mine",)),
+    (A, False, "cd /w/clone; cd /w/mine; git push origin x", ("/w/takt",)),
+    (D, False, "(cd /w/clone && git push origin x)", ("/w/mine",)),
+    (D, False, "pushd /w/clone >/dev/null && git push origin x", ("/w/mine",)),
+    (
+        W,
+        False,
+        "cd sub && git push origin x",
+        ("/w/takt",),
+    ),  # /w/takt/sub はリポジトリでない
+    (D, True, "cd sub && git push upstream x", ("/w/nest",)),
+    # 推定の場所での「決められない」は使わない（takt の upstream の語で止めない）
+    (W, False, "D=$(mktemp -d); cd $D; git push origin x", ("/w/takt",)),
+    (W, False, 'git push "$R" main', ("/w/takt",)),
+    (W, False, 'git push "$R" x; git push upstream main', ("/w/mine",)),
+    (D, True, 'git push "$R" x; git push upstream main', ("/w/takt",)),
+    (
+        W,
+        False,
+        "git -c remote.origin.pushurl=https://github.com/j5ik2o/takt push origin x",
+        ("/w/takt",),
+    ),
+    # 推定なしの語の規則は、いまと同じ
+    (D, False, 'git push "$R" main # nrslib', ("/w/mine",)),
+    # 偽の推定：コマンドで決まる宛先は、推定の値に左右されない
+    (D, False, "git push https://github.com/nrslib/takt main", ("/w/mine",)),
+    (D, False, "git push git@github.com:nrslib/takt.git main", ("/w/mine",)),
+    (D, False, "git push git@gh-alias:NrsLib/Takt.git HEAD:main", ("/w/mine",)),
+    (D, False, "GIT_DIR=/w/clone/.git git push origin main", ("/w/mine",)),
+    (
+        D,
+        False,
+        "git -c remote.origin.url=https://github.com/NRSLIB/takt push origin x",
+        ("/w/mine",),
+    ),
+    (
+        W,
+        False,
+        "git push nosuchremote HEAD:main",
+        ("/w/mine",),
+    ),  # 無い remote は許可にしない
+    # git のエイリアス。候補が無ければ、いまと同じく許可（別件の穴）
+    (D, True, "git pu", ("/w/alias",)),
+    (A, False, "git pu", ()),
+    (D, False, "git -C /w/alias pu", ()),
+    # 複数の候補：片方が決まった拒否なら拒否、全部が許可のときだけ許可
+    (A, True, "git push origin x", ("/w/takt", "/w/mine")),
+    (D, True, "git push origin x", ("/w/takt", "/w/clone")),
+    (W, False, "git push origin x", ("/w/takt", "/w/none")),
+]
+
+
+def _located(command, where, extra=None, repos=None):
+    return ug.decide_located(
+        command,
+        where,
+        {**ENV, **(extra or {})},
+        ("nrslib",),
+        Repos(LOCATED_REPOS if repos is None else repos),
+    )
+
+
+class DecideLocatedTable(unittest.TestCase):
+    def test_table(self):
+        failures = []
+        for expected, note, command, hints in LOCATED_CASES:
+            where = ug.Where(None, "estimated", hints) if hints else ug.NOWHERE
+            v = _located(command, where)
+            if v.kind != expected:
+                failures.append(f"{expected} を期待して {v.kind}: {command!r} {hints}")
+            if v.estimated != note or (ug.ESTIMATE_NOTE in v.reason) != (
+                note and v.kind == D
+            ):
+                failures.append(
+                    f"推定の印か一文が違う: {command!r} {hints}: {v.reason!r}"
+                )
+            if v.kind == D and (
+                len(v.reason.splitlines()) > 3 or "副元帥" not in v.reason
+            ):
+                failures.append(
+                    f"拒否のメッセージの形が違う: {command!r}: {v.reason!r}"
+                )
+        self.assertEqual(failures, [], "\n".join(failures))
+
+    def test_estimated_allow_is_marked_and_other_allows_are_not(self):
+        self.assertTrue(
+            _located(
+                "git push origin HEAD:feat", ug.Where(None, "estimated", ("/w/takt",))
+            ).estimated
+        )
+        self.assertFalse(_located("git -C /w/takt push origin x", ug.NOWHERE).estimated)
+
+    def test_a_certain_cwd_gives_the_same_verdict_as_decide(self):
+        # 不変 4：入力に cwd があれば、いまの decide() をそのまま使う
+        for _expected, _note, command, hints in LOCATED_CASES:
+            for cwd in hints:
+                got = _located(command, ug.Where(cwd, "payload", ("/w/clone",)))
+                want = ug.decide(command, cwd, ENV, ("nrslib",), Repos(LOCATED_REPOS))
+                self.assertEqual(got, want, (command, cwd))
+
+    def test_an_exception_at_a_hint_drops_that_hint(self):
+        class Boom(Repos):
+            def get(self, key, default=None):
+                if key == "/w/boom":
+                    raise OSError("読めない")
+                return super().get(key, default)
+
+        repos = Boom(LOCATED_REPOS)
+
+        def run(command, *hints):
+            where = ug.Where(None, "estimated", hints)
+            return ug.decide_located(command, where, ENV, ("nrslib",), repos).kind
+
+        self.assertEqual(run("git push origin x", "/w/boom"), W)
+        self.assertEqual(run("git push origin x", "/w/takt", "/w/boom"), W)
+        self.assertEqual(run("git push origin x", "/w/boom", "/w/clone"), D)
+        # 推定なしで決まった拒否は、候補の失敗で失わない
+        self.assertEqual(
+            run("git push https://github.com/nrslib/takt main", "/w/boom"), D
+        )
+
+
+# cwd が空だった記録 18 件の形（2026-11-25〜26、Cursor の ACP ワーカー）。値は偽のものに替えた。
+# (記録, 推定の候補, コマンド, 追加の環境変数, 推定なしの期待, 推定ありの期待)
+_TRAILER = ' --trailer "Co-authored-by: Cursor <agent@example.invalid>"'
+_RESOLVE = (
+    "for t in PRRT_fake1 PRRT_fake2; do gh api graphql -f query='mutation($id:ID!)"
+    "{resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -F id=$t; done"
+)
+_PY = (
+    "python3 - <<'X'\nimport re, subprocess\n"
+    "pat = re.compile(r'git (push|merge)[^\\n]*')\n"
+    "out = subprocess.run(['orca', 'status'], capture_output=True, text=True).stdout\n"
+    "print([m.group(0) for m in pat.finditer(out)]{})\nX"
+)
+_PAGER = {
+    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_KEY_0": "core.pager",
+    "GIT_CONFIG_VALUE_0": "cat",
+}
+_COMMIT = 'git add -A && git commit -m "fix: fake change"'
+_PUSH = "git push origin HEAD:j5ik2o/fake-branch"
+EMPTY_CWD_RECORDS: list[tuple[str, tuple[str, ...], str, dict[str, str], str, str]] = [
+    ("d9d6c6f1", ("/w/takt",), _PUSH, {}, W, A),
+    ("d9d6c6f1", ("/w/takt",), f"{_COMMIT}{_TRAILER} && {_PUSH}", {}, W, A),
+    (
+        "d9d6c6f1",
+        ("/w/takt",),
+        f"{_COMMIT} && {_PUSH} && git log --oneline -3",
+        {},
+        W,
+        A,
+    ),
+    (
+        "d9d6c6f1",
+        ("/w/takt",),
+        f"{_COMMIT}{_TRAILER} && {_PUSH} && {_RESOLVE}",
+        {},
+        W,
+        A,
+    ),
+    (
+        "0c096707",
+        ("/w/takt",),
+        f"{_COMMIT}{_TRAILER} && {_PUSH} 2>&1 | tail -3",
+        {},
+        W,
+        A,
+    ),
+    ("006d532d", ("/w/takt",), f"git status --short; {_COMMIT} && {_PUSH}", {}, W, A),
+    (
+        "d9d6c6f1",
+        ("/w/takt",),
+        f'{_PUSH} && gh pr create --repo j5ik2o/takt --title "fake" --body "fake body"',
+        {},
+        W,
+        A,
+    ),
+    (
+        "3a2a644c",
+        ("/w/mine",),
+        "git show --stat HEAD && git log abc1234..HEAD --grep=fake && git push origin fake-branch",
+        {},
+        W,
+        A,
+    ),
+    *(
+        (
+            "2685ffa6",
+            (hint,),
+            f"kill {pid} 2>/dev/null || true; " + _PY.format(f"[:{n}]"),
+            {},
+            W,
+            W,
+        )
+        for pid, n, hint in (
+            (11111, 1, "/w/takt"),
+            (22222, 2, "/w/takt"),
+            (33333, 3, "/w/none"),
+            (44444, 4, "/w/takt"),
+            (55555, 5, "/w/mine"),
+        )
+    ),
+    *(
+        ("2685ffa6", (hint,), _PY.format(f"[:{n}]"), {}, W, W)
+        for n, hint in ((6, "/w/takt"), (7, "/w/none"), (8, "/w/takt"))
+    ),
+    (
+        "784cf68b",
+        ("/w/takt",),
+        "cd /w/takt; git push -u origin j5ik2o/fake-branch 2>&1 | tail -3; git log --oneline -1",
+        _PAGER,
+        A,
+        A,
+    ),
+    (
+        "784cf68b",
+        ("/w/takt",),
+        (
+            "cd /w/takt; git remote get-url --push origin; "
+            "git push origin refs/heads/j5ik2o/fake-a:refs/heads/j5ik2o/fake-b 2>&1 | tail -3"
+        ),
+        {},
+        A,
+        A,
+    ),
+]
+
+
+class EmptyCwdRecords(unittest.TestCase):
+    def test_the_18_records_keep_their_shape(self):
+        self.assertEqual(len(EMPTY_CWD_RECORDS), 18)
+        failures = []
+        for record, hints, command, extra, without, with_hint in EMPTY_CWD_RECORDS:
+            got0 = _located(command, ug.NOWHERE, extra).kind
+            got = _located(command, ug.Where(None, "estimated", hints), extra).kind
+            if (got0, got) != (without, with_hint):
+                failures.append(
+                    f"{record}: ({without}, {with_hint}) を期待して ({got0}, {got}): {command!r}"
+                )
+        self.assertEqual(failures, [], "\n".join(failures))
+
+    def test_784cf68b_shapes_with_and_without_git_config_env(self):
+        for _r, hints, command, _extra, _w0, _w1 in EMPTY_CWD_RECORDS[-2:]:
+            for extra in ({}, _PAGER):
+                where = ug.Where(None, "estimated", hints)
+                self.assertEqual(
+                    _located(command, where, extra).kind, A, (command, extra)
+                )
+
+
+class EstimateNeverTurnsDenyIntoAllow(unittest.TestCase):
+    """推定は、推定が無ければ拒否になる入力を、推定の値が何でも拒否のまま残す（全部の組み合わせを回す）。"""
+
+    def test_property(self):
+        import itertools
+
+        commands = {(c, tuple(sorted(e.items()))) for _x, c, _cwd, e in CASES}
+        commands |= {(c, ()) for _x, _n, c, _h in LOCATED_CASES}
+        commands |= {
+            (c, tuple(sorted(e.items()))) for _r, _h, c, e, _a, _b in EMPTY_CWD_RECORDS
+        }
+        keys = [k for k in LOCATED_REPOS if not k.startswith("--")] + ["/w/none"]
+        hint_sets = [(k,) for k in keys] + list(itertools.combinations(keys, 2))
+        bad, combos, upgrades = [], 0, 0
+        for command, extra in sorted(commands):
+            env = {**ENV, **dict(extra)}
+            v0 = ug.decide(command, None, env, ("nrslib",), Repos(LOCATED_REPOS))
+            for hints in hint_sets:
+                combos += 1
+                v = _located(command, ug.Where(None, "estimated", hints), dict(extra))
+                if v0.kind == D and v != v0:
+                    bad.append(f"拒否が変わった: {command!r} {hints} -> {v.kind}")
+                elif (
+                    v0.kind != W
+                    and v.kind != v0.kind
+                    and not (v.kind == D and v.estimated)
+                ):
+                    bad.append(
+                        f"警告でないのに変わった: {command!r} {hints} {v0.kind}->{v.kind}"
+                    )
+                elif v.kind == A and v0.kind == W:
+                    upgrades += 1
+                if len(bad) > 20:
+                    break
+        self.assertEqual(bad, [], "\n".join(bad))
+        self.assertGreater(combos, 40000)
+        self.assertGreater(upgrades, 0)
+
+
+def _is_dir(path: str) -> bool:
+    return path in {"/w/takt", "/w/other", "/w/link", "/w/repohook", "/w/mine"}
+
+
+def _real(path: str) -> str:
+    return {"/w/link": "/w/takt"}.get(path, path)
+
+
+# (入力, CURSOR_PROJECT_DIR などの環境変数, 期待の Where)
+LOCATE_CASES: list[tuple[dict, dict[str, str], ug.Where]] = [
+    (
+        {"cwd": "/w/mine", "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where("/w/mine", "payload"),
+    ),
+    (
+        {"cwd": "", "tool_input": {"cwd": "/w/clone"}, "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where("/w/clone", "tool_input"),
+    ),
+    (
+        {"cwd": None, "tool_input": {"cwd": ""}, "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where(None, "estimated", ("/w/takt",)),
+    ),
+    (
+        {"workspace_roots": []},
+        {"CURSOR_PROJECT_DIR": "/w/takt"},
+        ug.Where(None, "estimated", ("/w/takt",)),
+    ),
+    ({"workspace_roots": "/w/takt"}, {}, ug.NOWHERE),
+    ({"workspace_roots": 3}, {}, ug.NOWHERE),
+    ({"workspace_roots": None}, {}, ug.NOWHERE),
+    ({"workspace_roots": [None, "/w/takt"]}, {}, ug.NOWHERE),
+    (
+        {"workspace_roots": ["/w/takt", "/w/repohook"]},
+        {},
+        ug.Where(None, "estimated", ("/w/takt",)),
+    ),
+    (
+        {"workspace_roots": ["/w/link"]},
+        {"CURSOR_PROJECT_DIR": "/w/takt"},
+        ug.Where(None, "estimated", ("/w/link",)),
+    ),
+    (
+        {"workspace_roots": ["/w/takt"]},
+        {"CURSOR_PROJECT_DIR": "/w/other"},
+        ug.Where(None, "estimated", ("/w/takt", "/w/other")),
+    ),
+    ({"workspace_roots": ["relative/path"]}, {}, ug.NOWHERE),
+    ({"workspace_roots": ["/nonexistent"]}, {}, ug.NOWHERE),
+    (
+        {"workspace_roots": ["/nonexistent"]},
+        {"CURSOR_PROJECT_DIR": "/w/mine"},
+        ug.Where(None, "estimated", ("/w/mine",)),
+    ),
+    (
+        {"tool_input": {"cwd": "sub"}, "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where(None, "estimated", ("/w/takt/sub",)),
+    ),
+    ({"tool_input": {"cwd": "sub"}}, {}, ug.NOWHERE),
+    # 相対の入力の cwd は、フックのプロセスの場所（Cursor では ~/.claude）から解かない
+    (
+        {"cwd": "sub", "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where(None, "estimated", ("/w/takt/sub",)),
+    ),
+    ({"cwd": "sub"}, {}, ug.NOWHERE),
+    (
+        {"cwd": "sub", "tool_input": {"cwd": "/w/clone"}},
+        {},
+        ug.Where("/w/clone", "tool_input"),
+    ),
+    (
+        {"cwd": 7, "tool_input": "x", "workspace_roots": ["/w/takt"]},
+        {},
+        ug.Where(None, "estimated", ("/w/takt",)),
+    ),
+    ({}, {"CLAUDE_PROJECT_DIR": "/w/takt"}, ug.NOWHERE),
+    ({}, {}, ug.NOWHERE),
+]
+
+
+class Locate(unittest.TestCase):
+    def test_table(self):
+        for payload, environ, want in LOCATE_CASES:
+            self.assertEqual(
+                ug.locate(payload, environ, _is_dir, _real), want, (payload, environ)
+            )
+
+
+class CursorHook(unittest.TestCase):
+    """Cursor の形の入力（上位の cwd なし）を hook_main に渡す。場所は使い捨てのリポジトリで、git は設定を読むだけ。"""
+
+    def setUp(self):
+        import subprocess
+        import tempfile
+
+        self.dir = os.path.realpath(tempfile.mkdtemp())
+        self.state = os.path.join(self.dir, "state")
+        git_env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": self.dir,
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+        }
+
+        def git(*args):
+            subprocess.run(["git", *args], check=True, env=git_env, capture_output=True)
+
+        # takt の形：origin は自分、upstream は禁止の宛先で push の URL は DISABLED
+        self.fork = os.path.join(self.dir, "fork")
+        git("init", "-q", "-b", "main", self.fork)
+        git(
+            "-C",
+            self.fork,
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/j5ik2o/takt.git",
+        )
+        git(
+            "-C",
+            self.fork,
+            "remote",
+            "add",
+            "upstream",
+            "https://github.com/nrslib/takt.git",
+        )
+        git("-C", self.fork, "remote", "set-url", "--push", "upstream", "DISABLED")
+        git(
+            "-C",
+            self.fork,
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@example.invalid",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "init",
+        )
+        self.worktree = os.path.join(self.dir, "fork-wt")
+        git("-C", self.fork, "worktree", "add", "-q", self.worktree, "-b", "wt")
+        self.env = {
+            **git_env,
+            "ORCA_AGENT_SESSION_ID": "cursor-fake",
+            "UPSTREAM_GUARD_STATE": self.state,
+        }
+
+    def payload(self, command, roots=None, cwd=None):
+        p = {
+            "hook_event_name": "preToolUse",
+            "tool_name": "Shell",
+            "tool_input": {"command": command, "cwd": ""},
+            "conversation_id": "00000000-0000-0000-0000-000000000000",
+            "transcript_path": "/nonexistent/fake.jsonl",
+        }
+        if roots is not None:
+            p["workspace_roots"] = roots
+        if cwd is not None:
+            p["cwd"] = cwd
+        return json.dumps(p)
+
+    def records(self, name):
+        path = os.path.join(self.state, name)
+        if not os.path.exists(path):
+            return []
+        with open(path) as f:
+            return [json.loads(line) for line in f]
+
+    def test_cursor_payload_is_judged_at_the_workspace_root(self):
+        code, out = ug.hook_main(
+            self.payload("git push origin HEAD:fake", [self.fork]), self.env
+        )
+        self.assertEqual((code, out), (0, ""))
+        code, msg = ug.hook_main(
+            self.payload("git push upstream HEAD:main", [self.fork]), self.env
+        )
+        self.assertEqual(code, 2)
+        self.assertIn(ug.ESTIMATE_NOTE, msg)
+        # worktree（.git がファイル）の場所でも、commondir の先の remote を読む
+        code, _ = ug.hook_main(
+            self.payload("git push upstream HEAD:main", [self.worktree]), self.env
+        )
+        self.assertEqual(code, 2)
+        # 推定なしで決まった拒否には、推定の一文を付けない
+        code, msg = ug.hook_main(
+            self.payload("git push https://github.com/nrslib/takt main", [self.fork]),
+            self.env,
+        )
+        self.assertEqual(code, 2)
+        self.assertNotIn(ug.ESTIMATE_NOTE, msg)
+        allows = self.records("allows.log")
+        denials = self.records("denials.log")
+        self.assertEqual([r["cwd_source"] for r in allows], ["estimated"])
+        self.assertEqual(allows[0]["verdict"], "allow")
+        self.assertEqual(allows[0]["looks_like"], "push")
+        self.assertEqual(
+            [r["cwd_source"] for r in denials], ["estimated", "estimated", "none"]
+        )
+
+    def test_cursor_project_dir_and_relative_tool_input_cwd(self):
+        env = {**self.env, "CURSOR_PROJECT_DIR": self.dir}
+        payload = json.loads(self.payload("git push upstream HEAD:main"))
+        payload["tool_input"]["cwd"] = "fork"
+        self.assertEqual(ug.hook_main(json.dumps(payload), env)[0], 2)
+
+    def test_without_hints_and_with_a_certain_cwd(self):
+        code, out = ug.hook_main(self.payload("git push upstream HEAD:main"), self.env)
+        self.assertEqual(code, 0)
+        self.assertIn("判定できませんでした", json.loads(out)["systemMessage"])
+        code, msg = ug.hook_main(
+            self.payload(
+                "git push upstream HEAD:main", ["/nonexistent"], cwd=self.fork
+            ),
+            self.env,
+        )
+        self.assertEqual(code, 2)
+        self.assertNotIn(ug.ESTIMATE_NOTE, msg)
+        self.assertEqual(
+            [r["cwd_source"] for r in self.records("warnings.log")], ["none"]
+        )
+        self.assertEqual(
+            [r["cwd_source"] for r in self.records("denials.log")], ["payload"]
+        )
+        self.assertEqual(self.records("allows.log"), [])
+        # 確かな cwd での許可は、これまでどおり記録に書かない
+        ug.hook_main(self.payload("git push origin HEAD:fake", cwd=self.fork), self.env)
+        self.assertEqual(self.records("allows.log"), [])
+
+    def test_check_entry_reproduces_the_cursor_payload(self):
+        import contextlib
+        import io
+
+        saved = dict(os.environ)
+        os.environ.update(self.env)
+        os.environ.pop("CURSOR_PROJECT_DIR", None)
+        try:
+
+            def run(*args):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    code = ug.main(["upstream-guard", "check", *args])
+                return code, out.getvalue().splitlines()[0]
+
+            command = "git push upstream HEAD:main"
+            self.assertEqual(
+                run("--no-cwd", "--workspace-root", self.fork, "--", command),
+                (2, "deny"),
+            )
+            self.assertEqual(run("--no-cwd", "--", command), (0, "warn"))
+            self.assertEqual(
+                run(
+                    "--no-cwd",
+                    "--workspace-root",
+                    self.fork,
+                    "--",
+                    "git push origin HEAD:x",
+                ),
+                (0, "allow"),
+            )
+            self.assertEqual(run("--cwd", self.fork, "--", command), (2, "deny"))
+        finally:
+            os.environ.clear()
+            os.environ.update(saved)
 
 
 if __name__ == "__main__":
