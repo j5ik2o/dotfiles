@@ -2,6 +2,8 @@
 # scripts/mise-shims-path.sh（.zshenv に埋め込む断片）を、zsh と sh で読ませるテスト。
 #
 # $HOME は mktemp -d に差し替え、利用者の .zshenv は読まない（zsh -f）。
+# zsh は PATH から引く。Linux の CI には /bin/zsh が無いので、Makefile が devShell の
+# zsh を PATH に置いて呼ぶ。env -i で PATH を消す前に、実体のパスを決めておく。
 
 # 子のシェルに渡すスクリプトは、子の側で展開させるため単引用符で書く。
 # shellcheck disable=SC2016
@@ -10,6 +12,12 @@ set -uo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 snippet="$repo_root/scripts/mise-shims-path.sh"
+
+zsh=$(command -v zsh) || {
+  echo "zsh が PATH に無い（make test-activation から devShell 経由で呼ぶ）" >&2
+  exit 1
+}
+sh=$(command -v sh)
 
 root=$(mktemp -d)
 trap 'rm -rf "$root"' EXIT
@@ -23,8 +31,8 @@ failures=0
 run_path() {
   local shell=$1 path=$2
   case "$shell" in
-    zsh) env -i HOME="$root" PATH="$path" /bin/zsh -f -c '. "$1"; print -r -- "$PATH"' _ "$snippet" ;;
-    sh) env -i HOME="$root" PATH="$path" /bin/sh -c '. "$1"; printf "%s\n" "$PATH"' _ "$snippet" ;;
+    zsh) env -i HOME="$root" PATH="$path" "$zsh" -f -c '. "$1"; print -r -- "$PATH"' _ "$snippet" ;;
+    sh) env -i HOME="$root" PATH="$path" "$sh" -c '. "$1"; printf "%s\n" "$PATH"' _ "$snippet" ;;
   esac
 }
 
@@ -56,11 +64,11 @@ for shell in zsh sh; do
 done
 
 # 二度読んでも重ならない（入れ子の zsh -c）。
-twice=$(env -i HOME="$root" PATH="/usr/bin:/bin" /bin/zsh -f -c '. "$1"; . "$1"; print -r -- "$PATH"' _ "$snippet")
+twice=$(env -i HOME="$root" PATH="/usr/bin:/bin" "$zsh" -f -c '. "$1"; . "$1"; print -r -- "$PATH"' _ "$snippet")
 expect "zsh: 二度読んでも shims は一つ" "$shims:/usr/bin:/bin" "$twice"
 
 # 断片は読み手のシェルに変数を残さない。
-leftover=$(env -i HOME="$root" PATH="/usr/bin" /bin/zsh -f -c '. "$1"; print -r -- "${_mise_shims-unset}"' _ "$snippet")
+leftover=$(env -i HOME="$root" PATH="/usr/bin" "$zsh" -f -c '. "$1"; print -r -- "${_mise_shims-unset}"' _ "$snippet")
 expect "zsh: 作業用の変数を残さない" "unset" "$leftover"
 
 if ((failures > 0)); then
