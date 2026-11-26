@@ -12,7 +12,13 @@ disable_tools = ["rust"]
 
 # takt の複製（worktree クローン）は実行ごとに新しいパスへ作られるため、複製の置き場所を
 # 信頼済みにして、複製の中の mise.toml が未 trust で読み込みに失敗しないようにする（2026-11-14）。
-trusted_config_paths = ["/Users/j5ik2o/takt-worktrees", "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/takt-worktrees"]
+# Orca が takt-dash から作る作業ツリーも名前ごとに新しいパスになるため、takt-dash の置き場所だけを
+# 信頼する。workspaces 全体には広げず、ほかのリポジトリの作業ツリーは信頼しない（2026-11-26）。
+trusted_config_paths = [
+  "/Users/j5ik2o/takt-worktrees",
+  "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/takt-worktrees",
+  "/Users/j5ik2o/orca/workspaces/takt-dash",
+]
 
 [settings.github]
 github_attestations = false
