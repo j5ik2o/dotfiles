@@ -3121,6 +3121,11 @@ class CursorHook(unittest.TestCase):
         self.assertEqual(
             [r["cwd_source"] for r in denials], ["estimated", "estimated", "none"]
         )
+        # 推定の記録には、どの場所で判定したかを残す
+        self.assertEqual(
+            [r.get("hints") for r in allows + denials],
+            [[self.fork], [self.fork], [self.worktree], [self.fork]],
+        )
 
     def test_cursor_project_dir_and_relative_tool_input_cwd(self):
         env = {**self.env, "CURSOR_PROJECT_DIR": self.dir}
@@ -3156,8 +3161,8 @@ class CursorHook(unittest.TestCase):
         import io
 
         saved = dict(os.environ)
+        os.environ.clear()  # 呼び出し元の GIT_DIR などを引き継がない
         os.environ.update(self.env)
-        os.environ.pop("CURSOR_PROJECT_DIR", None)
         try:
 
             def run(*args):

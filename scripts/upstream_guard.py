@@ -3113,6 +3113,8 @@ def _log_verdict(
         "length": len(command),
         "looks_like": looks,
     }
+    if where.hints:  # 推定の候補（cwd が空のとき、どこで判定したか）
+        record["hints"] = list(where.hints)
     name = {"allow": "allows.log", "warn": "warnings.log"}.get(
         verdict.kind, "denials.log"
     )
