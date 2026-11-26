@@ -5,6 +5,10 @@
   # j5ik2o-mac-studio 固有設定
   # ============================================================
 
+  # Tailscale は nix-darwin の services.tailscale で入れる (tailscaled を launchd で常駐させる)。
+  # cask の tailscale-app (Network Extension 版) も tailscaled もトンネルと DNS を握るので、併用しない。
+  services.tailscale.enable = true;
+
   # Homebrew casks (フルセット)
   homebrew.casks = [
     # ブラウザ
@@ -54,7 +58,6 @@
     "cleanshot"
     "angry-ip-scanner"
     "openmtp"
-    "tailscale-app"
     "geekbench"
 
     # コミュニケーション

@@ -70,7 +70,8 @@ in
       iproute2
       nettools
       traceroute
-      # macOS は Homebrew cask (tailscale-app) で入れる。Linux は CLI と
+      # macOS は Homebrew cask (tailscale-app)、Mac Studio だけ nix-darwin の
+      # services.tailscale で入れる。Linux は CLI と
       # tailscaled をここで入れる。デーモンの常駐はシステム側の unit が要り、
       # Home Manager 単体では置けないので、各有効化は手動で行う。
       tailscale
