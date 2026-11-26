@@ -737,7 +737,7 @@ in
       fi
 
       # mise shims
-      export PATH="$HOME/.local/share/mise/shims:$PATH"
+      ${builtins.readFile "${self}/scripts/mise-shims-path.sh"}
 
       # Obsidian CLI
       export PATH="$PATH:/Applications/Obsidian.app/Contents/MacOS"

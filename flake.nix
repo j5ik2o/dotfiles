@@ -405,7 +405,12 @@
         in
         {
           default = pkgs.mkShell {
-            buildInputs = [ pkgs.nil ] ++ lintTools system;
+            # zsh は tests/mise-shims-path-test.sh が .zshenv の断片を読ませるのに使う。
+            buildInputs = [
+              pkgs.nil
+              pkgs.zsh
+            ]
+            ++ lintTools system;
           };
         }
       );

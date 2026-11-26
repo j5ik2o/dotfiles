@@ -198,6 +198,7 @@ check-update:
 # scripts/ 配下のシェルをテストする。ネットワークも $HOME も触らない。
 test-activation:
 	bash tests/install-muse-test.sh
+	$(LINT_SHELL) bash tests/mise-shims-path-test.sh
 	bash tests/commit-subject-check-test.sh
 	bash tests/nix-check-node-test.sh
 	bash tests/publish-update-pr-test.sh
