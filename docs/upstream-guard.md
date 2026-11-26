@@ -18,6 +18,21 @@ Orca が起動したボットとワーカーが、禁止の宛先（既定は `n
 | Claude Code | `~/.claude/settings.json` の `hooks.PreToolUse` | `Bash`、`Monitor` |
 | Codex | `~/.codex/hooks.json` の `PreToolUse` と、`~/.codex/config.toml` の `hooks.state`（信頼の値） | `Bash` |
 | Pi | `~/.pi/agent/extensions/upstream-guard.ts`（Home Manager が置く） | `bash`、`powershell` |
+| Cursor（Orca の ACP ワーカー） | Claude Code と同じ `~/.claude/settings.json` を Cursor が読んで呼ぶ | `Shell`（Cursor が `Bash` を読み替える） |
+
+### 作業ディレクトリが入力に無いとき（Cursor）
+
+Cursor は入力に `cwd` を入れない。モデルが Shell に `working_directory` を渡したときだけ、`tool_input.cwd` に入る。フックは、判定に使う場所を次の順で決める（`locate`）。
+
+1. 入力の `cwd`、次に `tool_input.cwd`。絶対パスのときだけ、確かな作業ディレクトリにする。相対パスは、フックのプロセスの場所（Cursor では `~/.claude`）からは解かず、下の候補から解く
+2. どちらも無ければ、作業ツリーを推定する。候補は入力の `workspace_roots` の先頭と、環境変数 `CURSOR_PROJECT_DIR`（どちらも絶対パスで、ディレクトリのものだけ）。`CLAUDE_PROJECT_DIR` は使わない
+
+推定の場所から取るのは、宛先が決まった判定だけ（`decide_located`）。
+
+- 推定が無いときの判定（いままでの判定）が拒否なら、そのまま拒否する
+- 推定の場所で宛先が禁止の宛先と決まれば、拒否する。理由の文に、推定したことと、`working_directory` の渡し方を足す
+- いままでの判定が警告で、推定の場所のすべてで許可になれば、許可する。これは `allows.log` に記録する
+- それ以外は、いままでの判定のまま。推定の場所での「宛先を決められない」（作業ツリーの remote に禁止の語がある、など）は使わない
 
 Claude Code と Codex は `"$HOME/.local/bin/upstream-guard" hook` を呼び、Pi の拡張は `upstream-guard check --cwd <cwd> -- '<command>'` を PATH から spawn する。どちらも同じ実行ファイル（Home Manager が置く。`modules/common.nix`、`packages/upstream-guard.nix`）と判定（`scripts/upstream_guard.py`）を使う。
 
@@ -51,7 +66,7 @@ Pi の拡張は、終了コード 2（拒否）のときだけ bash を止め、
 - 語を探す範囲は、コマンドの全文、値の決まらない変数の代入の元、作業ディレクトリと判定の中で引いた場所の remote（fetch と push の URL。insteadOf を通した後の形）、`GH_` と `GIT_` で始まる環境変数、読んだクエリのファイル。大文字小文字は区別しない。禁止の宛先が `owner/repo` の形なら、全体と owner と repo のどれが出てきても当てる。
 - 宛先が禁止の宛先と決まったものは、これまでどおり止める。GraphQL の、宛先に関係なく止めていた mutation も、同じ考え方で扱う。
 
-警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。大きさの確認、移動、追記は、ロックのファイル（`<記録>.lock`）で直列にする。理由の文（記録とモデルへ返す理由と警告）には、コマンドや設定から取った生の値（URL、ヘッダ、`git -c` の値、変数の中身、API のパスなど）を写さない。書くのは、何を見たかを示す固定の文、判定の種類、設定の一覧に在る禁止の宛先の名前、作業ディレクトリだけ。記録には、ほかにコマンドの先頭の語と長さを書く。2 つ目の守りとして、それでも文に入ったときのために、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値（引用符で囲んだ値は閉じる引用符まで）、URL の `//…@` の部分（`@` が 2 つ以上あれば最後の `@` まで）を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
+警告と拒否は、フックの入口で `~/.local/state/upstream-guard/warnings.log` と `denials.log` に 1 行 1 件の JSON で追記する。許可のうち、推定した場所で決まったものだけは `allows.log` に書く。どの記録にも、判定を決めた場所の出どころ（`cwd_source`：`payload`、`tool_input`、`estimated`、`none`）を書く。推定の候補があったときは、その場所（`hints`）も書く。置き場は 0700、ファイルは 0600 で作り、すでに在るファイルも書く時に 0600 に直す。1 つのファイルが 1 MiB を超えたら `.1` に移し、古い `.1` は捨てる。大きさの確認、移動、追記は、ロックのファイル（`<記録>.lock`）で直列にする。理由の文（記録とモデルへ返す理由と警告）には、コマンドや設定から取った生の値（URL、ヘッダ、`git -c` の値、変数の中身、API のパスなど）を写さない。書くのは、何を見たかを示す固定の文、判定の種類、設定の一覧に在る禁止の宛先の名前、作業ディレクトリだけ。記録には、ほかにコマンドの先頭の語と長さを書く。2 つ目の守りとして、それでも文に入ったときのために、Authorization・Cookie のヘッダの値、認証の方式に続く値、GitHub のトークンの形、`token=` などの値（引用符で囲んだ値は閉じる引用符まで）、URL の `//…@` の部分（`@` が 2 つ以上あれば最後の `@` まで）を伏せる。中身は時刻、セッションの ID、作業ディレクトリ、判定の結果と理由、コマンドの先頭の語、コマンドの長さ、マージと push のどちらに見えたか。コマンドの全文は残さない（本文に秘密が入りうるため）。
 
 `gh pr create`、`comment`、`view`、`review --approve`、issue の操作、読み取り、禁止でない宛先への操作は止めない。
 
@@ -98,7 +113,7 @@ make apply
 
 登録するシェルの 1 行は `scripts/upstream-guard-hook.sh` に置き、`make lint` の ShellCheck を通す。Python の `HOOK_COMMAND` と同じであることは単体テストで確かめる。Orca が `~/.codex/hooks.json` を書き直して並びが変わると、Codex の信頼の値が合わなくなってフックが動かなくなる。そのときは `install` をもう一度実行する。
 
-手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定（`allow`、`warn`、`deny`）だけを出す。終了コードは `deny` だけが 2。
+手で確かめるときは `upstream-guard check --cwd <作業ディレクトリ> -- '<コマンド>'` を使う。コマンドは実行せず、判定（`allow`、`warn`、`deny`）だけを出す。終了コードは `deny` だけが 2。Cursor の入力を再現するときは `--no-cwd --workspace-root <作業ツリー>` を使う（フックと同じ順で場所を決める）。
 
 ### 実行ファイルの作り直し
 
@@ -141,6 +156,9 @@ Claude Code は、フックの拒否を `PreToolUse:Bash hook error: [<登録の
 - 条件で実行されない `cd`（`false && cd X; git push`）は、実行されたものとして扱う。`cd -` は場所を決められないものとして扱う
 - `git` の全体設定（`~/.gitconfig`）の `url.*.pushInsteadOf` で、URL を直接書いた push の宛先を差し替えるもの
 - 範囲の外: `gh workflow run` や `repos/*/dispatches` での上流のワークフローの起動
+- Cursor のシェルは、呼び出しの間で cwd、環境変数（`GIT_DIR`、`GH_REPO`、`GIT_CONFIG_*` など）、関数、alias を持ち越す。持ち越した値は、フックの入力にも環境変数にも出ない。前の呼び出しで作業ツリーの外へ `cd` していたり、これらを定義していたりすると、推定の場所の判定が外れ、禁止の宛先への push を許可しうる。推定で許可したものは `allows.log` に残るので、後から確かめられる
+- Cursor の呼び出しで、推定の候補（`workspace_roots`、`CURSOR_PROJECT_DIR`）が無く、宛先が作業ディレクトリに依存する push（`git push upstream` など）は、警告だけで通る
+- 場所の決まらない `git` で、サブコマンドがリポジトリの設定のエイリアスのものは、エイリアスを読めないので、警告も記録も無く通る
 
 誤って止める側に倒れるものもある。
 

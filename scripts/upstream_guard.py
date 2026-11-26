@@ -57,6 +57,8 @@ class Verdict:
     warning: str = ""
     # 拒否のうち、宛先を決められなかったもの（「何の、なぜ」）。禁止の宛先の語が見当たらなければ warn にする
     unresolved: str = ""
+    # 入力に cwd が無く、推定した場所（Cursor の作業ツリー）で決まった判定（decide_located の手順 4 と 6）
+    estimated: bool = False
 
     @property
     def kind(self) -> str:
@@ -1428,8 +1430,8 @@ def _parse_git_globals(
         i += 1
         if key in ("-C", "--git-dir") and not resolved:
             location_unknown = True
-        elif key == "-C" and workdir is not None:
-            workdir = _join(workdir, val)
+        elif key == "-C":
+            workdir = _join(workdir, val)  # 絶対パスなら cwd が無くても場所になる
         elif key == "--git-dir":
             git_dir = val
         elif key in ("-c", "--config-env"):
@@ -2869,12 +2871,121 @@ class LazyRepos(Mapping):
         return len(self._cache)
 
 
+# ---------------------------------------------------------------------------
+# 判定に使う場所（入力に cwd が無い Cursor の呼び出しでは、作業ツリーから推定する）
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Where:
+    cwd: str | None  # 確かな作業ディレクトリ（絶対パス）。無ければ None
+    source: str  # "payload" | "tool_input" | "estimated" | "none"
+    hints: tuple[str, ...] = ()  # 推定の候補。cwd が None のときだけ使う
+
+
+NOWHERE = Where(None, "none")
+
+ESTIMATE_NOTE = (
+    "作業ディレクトリが入力に無かったので、Cursor の作業ツリーから推定して判定しました。"
+    "別の場所で実行するなら、Shell の working_directory にその場所の絶対パスを渡してください。"
+)
+
+
+def locate(
+    payload: Mapping[str, object],
+    environ: Mapping[str, str],
+    is_dir: Callable[[str], bool],
+    real: Callable[[str], str],
+) -> Where:
+    """フックの入力から、判定に使う場所を決める。
+
+    入力の cwd と tool_input.cwd（Cursor の working_directory）は、絶対パスのときだけ確かな cwd にする。
+    相対パスは、フックのプロセスの場所（Cursor では ~/.claude）からではなく、推定の候補から解く。
+    推定の候補は workspace_roots の先頭と CURSOR_PROJECT_DIR だけ。CLAUDE_PROJECT_DIR は
+    セッションを始めた場所のまま動かないので使わない。
+    """
+    tool_input = payload.get("tool_input")
+    given = (
+        ("payload", payload.get("cwd")),
+        (
+            "tool_input",
+            tool_input.get("cwd") if isinstance(tool_input, Mapping) else None,
+        ),
+    )
+    named = [(src, c) for src, c in given if isinstance(c, str) and c]
+    for src, c in named:
+        if c.startswith("/"):
+            return Where(c, src)
+    roots = payload.get("workspace_roots")
+    # 2 つ目からは「フックの設定を持つリポジトリ」の場所で、シェルの起動する場所ではない
+    raw = [roots[0] if isinstance(roots, list) and roots else None]
+    raw.append(environ.get("CURSOR_PROJECT_DIR"))
+    bases: list[str] = []
+    seen: set[str] = set()
+    for c in raw:
+        if not (isinstance(c, str) and c.startswith("/") and is_dir(c)):
+            continue
+        key = real(c)  # symlink でずれた同じ場所は 1 つにまとめる。判定は論理パスのまま
+        if key not in seen:
+            seen.add(key)
+            bases.append(c)
+    relative = named[0][1] if named else None
+    hints = tuple(_join(b, relative) if relative else b for b in bases)
+    return Where(None, "estimated", hints) if hints else NOWHERE
+
+
+def _decided_deny(verdict: Verdict | None) -> bool:
+    return verdict is not None and not verdict.allowed and not verdict.unresolved
+
+
+def decide_located(
+    command: str,
+    where: Where,
+    env: Mapping[str, str],
+    blocked: tuple[str, ...],
+    repos: Mapping[str, RepoInfo | None],
+    files: Mapping[str, str | None] | None = None,
+) -> Verdict:
+    """decide() に、推定した場所を足す。推定が無ければ拒否になる入力は、推定の値が何でも拒否のまま。
+
+    推定の場所から取るのは、宛先が決まった拒否と許可だけ。推定の場所での「決められない」は使わない
+    （takt の作業ツリーは upstream に禁止の語を持つので、語の規則で宛先と関係なく止まる）。
+    """
+    if where.cwd is not None:
+        return decide(command, where.cwd, env, blocked, repos, files)
+    v0 = decide(command, None, env, blocked, repos, files)
+    if not v0.allowed:
+        return v0  # 推定と関係なく決まった拒否。推定の一文は付けない
+    located: list[Verdict | None] = []
+    for hint in where.hints:
+        try:
+            located.append(decide(command, hint, env, blocked, repos, files))
+        except Exception:  # noqa: BLE001  候補の失敗は、その候補から拒否も許可も取らない
+            located.append(None)
+    for verdict in located:
+        if _decided_deny(verdict):
+            return replace(
+                verdict, reason=f"{verdict.reason}\n{ESTIMATE_NOTE}", estimated=True
+            )
+    if (
+        v0.kind == "warn"
+        and located
+        and all(v is not None and v.kind == "allow" for v in located)
+    ):
+        return Verdict(
+            True,
+            f"{v0.unresolved}。Cursor の作業ツリーから推定した場所では宛先が禁止の宛先でないので、通します。",
+            estimated=True,
+        )
+    return v0
+
+
 def _fallback(command: str) -> Verdict:
     ctx = Ctx(cwd=None, env={}, vars={}, blocked=DEFAULT_BLOCKED, repos={})
     return _unparsed(command, ctx, "判定の途中で失敗した")
 
 
-def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
+def check(command: str, where: Where, environ: Mapping[str, str]) -> Verdict:
     home = environ.get("HOME", os.path.expanduser("~"))
     try:
         blocked = load_blocked(environ, home)
@@ -2882,7 +2993,7 @@ def check(command: str, cwd: str | None, environ: Mapping[str, str]) -> Verdict:
         blocked = DEFAULT_BLOCKED
     try:
         repos = LazyRepos(lambda loc: read_repo_info(loc, environ))
-        return decide(command, cwd, environ, blocked, repos, LazyFiles())
+        return decide_located(command, where, environ, blocked, repos, LazyFiles())
     except Exception:  # noqa: BLE001  判定の失敗でマージと push を通さない
         return settle(_fallback(command), command, blocked)
 
@@ -2965,12 +3076,12 @@ def _append_private(path: str, line: str) -> None:
 
 
 def _log_verdict(
-    verdict: Verdict, command: str, cwd: str | None, environ: Mapping[str, str]
+    verdict: Verdict, command: str, where: Where, environ: Mapping[str, str]
 ) -> None:
-    """警告と拒否を 1 行 1 件で追記する。コマンドの全文は残さない（本文に秘密が入りうる）。"""
+    """警告と拒否と、推定で決まった許可を 1 行 1 件で追記する。コマンドの全文は残さない（本文に秘密が入りうる）。"""
     import time
 
-    if verdict.kind == "allow":
+    if verdict.kind == "allow" and not verdict.estimated:
         return
     state = environ.get("UPSTREAM_GUARD_STATE") or os.path.join(
         environ.get("HOME", os.path.expanduser("~")),
@@ -2991,14 +3102,22 @@ def _log_verdict(
     record = {
         "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "session": environ.get("ORCA_AGENT_SESSION_ID", ""),
-        "cwd": cwd or "",
+        "cwd": where.cwd or "",
+        # 判定を決めた場所の出どころ。候補があっても、推定なしの判定で決まったものは none
+        "cwd_source": "estimated"
+        if verdict.estimated
+        else ("none" if where.cwd is None else where.source),
         "verdict": verdict.kind,
         "reason": _redact(verdict.unresolved or verdict.reason.splitlines()[0])[:300],
         "head": head,
         "length": len(command),
         "looks_like": looks,
     }
-    name = "warnings.log" if verdict.kind == "warn" else "denials.log"
+    if where.hints:  # 推定の候補（cwd が空のとき、どこで判定したか）
+        record["hints"] = list(where.hints)
+    name = {"allow": "allows.log", "warn": "warnings.log"}.get(
+        verdict.kind, "denials.log"
+    )
     with contextlib.suppress(OSError):
         _append_private(
             os.path.join(state, name), json.dumps(record, ensure_ascii=False) + "\n"
@@ -3034,9 +3153,12 @@ def hook_main(stdin: str, environ: Mapping[str, str]) -> tuple[int, str]:
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     if not isinstance(command, str):
         return 0, ""
-    cwd = payload.get("cwd") or None
-    verdict = check(command, cwd, environ)
-    _log_verdict(verdict, command, cwd, environ)
+    try:
+        where = locate(payload, environ, os.path.isdir, os.path.realpath)
+    except Exception:  # noqa: BLE001  場所を決められなければ、推定なしで判定する
+        where = NOWHERE
+    verdict = check(command, where, environ)
+    _log_verdict(verdict, command, where, environ)
     if verdict.kind == "warn":
         return 0, _warning_output(_redact(verdict.warning))
     if verdict.allowed:
@@ -3338,6 +3460,9 @@ def apply_install(home: str, present: bool, stamp: str) -> InstallResult:
     return InstallResult(_write_all(plan, stamp), skipped)
 
 
+CHECK_USAGE = "upstream-guard check [--cwd <dir> | --no-cwd] [--workspace-root <dir>] [--] '<command>'"
+
+
 def main(argv: list[str]) -> int:
     if len(argv) >= 2 and argv[1] == "hook":
         code, message = hook_main(sys.stdin.read(), os.environ)
@@ -3346,20 +3471,30 @@ def main(argv: list[str]) -> int:
         return code
     if len(argv) >= 3 and argv[1] == "check":
         # 判定だけを返す入口。コマンドは実行せず、読むのは作業ディレクトリの git の設定だけ。
-        #   upstream-guard check [--cwd <dir>] [--] '<command>'
+        #   upstream-guard check [--cwd <dir> | --no-cwd] [--workspace-root <dir>] [--] '<command>'
+        # --no-cwd と --workspace-root は、cwd の無い Cursor の入力を再現する（フックと同じ locate を通す）
         rest = argv[2:]
-        cwd = os.getcwd()
-        if rest[:1] == ["--cwd"] and len(rest) >= 2:
-            cwd, rest = os.path.abspath(rest[1]), rest[2:]
+        cwd: str | None = os.getcwd()
+        roots: list[str] = []
+        while rest[:1] in (["--cwd"], ["--no-cwd"], ["--workspace-root"]):
+            if rest[0] == "--no-cwd":
+                cwd, rest = None, rest[1:]
+            elif len(rest) >= 2 and rest[0] == "--cwd":
+                cwd, rest = os.path.abspath(rest[1]), rest[2:]
+            elif len(rest) >= 2 and rest[0] == "--workspace-root" and not roots:
+                roots, rest = [os.path.abspath(rest[1])], rest[2:]
+            else:
+                break
         if rest[:1] == ["--"]:
             rest = rest[1:]
         if len(rest) != 1:
-            print(
-                "usage: upstream-guard check [--cwd <dir>] [--] '<command>'",
-                file=sys.stderr,
-            )
+            print(f"usage: {CHECK_USAGE}", file=sys.stderr)
             return 64
-        verdict = check(rest[0], cwd, os.environ)
+        payload = {"cwd": cwd, "tool_input": {"command": rest[0], "cwd": ""}}
+        if roots:
+            payload["workspace_roots"] = roots
+        where = locate(payload, os.environ, os.path.isdir, os.path.realpath)
+        verdict = check(rest[0], where, os.environ)
         detail = _redact(verdict.warning if verdict.kind == "warn" else verdict.reason)
         print(verdict.kind + ("\n" + detail if detail else ""))
         return 0 if verdict.allowed else 2
@@ -3376,7 +3511,7 @@ def main(argv: list[str]) -> int:
             print(f"{argv[1]}: 登録できなかった: {reason}", file=sys.stderr)
         return 1 if result.skipped else 0
     print(
-        "usage: upstream-guard hook < payload.json | check [--cwd <dir>] [--] '<command>' | install | uninstall",
+        f"usage: upstream-guard hook < payload.json | {CHECK_USAGE.removeprefix('upstream-guard ')} | install | uninstall",
         file=sys.stderr,
     )
     return 64
