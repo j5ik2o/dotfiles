@@ -8,6 +8,8 @@
   # Tailscale は nix-darwin の services.tailscale で入れる (tailscaled を launchd で常駐させる)。
   # cask の tailscale-app (Network Extension 版) も tailscaled もトンネルと DNS を握るので、併用しない。
   services.tailscale.enable = true;
+  # 上流モジュールは RunAtLoad だけを設定する。リモートから入る機械なので、落ちたら launchd に再起動させる。
+  launchd.daemons.tailscaled.serviceConfig.KeepAlive = true;
 
   # Homebrew casks (フルセット)
   homebrew.casks = [
