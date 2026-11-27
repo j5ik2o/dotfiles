@@ -36,3 +36,7 @@ jobs:
       base_branch: main
       required_context: Check unresolved comments
       ci_ref: v1
+      # Codex は利用の上限に当たると、レビューの要約とは別に「上限に達した」旨の
+      # トップレベルのコメントを残す。指摘ではないので、返事を待たせない。
+      extra_ignored_auto_report_author_patterns: |
+        chatgpt-codex-connector	You have reached your Codex usage limits
