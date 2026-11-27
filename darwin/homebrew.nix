@@ -24,6 +24,10 @@
 
     # CLI ツール (Nix にないもの)
     brews = [
+      # ffmpeg は「CLI は Nix」のルールの例外。動画の音声処理（ElevenLabs の
+      # 長さ計測・音量の正規化・書き出し）で手元の ffmpeg を直接叩くため、
+      # オペレータの指示で brew に置いている。Nix 側には重複して入れない。
+      "ffmpeg"
       "macmon"
       "rtk"
     ];
